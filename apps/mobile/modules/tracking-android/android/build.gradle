@@ -1,0 +1,15 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'app.driftless.tracking'
+version = '0.1.0'
+
+android {
+  namespace "app.driftless.tracking"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+}

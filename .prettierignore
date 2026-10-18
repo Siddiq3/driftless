@@ -1,0 +1,7 @@
+pnpm-lock.yaml
+**/dist
+**/cdk.out
+**/coverage
+apps/mobile/android
+apps/mobile/ios
+*.md

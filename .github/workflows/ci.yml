@@ -1,0 +1,148 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI_JOB: node
+      DDB_ENDPOINT: http://localhost:8000
+      TABLE_NAME: driftless-test
+    services:
+      dynamodb:
+        image: amazon/dynamodb-local:latest
+        ports: ['8000:8000']
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: install
+        run: |
+          if [ -f pnpm-lock.yaml ]; then ci/step.sh install pnpm install --frozen-lockfile
+          else ci/step.sh install pnpm install --no-frozen-lockfile; fi
+          cp pnpm-lock.yaml ci-logs/node/ 2>/dev/null || true
+      - name: build
+        if: ${{ !cancelled() }}
+        run: ci/step.sh build pnpm turbo run build --filter=!@driftless/mobile
+      - name: format
+        if: ${{ !cancelled() }}
+        run: ci/step.sh format pnpm format:check
+      - name: lint
+        if: ${{ !cancelled() }}
+        run: ci/step.sh lint pnpm turbo run lint --continue --filter=!@driftless/mobile
+      - name: typecheck
+        if: ${{ !cancelled() }}
+        run: ci/step.sh typecheck pnpm turbo run typecheck --continue --filter=!@driftless/mobile
+      - name: test
+        if: ${{ !cancelled() }}
+        run: ci/step.sh test pnpm turbo run test --continue --filter=!@driftless/mobile
+      - name: collect coverage
+        if: ${{ !cancelled() }}
+        run: cp packages/domain/coverage/coverage-summary.json ci-logs/node/domain-coverage.json 2>/dev/null || true
+      - name: cdk synth
+        if: ${{ !cancelled() }}
+        working-directory: infra
+        run: ../ci/step.sh synth pnpm exec cdk synth --quiet
+        env: { CDK_DEFAULT_ACCOUNT: '000000000000', CDK_DEFAULT_REGION: ap-south-1 }
+      - name: secret scan
+        if: ${{ !cancelled() }}
+        run: |
+          curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_x64.tar.gz | tar xz gitleaks
+          ci/step.sh gitleaks ./gitleaks git --redact --no-banner .
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with: { name: logs-node, path: ci-logs/node, include-hidden-files: true }
+      - name: fail if any step failed
+        if: ${{ !cancelled() }}
+        run: '! grep -v "exit=0" ci-logs/node/status.txt'
+
+  mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      CI_JOB: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17, cache: gradle }
+      - name: install
+        run: |
+          if [ -f pnpm-lock.yaml ]; then ci/step.sh install pnpm install --frozen-lockfile
+          else ci/step.sh install pnpm install --no-frozen-lockfile; fi
+      - name: build shared packages
+        if: ${{ !cancelled() }}
+        run: ci/step.sh build-shared pnpm turbo run build --filter=@driftless/mobile^...
+      - name: expo dependency check
+        if: ${{ !cancelled() }}
+        working-directory: apps/mobile
+        run: ../../ci/step.sh expo-check npx expo install --check
+      - name: expo doctor
+        if: ${{ !cancelled() }}
+        working-directory: apps/mobile
+        run: ../../ci/step.sh expo-doctor npx expo-doctor
+      - name: typecheck
+        if: ${{ !cancelled() }}
+        working-directory: apps/mobile
+        run: ../../ci/step.sh typecheck pnpm typecheck
+      - name: lint
+        if: ${{ !cancelled() }}
+        working-directory: apps/mobile
+        run: ../../ci/step.sh lint pnpm lint
+      - name: unit tests
+        if: ${{ !cancelled() }}
+        working-directory: apps/mobile
+        run: ../../ci/step.sh test pnpm test
+      - name: prebuild android
+        if: ${{ !cancelled() }}
+        working-directory: apps/mobile
+        run: ../../ci/step.sh prebuild npx expo prebuild --platform android --no-install
+      - name: gradle debug build
+        if: ${{ !cancelled() }}
+        working-directory: apps/mobile/android
+        run: ../../../ci/step.sh gradle ./gradlew assembleDebug --no-daemon -PreactNativeArchitectures=arm64-v8a
+      - name: record APK
+        if: ${{ !cancelled() }}
+        run: ls -la apps/mobile/android/app/build/outputs/apk/debug/ > ci-logs/mobile/apk.txt 2>&1 || true
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with: { name: logs-mobile, path: ci-logs/mobile, include-hidden-files: true }
+      - name: fail if any step failed
+        if: ${{ !cancelled() }}
+        run: '! grep -v "exit=0" ci-logs/mobile/status.txt'
+
+  # The Claude session developing this repo cannot read Actions logs directly, so pushes to main
+  # publish step logs to the `ci-results` branch. Never runs for pull requests.
+  publish-results:
+    if: ${{ always() && github.event_name == 'push' }}
+    needs: [node, mobile]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: out }
+      - name: push to ci-results branch
+        run: |
+          mkdir -p out && cd out
+          printf 'sha=%s\nrun=%s\nnode=%s\nmobile=%s\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" \
+            "${{ needs.node.result }}" "${{ needs.mobile.result }}" > SUMMARY.txt
+          git init -q -b ci-results && git add -A
+          git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "results for ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}" ci-results
