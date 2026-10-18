@@ -58,4 +58,6 @@ Android: Pixel (stock, latest + previous major), Samsung One UI, Xiaomi/HyperOS 
 | 2026-10-18 | 2 | accuracy scorer (Python unittest) | 10/10 passed | run locally in the dev session; also added to CI |
 | 2026-10-18 | 2 | Kotlin unit tests (JUnit + Robolectric) | 39/39 passed | app commit dd35e32: ViewCounter 13, Engine 10, Classifier 9, Android layer 7. APK build failed: stale module class path in expo-module.config.json → fixed |
 | 2026-10-18 | 3 | backend usage sync/history | 43/43 API tests passed | driftless-backend commit 187dbda (125 backend tests total) |
+| 2026-10-18 | 3 | app CI at 4039c75 | Jest 54/54, Kotlin 50/50 passed; APK built (93.8 MB); typecheck failed (stale module types) → fixed | |
+| 2026-10-18 | 4 | backend goals + contracts 0.2.0 | 48/48 API tests; published 0.2.0 | driftless-backend b28792c |
 | — | 2 | G-2 device accuracy | **not run** | requires labelled sessions on a real phone (ACCURACY_PROTOCOL.md) |

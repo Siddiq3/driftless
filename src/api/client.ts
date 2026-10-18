@@ -92,6 +92,9 @@ export function createApiClient(o: ApiClientOptions) {
           headers: { 'idempotency-key': idempotencyKey },
         })
       ).data,
+    getGoals: async () => (await request('GET', '/v1/goals', v1.GoalsResponse)).data,
+    putGoals: async (goals: v1.Goal[]) =>
+      (await request('PUT', '/v1/goals', v1.GoalsResponse, { body: { goals } })).data,
     usageHistory: async (from: string, to: string) =>
       (await request('GET', `/v1/usage/history?from=${from}&to=${to}`, v1.HistoryResponse)).data,
     patchMe: (patch: v1.PatchMeRequest, rev: number) =>

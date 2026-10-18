@@ -29,6 +29,8 @@ export default function Welcome() {
         label="Reels & Shorts counter"
         onPress={() => router.push('/tracking')}
       />
+      <Button kind="secondary" label="History" onPress={() => router.push('/history')} />
+      <Button kind="secondary" label="Wick & goals" onPress={() => router.push('/progress')} />
 
       {s.status === 'unconfigured' && (
         <Notice

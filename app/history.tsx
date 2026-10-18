@@ -19,15 +19,24 @@ function toRow(d: Daily, h: TrackingHealth): Row {
   const usage = d.apps.reduce((n, a) => n + a.usageMs, 0);
   const counter = d.apps.reduce((n, a) => n + a.surfaceMs + a.unknownMs, 0);
   const ran = d.heartbeatMinutes > 0;
-  const minutes = h.usageAccessGranted
-    ? Math.round(usage / 60_000)
-    : ran
-      ? Math.round(counter / 60_000)
-      : null;
+  const hasRows = d.apps.length > 0;
+  const minutes = !hasRows
+    ? null
+    : h.usageAccessGranted
+      ? Math.round(usage / 60_000)
+      : ran
+        ? Math.round(counter / 60_000)
+        : null;
   const videos = ran ? d.apps.reduce((n, a) => n + a.views, 0) : null;
   const confirmed =
     h.apps.filter((a) => a.installed).every((a) => a.validated) && h.apps.some((a) => a.installed);
-  return { date: d.localDate, minutes, videos, confirmed, gap: !ran && !h.usageAccessGranted };
+  return {
+    date: d.localDate,
+    minutes,
+    videos,
+    confirmed,
+    gap: !hasRows || (!ran && !h.usageAccessGranted),
+  };
 }
 
 export default function History() {

@@ -63,6 +63,20 @@ export const MIGRATIONS: readonly Migration[] = [
       );
     `,
   },
+  {
+    version: 3,
+    name: 'goals',
+    sql: `
+      -- Local-first goals; backed up to the server when signed in (PUT /v1/goals).
+      CREATE TABLE IF NOT EXISTS goals (
+        goal_id     TEXT PRIMARY KEY NOT NULL,
+        metric      TEXT NOT NULL CHECK (metric IN ('views', 'minutes')),
+        daily_limit INTEGER NOT NULL CHECK (daily_limit BETWEEN 1 AND 2000),
+        enabled     INTEGER NOT NULL DEFAULT 1,
+        rev         INTEGER NOT NULL DEFAULT 1
+      );
+    `,
+  },
 ];
 
 /** Subset of expo-sqlite's SQLiteDatabase used here (keeps the runner unit-testable). */

@@ -11,6 +11,7 @@ const base: TrackingHealth = {
   lastConnectedMs: 0,
   lastEventMs: 0,
   heartbeatMinutesToday: 0,
+  usageAccessGranted: false,
   debugBuild: false,
   apps: [
     {

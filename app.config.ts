@@ -32,6 +32,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-secure-store',
     'expo-localization',
     'expo-system-ui',
+    'expo-notifications',
     ['expo-build-properties', { android: { usesCleartextTraffic: false } }],
   ],
   experiments: { typedRoutes: true },

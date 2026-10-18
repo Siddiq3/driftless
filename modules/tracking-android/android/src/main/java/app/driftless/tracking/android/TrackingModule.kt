@@ -141,6 +141,21 @@ class TrackingModule : Module() {
             "file://${f.absolutePath}"
         }
 
+        /** Mirrors enabled goals into native storage so alerts work while the app is closed. */
+        Function("setLimits") { limits: List<Map<String, Any>> ->
+            TrackingPrefs(context).limits = limits.mapNotNull { m ->
+                val metric = m["metric"] as? String ?: return@mapNotNull null
+                val limit = (m["dailyLimit"] as? Number)?.toInt() ?: return@mapNotNull null
+                app.driftless.tracking.core.Limit(metric, limit)
+            }
+        }
+
+        /** Runs the goal check now (also runs every minute inside the service). */
+        Function("checkGoals") {
+            val ctx = context
+            GoalNotifier.check(ctx, SqliteStore.get(ctx), TrackingPrefs(ctx))
+        }
+
         Function("wipeLocalData") {
             SqliteStore.get(context).wipeAll()
         }

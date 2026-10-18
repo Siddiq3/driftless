@@ -80,6 +80,17 @@ describe('aggregateDay (what may leave the phone)', () => {
     expect(none.views).toBeNull();
   });
 
+  it('a day with no rows is not tracked, even with Usage Access (never 0 minutes)', () => {
+    const empty = aggregateDay(
+      { localDate: '2026-01-01', heartbeatMinutes: 0, coverage: 0, apps: [] },
+      health(),
+      DEV,
+      'UTC',
+    );
+    expect(empty.minutes).toBeNull();
+    expect(empty.coverage).toBe(0);
+  });
+
   it('clamps to contract limits', () => {
     const big = daily({
       apps: [

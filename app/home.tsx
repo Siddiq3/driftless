@@ -5,6 +5,7 @@ import { ActivityIndicator, Switch, View } from 'react-native';
 import { ApiError, createApiClient } from '@/api/client';
 import { useSession } from '@/auth/session';
 import { APP_VERSION, readEnv } from '@/config/env';
+import { syncGoals } from '@/goals/sync';
 import { syncNow } from '@/sync/run';
 import { Button, Card, Notice, Screen, T } from '@/ui/kit';
 
@@ -63,6 +64,7 @@ export default function Home() {
   // Sync runs only after the user turned cloud sync on. Results are reported, never blocking.
   useEffect(() => {
     if (!api || !cloudSync) return;
+    syncGoals(api).catch(() => undefined); // best effort; goals work locally regardless
     syncNow(api)
       .then((o) =>
         setSyncNote(
@@ -159,6 +161,7 @@ export default function Home() {
       )}
       <Button label="Reels & Shorts counter" onPress={() => router.push('/tracking')} />
       <Button kind="secondary" label="History" onPress={() => router.push('/history')} />
+      <Button kind="secondary" label="Wick & goals" onPress={() => router.push('/progress')} />
       <Button kind="secondary" label="Sign out" onPress={() => void s.signOut()} />
     </Screen>
   );

@@ -112,7 +112,13 @@ class DriftlessAccessibilityService : AccessibilityService() {
             if (fg != active) engine.onLeave(now)
         }
         engine.onTick(now)
+        if (now - lastGoalCheckMs >= GOAL_CHECK_MS) {
+            lastGoalCheckMs = now
+            runCatching { GoalNotifier.check(this, SqliteStore.get(this), prefs, now) }
+        }
     }
+
+    private var lastGoalCheckMs = 0L
 
     private fun saltFor(now: Long): ByteArray {
         val d = Recorder.localDate(now, ZoneId.systemDefault())
@@ -191,6 +197,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
         @Volatile var lastCaptureFile: java.io.File? = null
             private set
         const val TICK_MS = 2_000L
+        const val GOAL_CHECK_MS = 60_000L
         const val SETTLE_MS = 300L
         const val RETENTION_MS = 30L * 24 * 3600 * 1000
 

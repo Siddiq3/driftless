@@ -31,10 +31,19 @@ export type DailyApp = {
   package: string;
   views: number;
   adViews: number;
+  /** Time on the short-video surface seen by the accessibility counter. */
   surfaceMs: number;
   unknownMs: number;
+  /** Foreground time from Android UsageStats. */
+  usageMs: number;
 };
-export type Daily = { localDate: string; heartbeatMinutes: number; apps: DailyApp[] };
+/** coverage: share of the day the accessibility counter was running (0..1). */
+export type Daily = {
+  localDate: string;
+  heartbeatMinutes: number;
+  coverage: number;
+  apps: DailyApp[];
+};
 
 type NativeTracking = {
   getHealth(): TrackingHealth;
@@ -46,6 +55,8 @@ type NativeTracking = {
   exportSessionLog(days: number): { uri: string; count: number };
   scheduleStructureCapture(delayMs: number): void;
   lastStructureCapture(): string;
+  setLimits(limits: { metric: 'views' | 'minutes'; dailyLimit: number }[]): void;
+  checkGoals(): void;
   wipeLocalData(): void;
 };
 
@@ -61,5 +72,8 @@ export const Tracking = {
   exportSessionLog: (days = 7) => native.exportSessionLog(days),
   scheduleStructureCapture: (delayMs = 8000) => native.scheduleStructureCapture(delayMs),
   lastStructureCapture: () => native.lastStructureCapture(),
+  setLimits: (limits: { metric: 'views' | 'minutes'; dailyLimit: number }[]) =>
+    native.setLimits(limits),
+  checkGoals: () => native.checkGoals(),
   wipeLocalData: () => native.wipeLocalData(),
 };

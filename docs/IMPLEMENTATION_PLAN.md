@@ -50,13 +50,20 @@ Risks: bundled selectors are unvalidated guesses (structure capture exists to co
 | P3-02 | Health/coverage & gap UI | ◐ coverage from heartbeats; "Not tracked" gaps in History |
 | P3-03 | iOS App Group flags | ⏸ deferred |
 | P3-04 | `POST /v1/usage/sync`, `GET /v1/usage/history` (backend) | ☑ 12 integration tests, backend run green |
-| P3-05 | App sync: per-day rev, frozen batches with stable Idempotency-Key, backoff, permanent-error handling | ◐ written + unit tests; CI pending |
+| P3-05 | App sync: per-day rev, frozen batches with stable Idempotency-Key, backoff, permanent-error handling | ◐ written + unit tests (54 Jest tests pass in run for 4039c75); typecheck fix pushed |
 | P3-06 | History screen (local, 14 days) | ◐ written; CI pending |
-| P3-07 | Minutes via Android Usage Access (works without the accessibility service) | ◐ written + Kotlin tests; CI pending |
+| P3-07 | Minutes via Android Usage Access (works without the accessibility service) | ☑ native + 9 Kotlin tests; APK builds |
 Acceptance still open: totals identical across restart/reboot/offline on a real device; end-to-end sync against a deployed backend (nothing deployed yet).
 
-## Phase 4 — Engagement
-P4-01 Goals UI/API · P4-02 Wick progression (original Lottie/Reanimated assets) · P4-03 Statistics · P4-04 Local reminders · P4-05 Streaks/achievements. All driven by real aggregates (→ Phase 3).
+## Phase 4 — Engagement ◐
+| ID | Task | Status |
+|---|---|---|
+| P4-01 | Goals: local-first (migration 3) + server backup `GET/PUT /v1/goals` (contracts 0.2.0) | ◐ backend ☑ (5 tests, published 0.2.0); app written, CI pending |
+| P4-02 | Wick: original animated mascot (RN Animated, reduce-motion aware), 6 stages | ◐ written; CI pending |
+| P4-03 | Stats: 7/30-day bars, honest gaps, goal line | ◐ written; 30-day Pro gating deferred to Phase 5 with billing |
+| P4-04 | Reminders: 9 pm check-in (expo-notifications); native 80%/100% goal alerts from the service | ◐ written; LimitAlerts Kotlin tests added |
+| P4-05 | Streaks & milestones from real outcomes only | ◐ written + Jest tests |
+Rule: video-count goals unlock only for accuracy-validated app versions; days without data are "not tracked", never 0.
 
 ## Phase 5 — Restrictions & billing (gate G-6)
 P5-01 Android pause-screen blocking + schedules · P5-02 iOS shields + schedules *(iOS — deferred)* · P5-03 Recovery (permission loss, entitlement lapse ⇒ restrictions safely cleared, tracking continues) · P5-04 Play Billing client + `/billing/play/verify` + RTDN · P5-05 StoreKit 2 + App Store Server API + notifications *(iOS — deferred)* · P5-06 Reconciliation job · P5-07 Restore purchases.

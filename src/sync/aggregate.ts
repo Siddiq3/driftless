@@ -38,11 +38,15 @@ export function aggregateDay(
   const usageMs = daily.apps.reduce((n, a) => n + a.usageMs, 0);
   const counterMs = daily.apps.reduce((n, a) => n + a.surfaceMs + a.unknownMs, 0);
   let minutes: number | null = null;
-  if (health.usageAccessGranted) minutes = Math.floor(usageMs / 60_000);
+  // No rows at all for the day (e.g. before install, or older than the UsageStats refresh window)
+  // means "not tracked", never 0 minutes.
+  const hasRows = daily.apps.length > 0;
+  if (health.usageAccessGranted && hasRows) minutes = Math.floor(usageMs / 60_000);
   else if (counterRan) minutes = Math.floor(counterMs / 60_000);
   if (minutes !== null) minutes = Math.min(1440, Math.max(0, minutes));
 
-  const coverage = views !== null ? daily.coverage : health.usageAccessGranted ? 1 : daily.coverage;
+  const coverage =
+    views !== null ? daily.coverage : health.usageAccessGranted && hasRows ? 1 : daily.coverage;
 
   return {
     localDate: daily.localDate,

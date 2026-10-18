@@ -85,12 +85,38 @@ class TrackingPrefs(context: Context) {
             return b
         }
 
+    /** Goals mirrored from the app so the service can alert without JS running. */
+    var limits: List<app.driftless.tracking.core.Limit>
+        get() {
+            val raw = p.getString(KEY_LIMITS, null) ?: return emptyList()
+            val arr = org.json.JSONArray(raw)
+            return (0 until arr.length()).map {
+                val o = arr.getJSONObject(it)
+                app.driftless.tracking.core.Limit(o.getString("metric"), o.getInt("dailyLimit"))
+            }
+        }
+        set(v) {
+            val arr = org.json.JSONArray()
+            v.forEach { arr.put(org.json.JSONObject().put("metric", it.metric).put("dailyLimit", it.dailyLimit)) }
+            p.edit().putString(KEY_LIMITS, arr.toString()).apply()
+        }
+
+    /** Alert keys already sent; only today's are kept. */
+    fun sentAlerts(localDate: String): Set<String> =
+        p.getStringSet(KEY_SENT, emptySet())!!.filter { it.startsWith("$localDate|") }.toSet()
+
+    fun markSent(localDate: String, keys: Collection<String>) {
+        p.edit().putStringSet(KEY_SENT, sentAlerts(localDate) + keys).apply()
+    }
+
     private fun String.hexToBytes(): ByteArray = ByteArray(length / 2) { substring(it * 2, it * 2 + 2).toInt(16).toByte() }
 
     companion object {
         private const val KEY_CONSENT = "a11y_disclosure_accepted"
         private const val KEY_CONSENT_AT = "a11y_disclosure_accepted_at"
         private const val KEY_SECRET = "fp_install_secret"
+        private const val KEY_LIMITS = "goal_limits"
+        private const val KEY_SENT = "alerts_sent"
     }
 }
 
