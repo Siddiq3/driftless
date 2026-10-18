@@ -39,9 +39,9 @@ export default function Home() {
   );
   const [load, setLoad] = useState<Load>({ state: 'loading' });
 
-  const refresh = useCallback(() => {
+  // State is only set from the request's callbacks, never synchronously inside the effect.
+  const fetchMe = useCallback(() => {
     if (!api) return;
-    setLoad({ state: 'loading' });
     api
       .getMe()
       .then(({ data }) => setLoad({ state: 'ok', me: data }))
@@ -54,7 +54,12 @@ export default function Home() {
       );
   }, [api]);
 
-  useEffect(refresh, [refresh]);
+  useEffect(fetchMe, [fetchMe]);
+
+  const retry = () => {
+    setLoad({ state: 'loading' });
+    fetchMe();
+  };
 
   if (s.status !== 'signedIn') return <Redirect href="/welcome" />;
 
@@ -71,7 +76,7 @@ export default function Home() {
               load.offline ? 'Anything tracked on this phone keeps working offline.' : load.message
             }
           />
-          <Button kind="secondary" label="Try again" onPress={refresh} />
+          <Button kind="secondary" label="Try again" onPress={retry} />
         </>
       )}
       {load.state === 'ok' && (

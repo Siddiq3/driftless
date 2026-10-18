@@ -76,7 +76,7 @@ export const type = {
 export const MIN_TOUCH = 48;
 
 /** [foreground key, background key] pairs rendered as text in the UI. */
-export const TEXT_PAIRS: ReadonlyArray<readonly [keyof Theme, keyof Theme]> = [
+export const TEXT_PAIRS: readonly (readonly [keyof Theme, keyof Theme])[] = [
   ['text', 'bg'],
   ['text', 'surface'],
   ['text', 'surfaceRaised'],

@@ -107,10 +107,7 @@ function ConfiguredSession({ env, children }: { env: Env; children: ReactNode })
   }, []);
 
   useEffect(() => {
-    if (response?.type !== 'success' || !request?.codeVerifier) {
-      if (response?.type === 'error') setError(response.error?.message ?? 'sign-in failed');
-      return;
-    }
+    if (response?.type !== 'success' || !request?.codeVerifier) return;
     exchangeCodeAsync(
       {
         clientId: env.cognitoClientId,
@@ -182,7 +179,10 @@ function ConfiguredSession({ env, children }: { env: Env; children: ReactNode })
         ? { status: 'signedIn', getAccessToken, signOut }
         : {
             status: 'signedOut',
-            error,
+            // Errors from the browser round-trip are derived from the response, not copied into state.
+            error:
+              error ??
+              (response?.type === 'error' ? (response.error?.message ?? 'sign-in failed') : null),
             signIn: async () => {
               setError(null);
               await promptAsync();
