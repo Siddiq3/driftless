@@ -7,9 +7,10 @@ Status: [PROPOSED] · 2026-10-18
 | Data | Where | Leaves device? | Retention | Purpose |
 |---|---|---|---|---|
 | Accessibility node data | Service memory only | **Never** | Discarded within the callback | Classification |
-| Item fingerprints (salted hash) | Native DB | Never | 30 days, salt rotated daily | Dedup |
+| Item fingerprints (salted hash) | Native DB `rings` table, last 8 per app | Never | Overwritten continuously; ignored after 30 min; daily salt | Dedup across service restarts |
 | Count events | Native DB | Never | 30 days | Recompute aggregates, debugging (local) |
-| Coverage/heartbeat intervals | Native DB | Never (only coverage ratio) | 30 days | Data quality |
+| Coverage heartbeats (one row per active minute) | Native DB | Never (only coverage ratio) | 30 days | Data quality |
+| Debug exports (event ids/times; structure captures with view ids and class names only) | App cache, shared only by the developer's explicit action | Only if the developer shares the file | Until app cache is cleared | Accuracy study (debug builds only) |
 | Daily aggregates | Native DB + DynamoDB if sync on | With consent | Device: until wiped; cloud: 400 days default | History, multi-device, challenges |
 | iOS Screen Time data | Apple's report sandbox | **Never** | Apple-controlled | Display |
 | Profile (handle, display name, tz) | DynamoDB | Yes (account) | Until deletion | Social |

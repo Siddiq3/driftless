@@ -10,7 +10,7 @@ Status: Phase 1 suites in place. Results below are from real CI runs only.
 | Authorization matrix | Generated: every route × {owner, other user, anonymous, expired token} | CI |
 | API contract | zod schemas ↔ OpenAPI ↔ handler responses | CI |
 | CDK | `aws-cdk-lib/assertions` | CI |
-| Kotlin unit | JUnit5 + Robolectric for classifier/dedup with recorded event fixtures | CI (Android SDK runner) |
+| Kotlin unit | JUnit 4 + Robolectric: counter parity fixtures, engine, classifier, SQLite store, config checks | CI (Android SDK runner) |
 | Android instrumented | Espresso/UiAutomator on emulator + device lab | CI emulator + manual devices |
 | Swift unit | XCTest for policy, App Group codec, date logic | macOS CI |
 | iOS device | Manual + XCUITest on physical iPhone (Screen Time requires device) | Manual |
@@ -53,4 +53,7 @@ Android: Pixel (stock, latest + previous major), Samsung One UI, Xiaomi/HyperOS 
 | 2026-10-18 | 1 | app (Jest) | 15/15 passed | migrations, outbox policy, API client |
 | 2026-10-18 | 1 | Android debug build | passed | `assembleDebug`, arm64-v8a, 566 s |
 | 2026-10-18 | 1 | gitleaks | no leaks | 7 commits scanned |
-| 2026-10-18 | 1 | app typecheck / lint / expo-doctor | failed | SDK 57 version alignment, removed `edgeToEdgeEnabled`, ESLint 10 incompatible with eslint-config-expo → fixes pending |
+| 2026-10-18 | 1 | app typecheck / lint / expo-doctor | failed | SDK 57 version alignment, removed `edgeToEdgeEnabled`, ESLint 10 incompatible with eslint-config-expo |
+| 2026-10-18 | 1 | app repo, all steps | passed | run 39135897288 at 31abd89: format, expo check/doctor, typecheck, lint, 37 Jest tests, Android build |
+| 2026-10-18 | 2 | accuracy scorer (Python unittest) | 10/10 passed | run locally in the dev session; also added to CI |
+| — | 2 | G-2 device accuracy | **not run** | requires labelled sessions on a real phone (ACCURACY_PROTOCOL.md) |

@@ -1,5 +1,5 @@
 import type { v1 } from '@siddiq3/driftless-contracts';
-import { Redirect } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator } from 'react-native';
 import { ApiError, createApiClient } from '@/api/client';
@@ -96,6 +96,7 @@ export default function Home() {
           </Card>
         </>
       )}
+      <Button label="Reels & Shorts counter" onPress={() => router.push('/tracking')} />
       <Button kind="secondary" label="Sign out" onPress={() => void s.signOut()} />
     </Screen>
   );

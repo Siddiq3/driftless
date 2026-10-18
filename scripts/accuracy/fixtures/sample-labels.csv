@@ -1,0 +1,10 @@
+# package=com.instagram.android
+# app_version=400.0.0.0
+# recording_start_ms=1760787000000
+offset_s,kind
+0.0,view
+6.0,skip
+6.8,view
+14.0,ad
+20.0,view
+27.0,view

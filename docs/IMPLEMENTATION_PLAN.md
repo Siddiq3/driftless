@@ -12,36 +12,36 @@ Dependency-ordered. `→` = depends on. Each phase ends with: run tests, builds,
 - ◐ P0-05 GitHub repository — session cannot create repos (HTTP 403); owner to create `Siddiq3/driftless` (empty), then push
 - ⏸ P0-06 Apple Family Controls distribution request *(iOS — deferred)* — draft kept in APPLE_FAMILY_CONTROLS_REQUEST.md
 
-## Phase 1 — Foundations ◐
+## Phase 1 — Foundations ☑
 
-Status from CI run 39133222400 (commit e5fb168, single repo, 2026-10-18); re-verified after the split (P1-10).
+Completed 2026-10-18. Final verification: backend run 39134202260 (113 tests, synth, gitleaks), app run 39135897288 at 31abd89 (format, expo check/doctor, typecheck, lint, 37 tests, Android build).
 
 | ID | Task | Depends | Acceptance | Status |
 |---|---|---|---|---|
-| P1-01 | Repo scaffold (pnpm, TS, eslint, prettier) | P0-04 | lint/typecheck/test green in CI | ◐ backend green (run 39134202260); app re-verification pending |
+| P1-01 | Repo scaffold (pnpm, TS, eslint, prettier) | P0-04 | lint/typecheck/test green in CI | ☑ both repos green |
 | P1-02 | Contracts: v1 zod schemas + OpenAPI | P1-01 | Contract tests for valid/invalid payloads, size limits | ☑ 33 tests passed |
 | P1-03 | Domain: local-date, streaks, goals, Wick, reference view rule | P1-01 | 100% branch coverage on date/tz edge cases | ◐ 41 tests passed; branches 96.8% (lines/functions 100%) — target not yet met |
-| P1-04 | CI: lint/test/synth/gitleaks + Android build | P1-01, P0-05 | All jobs run on push/PR | ◐ runs; logs published to `ci-results` |
+| P1-04 | CI: lint/test/synth/gitleaks + Android build | P1-01, P0-05 | All jobs run on push/PR | ☑ runs on push/PR; logs published to `ci-results` |
 | P1-05 | CDK: Cognito, table+GSI1+PITR+TTL, HTTP API + JWT authorizer, alarms | P1-01 | Assertion tests + `cdk synth`; **no deploy** | ☑ 8 tests passed; synth passes (backend run 39134202260) |
 | P1-06 | API: auth, validation, idempotency, problem+json, `GET/PATCH /v1/me` | P1-02, P1-05 | DynamoDB Local tests incl. cross-user denial | ☑ 31 tests passed |
-| P1-07 | Expo SDK 57 app: dev client, expo-router, sign-in, design tokens | P1-01 | Android debug build on CI | ◐ APK built (93.8 MB); dep versions, typecheck, lint being fixed |
+| P1-07 | Expo SDK 57 app: dev client, expo-router, sign-in, design tokens | P1-01 | Android debug build on CI | ☑ APK built; typecheck/lint/doctor green |
 | P1-08 | Local DB (expo-sqlite) migrations + outbox | P1-07 | Migration tests | ☑ part of 15 passing app tests |
 | P1-09 | Android native module scaffold; iOS *(deferred)* | P1-07 | Android build passes | ☑ compiled in APK |
-| P1-10 | Split into app + backend repos (D-016); publish contracts 0.1.0 | P1-01…09 | Both repos green; app installs published package | ◐ backend done, contracts 0.1.0 published; app push pending |
+| P1-10 | Split into app + backend repos (D-016); publish contracts 0.1.0 | P1-01…09 | Both repos green; app installs published package | ☑ contracts 0.1.0 published; app consumes it |
 
 Not yet verified end-to-end: sign-in against a real Cognito pool (nothing deployed), app running on a device.
 Risks: Expo/RN native-module churn; GitHub Packages access for app CI (owner must grant the app repo read access).
 
-## Phase 2 — Native proofs of concept (gates G-2, G-3, G-5)
-| ID | Task | Depends | Acceptance |
-|---|---|---|---|
-| P2-01 | Android AccessibilityService PoC, Instagram + YouTube, classifier in memory | P1-09 | Runs on ≥ 3 devices / 2 Android versions |
-| P2-02 | Labelled session harness: screen-record ground truth (developer device only, never shipped) vs engine log | P2-01 | ≥ 30 labelled sessions/app incl. all fixture scenarios |
-| P2-03 | Accuracy report: precision/recall/duplicate rate per app version | P2-02 | Meets G-2 or scope revised |
-| ⏸ P2-04 | iOS PoC: auth, picker, schedule, threshold event, shield, report ext | P1-09 | Working on physical iPhone; memory measured in Instruments |
-| ⏸ P2-05 | Apple guidance on social metric (DTS/App Review) | P0-06 | Decision recorded for G-5 |
-| P2-06 | Capability matrix updated with measured results | P2-03, P2-04 | Docs reflect evidence only |
-Risks: **highest risk phase** — reliability may be insufficient; plan time for scope revision.
+## Phase 2 — Android tracking proof of concept ◐ (gate G-2 open) · iOS items deferred (D-015)
+| ID | Task | Status |
+|---|---|---|
+| P2-01 | AccessibilityService PoC (Instagram + YouTube): classifier, engine, SQLite store, health, JS bridge, Play prominent disclosure | ◐ implemented; CI compile + Kotlin tests pending; **not yet run on a device** |
+| P2-02 | Labelled-session harness: event export, structure capture, label format, scorer | ☑ scorer + 10 tests pass locally; protocol in `docs/ACCURACY_PROTOCOL.md` |
+| P2-03 | Accuracy report per app version (G-2) | ☐ **needs the owner's phone** — ≥ 30 labelled sessions per app |
+| ⏸ P2-04 | iOS PoC | deferred |
+| ⏸ P2-05 | Apple social-metric guidance | closed by D-009 |
+| P2-06 | Capability matrix updated with measured results | ◐ updated with implementation status; measured accuracy pending P2-03 |
+Risks: bundled selectors are unvalidated guesses (structure capture exists to correct them); Advanced Protection users cannot use counting at all; target apps change UI often.
 
 ## Phase 3 — Local-first tracking & sync
 P3-01 Production event pipeline + transactional aggregates (→ P2-03) · P3-02 Health/coverage & gap UI (→ P3-01) · P3-03 iOS App Group status flags *(iOS — deferred)* · P3-04 `POST /v1/usage/sync` with rev + idempotency (→ P1-06) · P3-05 Outbox retry/backoff (→ P3-04) · P3-06 History API & screens (→ P3-04).

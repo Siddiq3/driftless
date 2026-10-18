@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { useSession } from '@/auth/session';
 import { Button, Card, Notice, Screen, T } from '@/ui/kit';
@@ -20,8 +21,13 @@ export default function Welcome() {
       </Card>
 
       <Notice
-        title="Early build"
-        body="Tracking is not available in this version yet. It will be switched on only after it has been tested for accuracy."
+        title="Accuracy test build"
+        body="Counting works on this phone without an account, but its accuracy has not been confirmed yet."
+      />
+      <Button
+        kind="secondary"
+        label="Reels & Shorts counter"
+        onPress={() => router.push('/tracking')}
       />
 
       {s.status === 'unconfigured' && (
