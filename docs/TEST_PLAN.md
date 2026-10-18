@@ -47,7 +47,9 @@ Android: Pixel (stock, latest + previous major), Samsung One UI, Xiaomi/HyperOS 
 | 2026-10-18 | 1 | domain (Vitest) | 41/41 passed | coverage: lines 100%, functions 100%, branches 96.8% |
 | 2026-10-18 | 1 | design tokens (Vitest) | 22/22 passed | WCAG AA on all text pairs, both themes |
 | 2026-10-18 | 1 | API on DynamoDB Local | 31/31 passed | auth, cross-user isolation, revisions, handle uniqueness, idempotency, payload limits |
-| 2026-10-18 | 1 | CDK assertions | 8/8 passed | `cdk synth` failed (CDK v1 flag) — fixed, pending re-run |
+| 2026-10-18 | 1 | CDK assertions | 8/8 passed | `cdk synth` failed (CDK v1 flag) |
+| 2026-10-18 | 1 | backend repo, all suites | 113/113 passed; synth, pack, gitleaks OK | driftless-backend CI run 39134202260 (commit 100ae63) |
+| 2026-10-18 | 1 | contracts 0.1.0 publish | published | run 39134435329, tag contracts-v0.1.0 |
 | 2026-10-18 | 1 | app (Jest) | 15/15 passed | migrations, outbox policy, API client |
 | 2026-10-18 | 1 | Android debug build | passed | `assembleDebug`, arm64-v8a, 566 s |
 | 2026-10-18 | 1 | gitleaks | no leaks | 7 commits scanned |

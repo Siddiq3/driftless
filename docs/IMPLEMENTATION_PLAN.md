@@ -18,16 +18,16 @@ Status from CI run 39133222400 (commit e5fb168, single repo, 2026-10-18); re-ver
 
 | ID | Task | Depends | Acceptance | Status |
 |---|---|---|---|---|
-| P1-01 | Repo scaffold (pnpm, TS, eslint, prettier) | P0-04 | lint/typecheck/test green in CI | ◐ backend green; app lint/typecheck fixes pending |
+| P1-01 | Repo scaffold (pnpm, TS, eslint, prettier) | P0-04 | lint/typecheck/test green in CI | ◐ backend green (run 39134202260); app re-verification pending |
 | P1-02 | Contracts: v1 zod schemas + OpenAPI | P1-01 | Contract tests for valid/invalid payloads, size limits | ☑ 33 tests passed |
 | P1-03 | Domain: local-date, streaks, goals, Wick, reference view rule | P1-01 | 100% branch coverage on date/tz edge cases | ◐ 41 tests passed; branches 96.8% (lines/functions 100%) — target not yet met |
 | P1-04 | CI: lint/test/synth/gitleaks + Android build | P1-01, P0-05 | All jobs run on push/PR | ◐ runs; logs published to `ci-results` |
-| P1-05 | CDK: Cognito, table+GSI1+PITR+TTL, HTTP API + JWT authorizer, alarms | P1-01 | Assertion tests + `cdk synth`; **no deploy** | ◐ 8 tests passed; synth failed (CDK v1 flag) → fixed, re-verify |
+| P1-05 | CDK: Cognito, table+GSI1+PITR+TTL, HTTP API + JWT authorizer, alarms | P1-01 | Assertion tests + `cdk synth`; **no deploy** | ☑ 8 tests passed; synth passes (backend run 39134202260) |
 | P1-06 | API: auth, validation, idempotency, problem+json, `GET/PATCH /v1/me` | P1-02, P1-05 | DynamoDB Local tests incl. cross-user denial | ☑ 31 tests passed |
 | P1-07 | Expo SDK 57 app: dev client, expo-router, sign-in, design tokens | P1-01 | Android debug build on CI | ◐ APK built (93.8 MB); dep versions, typecheck, lint being fixed |
 | P1-08 | Local DB (expo-sqlite) migrations + outbox | P1-07 | Migration tests | ☑ part of 15 passing app tests |
 | P1-09 | Android native module scaffold; iOS *(deferred)* | P1-07 | Android build passes | ☑ compiled in APK |
-| P1-10 | Split into app + backend repos (D-016); publish contracts 0.1.0 | P1-01…09 | Both repos green; app installs published package | ◐ in progress |
+| P1-10 | Split into app + backend repos (D-016); publish contracts 0.1.0 | P1-01…09 | Both repos green; app installs published package | ◐ backend done, contracts 0.1.0 published; app push pending |
 
 Not yet verified end-to-end: sign-in against a real Cognito pool (nothing deployed), app running on a device.
 Risks: Expo/RN native-module churn; GitHub Packages access for app CI (owner must grant the app repo read access).
