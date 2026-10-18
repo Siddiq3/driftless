@@ -26,6 +26,8 @@ data class DailyRow(
     val adViews: Int,
     val surfaceMs: Long,
     val unknownMs: Long,
+    /** Foreground time from Android UsageStats (works without the accessibility service). */
+    val usageMs: Long = 0,
 )
 
 /** Durable storage contract. The Android implementation is SQLite; tests use [MemoryStore]. */
@@ -33,6 +35,8 @@ interface TrackingStore {
     /** Inserts the event and bumps the day aggregate atomically. Returns false if it already existed. */
     fun recordView(e: ViewEvent): Boolean
     fun addTime(localDate: String, pkg: String, surfaceMs: Long, unknownMs: Long)
+    /** Overwrites the UsageStats foreground time for a day (recomputed from the OS, so idempotent). */
+    fun setUsage(localDate: String, pkg: String, usageMs: Long)
     fun saveRing(pkg: String, ring: List<String>, savedAtMs: Long)
     /** Ring buffer saved within [maxAgeMs] of [nowMs], else empty (stale after a long gap). */
     fun loadRing(pkg: String, nowMs: Long, maxAgeMs: Long): List<String>
@@ -128,6 +132,11 @@ class MemoryStore : TrackingStore {
     override fun addTime(localDate: String, pkg: String, surfaceMs: Long, unknownMs: Long) {
         val r = row(localDate, pkg)
         agg[localDate to pkg] = r.copy(surfaceMs = r.surfaceMs + surfaceMs, unknownMs = r.unknownMs + unknownMs)
+    }
+
+    @Synchronized
+    override fun setUsage(localDate: String, pkg: String, usageMs: Long) {
+        agg[localDate to pkg] = row(localDate, pkg).copy(usageMs = usageMs)
     }
 
     override fun saveRing(pkg: String, ring: List<String>, savedAtMs: Long) {

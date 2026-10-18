@@ -21,6 +21,8 @@ export type TrackingHealth = {
   lastConnectedMs: number;
   lastEventMs: number;
   heartbeatMinutesToday: number;
+  /** Usage Access granted: minutes come from Android UsageStats (works without the service). */
+  usageAccessGranted: boolean;
   debugBuild: boolean;
   apps: TrackedApp[];
 };
@@ -38,6 +40,8 @@ type NativeTracking = {
   getHealth(): TrackingHealth;
   setDisclosureAccepted(accepted: boolean): void;
   openAccessibilitySettings(): void;
+  openUsageAccessSettings(): void;
+  refreshUsage(days: number): number;
   getDaily(localDate: string | null): Daily;
   exportSessionLog(days: number): { uri: string; count: number };
   scheduleStructureCapture(delayMs: number): void;
@@ -51,6 +55,8 @@ export const Tracking = {
   health: () => native.getHealth(),
   setDisclosureAccepted: (v: boolean) => native.setDisclosureAccepted(v),
   openAccessibilitySettings: () => native.openAccessibilitySettings(),
+  openUsageAccessSettings: () => native.openUsageAccessSettings(),
+  refreshUsage: (days = 7) => native.refreshUsage(days),
   daily: (localDate: string | null = null) => native.getDaily(localDate),
   exportSessionLog: (days = 7) => native.exportSessionLog(days),
   scheduleStructureCapture: (delayMs = 8000) => native.scheduleStructureCapture(delayMs),

@@ -1,4 +1,4 @@
 {
   "platforms": ["android"],
-  "android": { "modules": ["app.driftless.tracking.TrackingModule"] }
+  "android": { "modules": ["app.driftless.tracking.android.TrackingModule"] }
 }

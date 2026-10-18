@@ -41,6 +41,28 @@ export const MIGRATIONS: readonly Migration[] = [
       );
     `,
   },
+  {
+    version: 2,
+    name: 'usage_sync',
+    sql: `
+      -- One row per local day: latest values that may be synced, and how far the server has them.
+      CREATE TABLE IF NOT EXISTS sync_days (
+        local_date  TEXT PRIMARY KEY NOT NULL,
+        values_key  TEXT NOT NULL,
+        rev         INTEGER NOT NULL,
+        synced_rev  INTEGER NOT NULL DEFAULT 0,
+        values_json TEXT NOT NULL
+      );
+      -- At most one frozen in-flight batch (same days + Idempotency-Key across retries).
+      CREATE TABLE IF NOT EXISTS sync_batch (
+        id              TEXT PRIMARY KEY NOT NULL,
+        idempotency_key TEXT NOT NULL,
+        days_json       TEXT NOT NULL,
+        attempts        INTEGER NOT NULL DEFAULT 0,
+        next_attempt_at INTEGER NOT NULL
+      );
+    `,
+  },
 ];
 
 /** Subset of expo-sqlite's SQLiteDatabase used here (keeps the runner unit-testable). */

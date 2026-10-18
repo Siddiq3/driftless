@@ -1,10 +1,11 @@
 import type { v1 } from '@siddiq3/driftless-contracts';
 import { Redirect, router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator } from 'react-native';
+import { ActivityIndicator, Switch, View } from 'react-native';
 import { ApiError, createApiClient } from '@/api/client';
 import { useSession } from '@/auth/session';
 import { APP_VERSION, readEnv } from '@/config/env';
+import { syncNow } from '@/sync/run';
 import { Button, Card, Notice, Screen, T } from '@/ui/kit';
 
 const CAPABILITY_LABELS: Record<keyof v1.Capabilities, string> = {
@@ -56,6 +57,38 @@ export default function Home() {
 
   useEffect(fetchMe, [fetchMe]);
 
+  const [syncNote, setSyncNote] = useState<string | null>(null);
+  const cloudSync = load.state === 'ok' && load.me.profile.consent.cloudSync;
+
+  // Sync runs only after the user turned cloud sync on. Results are reported, never blocking.
+  useEffect(() => {
+    if (!api || !cloudSync) return;
+    syncNow(api)
+      .then((o) =>
+        setSyncNote(
+          o.kind === 'sent'
+            ? 'Synced'
+            : o.kind === 'idle'
+              ? 'Up to date'
+              : o.kind === 'deferred'
+                ? o.stuck
+                  ? 'Sync keeps failing — your data is safe on this phone'
+                  : 'Will retry sync shortly'
+                : `Sync refused (${o.code})`,
+        ),
+      )
+      .catch((e: unknown) => setSyncNote(e instanceof Error ? e.message : 'Sync failed'));
+  }, [api, cloudSync]);
+
+  const setCloudSync = (on: boolean) => {
+    if (!api || load.state !== 'ok') return;
+    const consent = on ? { cloudSync: true } : { cloudSync: false, shareWithFriends: false };
+    api
+      .patchMe({ consent }, load.me.profile.rev)
+      .then(({ data }) => setLoad({ state: 'ok', me: data }))
+      .catch((e: unknown) => setSyncNote(e instanceof Error ? e.message : 'Could not change sync'));
+  };
+
   const retry = () => {
     setLoad({ state: 'loading' });
     fetchMe();
@@ -86,6 +119,34 @@ export default function Home() {
             <T muted>Plan: {load.me.entitlement.tier === 'pro' ? 'Pro' : 'Free'}</T>
           </Card>
           <Card>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <T v="heading">Cloud backup</T>
+                <T muted>
+                  Sends daily totals only (minutes, and video counts once accuracy is confirmed) so
+                  your history survives a new phone. Nothing about what you watched.
+                </T>
+              </View>
+              <Switch
+                accessibilityLabel="Cloud backup"
+                value={load.me.profile.consent.cloudSync}
+                onValueChange={setCloudSync}
+              />
+            </View>
+            {syncNote && (
+              <T v="caption" muted>
+                {syncNote}
+              </T>
+            )}
+          </Card>
+          <Card>
             <T v="heading">What works on this phone</T>
             {(Object.keys(CAPABILITY_LABELS) as (keyof v1.Capabilities)[]).map((k) => (
               <T key={k} muted>
@@ -97,6 +158,7 @@ export default function Home() {
         </>
       )}
       <Button label="Reels & Shorts counter" onPress={() => router.push('/tracking')} />
+      <Button kind="secondary" label="History" onPress={() => router.push('/history')} />
       <Button kind="secondary" label="Sign out" onPress={() => void s.signOut()} />
     </Screen>
   );

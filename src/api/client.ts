@@ -85,6 +85,15 @@ export function createApiClient(o: ApiClientOptions) {
         `/v1/me?platform=${o.platform}&appVersion=${encodeURIComponent(o.appVersion)}`,
         v1.MeResponse,
       ),
+    usageSync: async (days: v1.DailyAggregate[], idempotencyKey: string) =>
+      (
+        await request('POST', '/v1/usage/sync', v1.UsageSyncResponse, {
+          body: { days },
+          headers: { 'idempotency-key': idempotencyKey },
+        })
+      ).data,
+    usageHistory: async (from: string, to: string) =>
+      (await request('GET', `/v1/usage/history?from=${from}&to=${to}`, v1.HistoryResponse)).data,
     patchMe: (patch: v1.PatchMeRequest, rev: number) =>
       request('PATCH', '/v1/me', v1.MeResponse, {
         body: patch,

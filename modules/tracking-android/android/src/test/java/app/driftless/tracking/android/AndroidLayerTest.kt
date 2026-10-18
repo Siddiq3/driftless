@@ -59,6 +59,36 @@ class AndroidLayerTest {
         s.close()
     }
 
+    @Test fun usageMinutesOverwriteInsteadOfAccumulating() {
+        val s = SqliteStore(ctx, dbName)
+        s.setUsage("2026-10-18", "com.instagram.android", 60_000)
+        s.setUsage("2026-10-18", "com.instagram.android", 90_000)
+        s.recordView(ev("e1", 1))
+        val row = s.daily("2026-10-18").single()
+        assertEquals(90_000L, row.usageMs)
+        assertEquals(1, row.views)
+        s.close()
+    }
+
+    @Test fun upgradesAVersion1DatabaseWithoutLosingCounts() {
+        // Create the schema exactly as version 1 shipped it, with data.
+        val path = ctx.getDatabasePath(dbName).apply { parentFile?.mkdirs() }
+        android.database.sqlite.SQLiteDatabase.openOrCreateDatabase(path, null).use { db ->
+            db.execSQL(
+                """CREATE TABLE daily (local_date TEXT NOT NULL, pkg TEXT NOT NULL, views INTEGER NOT NULL DEFAULT 0,
+                   ad_views INTEGER NOT NULL DEFAULT 0, surface_ms INTEGER NOT NULL DEFAULT 0,
+                   unknown_ms INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (local_date, pkg))""",
+            )
+            db.execSQL("INSERT INTO daily (local_date, pkg, views) VALUES ('2026-10-01', 'com.instagram.android', 7)")
+            db.version = 1
+        }
+        val s = SqliteStore(ctx, dbName)
+        val row = s.daily("2026-10-01").single()
+        assertEquals(7, row.views)
+        assertEquals(0L, row.usageMs)
+        s.close()
+    }
+
     @Test fun purgeKeepsAggregatesAndDropsRawEvents() {
         val s = SqliteStore(ctx, dbName)
         s.recordView(ev("old", 1, date = "2026-09-01"))

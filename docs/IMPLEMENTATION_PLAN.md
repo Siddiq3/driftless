@@ -35,7 +35,7 @@ Risks: Expo/RN native-module churn; GitHub Packages access for app CI (owner mus
 ## Phase 2 — Android tracking proof of concept ◐ (gate G-2 open) · iOS items deferred (D-015)
 | ID | Task | Status |
 |---|---|---|
-| P2-01 | AccessibilityService PoC (Instagram + YouTube): classifier, engine, SQLite store, health, JS bridge, Play prominent disclosure | ◐ implemented; CI compile + Kotlin tests pending; **not yet run on a device** |
+| P2-01 | AccessibilityService PoC (Instagram + YouTube): classifier, engine, SQLite store, health, JS bridge, Play prominent disclosure | ◐ implemented; 39 Kotlin unit tests pass (see TEST_PLAN); APK build fix pushed; **not yet run on a device** |
 | P2-02 | Labelled-session harness: event export, structure capture, label format, scorer | ☑ scorer + 10 tests pass locally; protocol in `docs/ACCURACY_PROTOCOL.md` |
 | P2-03 | Accuracy report per app version (G-2) | ☐ **needs the owner's phone** — ≥ 30 labelled sessions per app |
 | ⏸ P2-04 | iOS PoC | deferred |
@@ -43,9 +43,17 @@ Risks: Expo/RN native-module churn; GitHub Packages access for app CI (owner mus
 | P2-06 | Capability matrix updated with measured results | ◐ updated with implementation status; measured accuracy pending P2-03 |
 Risks: bundled selectors are unvalidated guesses (structure capture exists to correct them); Advanced Protection users cannot use counting at all; target apps change UI often.
 
-## Phase 3 — Local-first tracking & sync
-P3-01 Production event pipeline + transactional aggregates (→ P2-03) · P3-02 Health/coverage & gap UI (→ P3-01) · P3-03 iOS App Group status flags *(iOS — deferred)* · P3-04 `POST /v1/usage/sync` with rev + idempotency (→ P1-06) · P3-05 Outbox retry/backoff (→ P3-04) · P3-06 History API & screens (→ P3-04).
-Acceptance: totals identical before/after restart, reboot, offline week, duplicate sync.
+## Phase 3 — Local-first tracking, sync, history ◐
+| ID | Task | Status |
+|---|---|---|
+| P3-01 | Production event pipeline + transactional aggregates | ☑ (Phase 2 engine + SQLite store) |
+| P3-02 | Health/coverage & gap UI | ◐ coverage from heartbeats; "Not tracked" gaps in History |
+| P3-03 | iOS App Group flags | ⏸ deferred |
+| P3-04 | `POST /v1/usage/sync`, `GET /v1/usage/history` (backend) | ☑ 12 integration tests, backend run green |
+| P3-05 | App sync: per-day rev, frozen batches with stable Idempotency-Key, backoff, permanent-error handling | ◐ written + unit tests; CI pending |
+| P3-06 | History screen (local, 14 days) | ◐ written; CI pending |
+| P3-07 | Minutes via Android Usage Access (works without the accessibility service) | ◐ written + Kotlin tests; CI pending |
+Acceptance still open: totals identical across restart/reboot/offline on a real device; end-to-end sync against a deployed backend (nothing deployed yet).
 
 ## Phase 4 — Engagement
 P4-01 Goals UI/API · P4-02 Wick progression (original Lottie/Reanimated assets) · P4-03 Statistics · P4-04 Local reminders · P4-05 Streaks/achievements. All driven by real aggregates (→ Phase 3).

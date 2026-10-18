@@ -47,6 +47,7 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
                  ad_views INTEGER NOT NULL DEFAULT 0,
                  surface_ms INTEGER NOT NULL DEFAULT 0,
                  unknown_ms INTEGER NOT NULL DEFAULT 0,
+                 usage_ms INTEGER NOT NULL DEFAULT 0,
                  PRIMARY KEY (local_date, pkg))""",
         )
         db.execSQL("CREATE TABLE rings (pkg TEXT PRIMARY KEY NOT NULL, fps TEXT NOT NULL, saved_at INTEGER NOT NULL)")
@@ -56,7 +57,8 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        // Forward-only migrations go here. Never drop user aggregates.
+        // Forward-only migrations. Never drop user aggregates.
+        if (oldVersion < 2) db.execSQL("ALTER TABLE daily ADD COLUMN usage_ms INTEGER NOT NULL DEFAULT 0")
     }
 
     private fun ensureDaily(db: SQLiteDatabase, date: String, pkg: String) {
@@ -100,8 +102,20 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
             ensureDaily(db, localDate, pkg)
             db.execSQL(
                 "UPDATE daily SET surface_ms = surface_ms + ?, unknown_ms = unknown_ms + ? WHERE local_date = ? AND pkg = ?",
-                arrayOf(surfaceMs, unknownMs, localDate, pkg),
+                arrayOf<Any>(surfaceMs, unknownMs, localDate, pkg),
             )
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    override fun setUsage(localDate: String, pkg: String, usageMs: Long) {
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            ensureDaily(db, localDate, pkg)
+            db.execSQL("UPDATE daily SET usage_ms = ? WHERE local_date = ? AND pkg = ?", arrayOf<Any>(usageMs, localDate, pkg))
             db.setTransactionSuccessful()
         } finally {
             db.endTransaction()
@@ -111,7 +125,7 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
     override fun saveRing(pkg: String, ring: List<String>, savedAtMs: Long) {
         writableDatabase.execSQL(
             "INSERT OR REPLACE INTO rings (pkg, fps, saved_at) VALUES (?, ?, ?)",
-            arrayOf(pkg, ring.joinToString(","), savedAtMs),
+            arrayOf<Any>(pkg, ring.joinToString(","), savedAtMs),
         )
     }
 
@@ -124,7 +138,7 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
     override fun heartbeat(localDate: String, minuteOfDay: Int) {
         writableDatabase.execSQL(
             "INSERT OR IGNORE INTO heartbeats (local_date, minute) VALUES (?, ?)",
-            arrayOf(localDate, minuteOfDay),
+            arrayOf<Any>(localDate, minuteOfDay),
         )
     }
 
@@ -136,11 +150,11 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
 
     override fun daily(localDate: String): List<DailyRow> =
         readableDatabase.rawQuery(
-            "SELECT local_date, pkg, views, ad_views, surface_ms, unknown_ms FROM daily WHERE local_date = ? ORDER BY pkg",
+            "SELECT local_date, pkg, views, ad_views, surface_ms, unknown_ms, usage_ms FROM daily WHERE local_date = ? ORDER BY pkg",
             arrayOf(localDate),
         ).use { c ->
             buildList {
-                while (c.moveToNext()) add(DailyRow(c.getString(0), c.getString(1), c.getInt(2), c.getInt(3), c.getLong(4), c.getLong(5)))
+                while (c.moveToNext()) add(DailyRow(c.getString(0), c.getString(1), c.getInt(2), c.getInt(3), c.getLong(4), c.getLong(5), c.getLong(6)))
             }
         }
 
@@ -165,7 +179,7 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
 
     /** Raw events and heartbeats are kept 30 days; daily aggregates until the user wipes them. */
     fun purgeOlderThan(cutoffMs: Long, cutoffDate: String) {
-        writableDatabase.execSQL("DELETE FROM events WHERE counted_at_ms < ?", arrayOf(cutoffMs))
+        writableDatabase.execSQL("DELETE FROM events WHERE counted_at_ms < ?", arrayOf<Any>(cutoffMs))
         writableDatabase.execSQL("DELETE FROM heartbeats WHERE local_date < ?", arrayOf(cutoffDate))
     }
 
@@ -176,7 +190,7 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
 
     companion object {
         const val DB_NAME = "driftless_tracking.db"
-        const val SCHEMA_VERSION = 1
+        const val SCHEMA_VERSION = 2
 
         @Volatile private var instance: SqliteStore? = null
 

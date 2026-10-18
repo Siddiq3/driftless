@@ -11,7 +11,8 @@ Status: [PROPOSED] · 2026-10-18
 | Count events | Native DB | Never | 30 days | Recompute aggregates, debugging (local) |
 | Coverage heartbeats (one row per active minute) | Native DB | Never (only coverage ratio) | 30 days | Data quality |
 | Debug exports (event ids/times; structure captures with view ids and class names only) | App cache, shared only by the developer's explicit action | Only if the developer shares the file | Until app cache is cleared | Accuracy study (debug builds only) |
-| Daily aggregates | Native DB + DynamoDB if sync on | With consent | Device: until wiped; cloud: 400 days default | History, multi-device, challenges |
+| Usage Access minutes (foreground time of Instagram/YouTube only) | Native DB `daily.usage_ms` | Only as part of daily aggregates, with consent | Daily rows until wiped | Minutes even without the accessibility service |
+| Daily aggregates | Native DB + DynamoDB if sync on | With consent; `views` only for accuracy-validated app versions, else null | Device: until wiped; cloud: 400 days (DynamoDB TTL) | History, multi-device, challenges |
 | iOS Screen Time data | Apple's report sandbox | **Never** | Apple-controlled | Display |
 | Profile (handle, display name, tz) | DynamoDB | Yes (account) | Until deletion | Social |
 | Email (Cognito) | Cognito | Yes | Until deletion | Sign-in |

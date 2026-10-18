@@ -15,6 +15,7 @@ export default function TrackingScreen() {
 
   const read = useCallback(() => {
     try {
+      Tracking.refreshUsage(1);
       const h = Tracking.health();
       const d = Tracking.daily();
       setHealth(h);
@@ -72,13 +73,30 @@ export default function TrackingScreen() {
       )}
 
       <Card>
+        <T v="heading">Minutes (Usage Access)</T>
+        <T muted>
+          {health.usageAccessGranted
+            ? 'On. Minutes in Instagram and YouTube come from Android and work even when the counter is off.'
+            : 'Off. Allow Usage Access to record minutes in Instagram and YouTube — this works on every phone, including ones where the counter is blocked.'}
+        </T>
+        {!health.usageAccessGranted && (
+          <Button
+            kind="secondary"
+            label="Open Usage Access settings"
+            onPress={Tracking.openUsageAccessSettings}
+          />
+        )}
+      </Card>
+
+      <Card>
         <T v="heading">Today on this phone</T>
         {daily.apps.length === 0 ? (
           <T muted>Nothing counted yet today.</T>
         ) : (
           daily.apps.map((a) => (
             <T key={a.package} muted>
-              {label(a.package)}: {a.views} videos · {minutes(a.surfaceMs + a.unknownMs)} min
+              {label(a.package)}: {a.views} videos ·{' '}
+              {minutes(health.usageAccessGranted ? a.usageMs : a.surfaceMs + a.unknownMs)} min
               {a.adViews > 0 ? ` · ${a.adViews} ads` : ''}
             </T>
           ))

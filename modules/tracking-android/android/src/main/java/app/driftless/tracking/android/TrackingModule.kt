@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.provider.Settings
 import app.driftless.tracking.core.Recorder
+import app.driftless.tracking.core.UsageMath
 import app.driftless.tracking.core.isValidatedVersion
 import expo.modules.kotlin.exception.CodedException
 import expo.modules.kotlin.modules.Module
@@ -39,6 +40,7 @@ class TrackingModule : Module() {
                 "lastConnectedMs" to DriftlessAccessibilityService.lastConnectedMs.toDouble(),
                 "lastEventMs" to DriftlessAccessibilityService.lastEventMs.toDouble(),
                 "heartbeatMinutesToday" to store.heartbeatMinutes(today),
+                "usageAccessGranted" to UsageReader.granted(ctx),
                 "debugBuild" to isDebuggable(ctx),
                 "apps" to rules.apps.values.map { r ->
                     val v = Health.appVersion(ctx, r.pkg)
@@ -61,13 +63,27 @@ class TrackingModule : Module() {
             context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
 
+        Function("openUsageAccessSettings") {
+            context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+
+        /** Recomputes UsageStats minutes for the last [days] days. Returns rows written (0 = no access). */
+        Function("refreshUsage") { days: Int ->
+            val ctx = context
+            UsageReader.refresh(ctx, SqliteStore.get(ctx), RulesLoader.load(ctx).apps.keys, days)
+        }
+
         Function("getDaily") { localDate: String? ->
             val ctx = context
-            val d = localDate ?: Recorder.localDate(System.currentTimeMillis(), ZoneId.systemDefault())
+            val zone = ZoneId.systemDefault()
+            val now = System.currentTimeMillis()
+            val d = localDate ?: Recorder.localDate(now, zone)
             val store = SqliteStore.get(ctx)
+            val beats = store.heartbeatMinutes(d)
             mapOf(
                 "localDate" to d,
-                "heartbeatMinutes" to store.heartbeatMinutes(d),
+                "heartbeatMinutes" to beats,
+                "coverage" to UsageMath.coverage(beats, d, zone, now),
                 "apps" to store.daily(d).map {
                     mapOf(
                         "package" to it.pkg,
@@ -75,6 +91,7 @@ class TrackingModule : Module() {
                         "adViews" to it.adViews,
                         "surfaceMs" to it.surfaceMs.toDouble(),
                         "unknownMs" to it.unknownMs.toDouble(),
+                        "usageMs" to it.usageMs.toDouble(),
                     )
                 },
             )
