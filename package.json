@@ -15,7 +15,7 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
-    "@siddiq3/driftless-contracts": "0.2.0",
+    "@siddiq3/driftless-contracts": "0.3.0",
     "expo": "~57.0.30",
     "expo-auth-session": "~57.0.0",
     "expo-build-properties": "~57.0.22",

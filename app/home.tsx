@@ -7,6 +7,7 @@ import { useSession } from '@/auth/session';
 import { APP_VERSION, readEnv } from '@/config/env';
 import { cacheEntitlement } from '@/billing/pro';
 import { syncGoals } from '@/goals/sync';
+import { registerPush } from '@/sync/push';
 import { syncNow } from '@/sync/run';
 import { Button, Card, Notice, Screen, T } from '@/ui/kit';
 
@@ -69,6 +70,7 @@ export default function Home() {
   useEffect(() => {
     if (!api || !cloudSync) return;
     syncGoals(api).catch(() => undefined); // best effort; goals work locally regardless
+    registerPush(api).catch(() => undefined); // needs Firebase config; harmless without it
     syncNow(api)
       .then((o) =>
         setSyncNote(
@@ -166,6 +168,12 @@ export default function Home() {
       <Button label="Reels & Shorts counter" onPress={() => router.push('/tracking')} />
       <Button kind="secondary" label="History" onPress={() => router.push('/history')} />
       <Button kind="secondary" label="Wick & goals" onPress={() => router.push('/progress')} />
+      <Button kind="secondary" label="Privacy & data" onPress={() => router.push('/privacy')} />
+      <Button
+        kind="secondary"
+        label="Friends & challenges"
+        onPress={() => router.push('/friends')}
+      />
       <Button kind="secondary" label="Pause apps (Pro)" onPress={() => router.push('/blocking')} />
       <Button kind="secondary" label="Driftless Pro" onPress={() => router.push('/pro')} />
       <Button kind="secondary" label="Sign out" onPress={() => void s.signOut()} />

@@ -31,6 +31,7 @@ export default function Welcome() {
       />
       <Button kind="secondary" label="History" onPress={() => router.push('/history')} />
       <Button kind="secondary" label="Wick & goals" onPress={() => router.push('/progress')} />
+      <Button kind="secondary" label="Privacy & data" onPress={() => router.push('/privacy')} />
 
       {s.status === 'unconfigured' && (
         <Notice

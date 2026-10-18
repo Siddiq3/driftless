@@ -60,4 +60,7 @@ Android: Pixel (stock, latest + previous major), Samsung One UI, Xiaomi/HyperOS 
 | 2026-10-18 | 3 | backend usage sync/history | 43/43 API tests passed | driftless-backend commit 187dbda (125 backend tests total) |
 | 2026-10-18 | 3 | app CI at 4039c75 | Jest 54/54, Kotlin 50/50 passed; APK built (93.8 MB); typecheck failed (stale module types) → fixed | |
 | 2026-10-18 | 4 | backend goals + contracts 0.2.0 | 48/48 API tests; published 0.2.0 | driftless-backend b28792c |
+| 2026-10-18 | 5 | app CI at 43b3464 (run 39140081429) | all steps passed: Jest 65/65, Kotlin 65/65, APK built with Play Billing | |
+| 2026-10-18 | 5 | backend billing (run for 398eaad) | 70/70 API tests | state mapping, verify, RTDN, abuse cases |
+| 2026-10-18 | 6 | backend social (run for e190b02) | 83/83 API tests (166 backend total) | friends, invites, rate limits, challenges, leaderboard privacy, devices |
 | — | 2 | G-2 device accuracy | **not run** | requires labelled sessions on a real phone (ACCURACY_PROTOCOL.md) |

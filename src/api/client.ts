@@ -1,5 +1,7 @@
 import { Problem, v1 } from '@siddiq3/driftless-contracts';
-import type { z } from 'zod';
+import { z } from 'zod';
+
+const OkResponse = z.object({ ok: z.literal(true) });
 
 export class ApiError extends Error {
   constructor(
@@ -98,6 +100,41 @@ export function createApiClient(o: ApiClientOptions) {
           body: { productId, purchaseToken },
         })
       ).data,
+    friends: async () => (await request('GET', '/v1/friends', v1.FriendsResponse)).data.friends,
+    createInvite: async () =>
+      (await request('POST', '/v1/friends/invites', v1.InviteResponse)).data,
+    addFriend: async (by: { handle: string } | { inviteCode: string }) =>
+      (await request('POST', '/v1/friends/requests', v1.FriendRequestResult, { body: by })).data
+        .friend,
+    respondFriend: async (userId: string, accept: boolean) =>
+      void (await request('POST', '/v1/friends/respond', OkResponse, { body: { userId, accept } })),
+    removeFriend: async (userId: string) =>
+      void (await request('POST', '/v1/friends/remove', OkResponse, { body: { userId } })),
+    challenges: async () =>
+      (await request('GET', '/v1/challenges', v1.ChallengesResponse)).data.challenges,
+    createChallenge: async (c: z.input<typeof v1.ChallengeCreate>) =>
+      (await request('POST', '/v1/challenges', v1.ChallengeSummary, { body: c })).data,
+    joinChallenge: async (id: string) =>
+      (await request('POST', `/v1/challenges/${encodeURIComponent(id)}/join`, v1.ChallengeSummary))
+        .data,
+    leaveChallenge: async (id: string) =>
+      void (await request('POST', `/v1/challenges/${encodeURIComponent(id)}/leave`, OkResponse)),
+    leaderboard: async (id: string) =>
+      (
+        await request(
+          'GET',
+          `/v1/challenges/${encodeURIComponent(id)}/leaderboard`,
+          v1.LeaderboardResponse,
+        )
+      ).data,
+    registerDevice: async (deviceId: string, pushToken: string) =>
+      void (await request('POST', '/v1/devices', OkResponse, {
+        body: { deviceId, platform: 'android', pushToken },
+      })),
+    deleteAccount: async () =>
+      (await request('POST', '/v1/account/delete', v1.DeletionStatus)).data,
+    exportData: async () =>
+      (await request('GET', '/v1/account/export', z.record(z.string(), z.unknown()))).data,
     getGoals: async () => (await request('GET', '/v1/goals', v1.GoalsResponse)).data,
     putGoals: async (goals: v1.Goal[]) =>
       (await request('PUT', '/v1/goals', v1.GoalsResponse, { body: { goals } })).data,

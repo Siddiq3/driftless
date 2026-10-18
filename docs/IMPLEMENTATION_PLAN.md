@@ -78,8 +78,23 @@ Rule: video-count goals unlock only for accuracy-validated app versions; days wi
 Needs the owner: a Google Play Console app with subscription product `driftless_pro`, a Play service account (JSON into the CDK secret), and a Pub/Sub topic + push subscription for RTDN. Until then billing cannot be tested end-to-end.
 Security note: the native entitlement cache is set by the app from the server's response. A modified app could switch on blocking for itself, which only restricts that user's own phone; it can never unlock server-side Pro.
 
-## Phase 6 — Social
-P6-01 Handles & invites · P6-02 Friend requests · P6-03 Challenges · P6-04 Leaderboard snapshot job · P6-05 Push via SNS · P6-06 Anti-abuse (rate limits, plausibility, reporting/blocking users).
+## Phase 6 — Social ◐
+| ID | Task | Status |
+|---|---|---|
+| P6-01 | Handles & one-time invite codes | ☑ backend (tests green, run for e190b02); app Friends screen written |
+| P6-02 | Friend requests: accept/decline/remove, mutual auto-accept | ☑ backend; app written |
+| P6-03 | Challenges: friends-only, capacity, leave, 31-day max | ☑ backend; app Challenges screen written |
+| P6-04 | Leaderboards from shared aggregates only; hidden count for non-sharers | ☑ backend (computed on read; snapshot job not needed at current scale) |
+| P6-05 | Push: device registration API ☑; app registration written; **delivery via SNS/FCM not built** (needs Firebase + SNS platform app) | ◐ |
+| P6-06 | Anti-abuse: per-user rate limits, plausibility (coverage) for video scores, friends-only, no prizes | ☑ backend |
 
-## Phase 7 — Hardening & release
-Security review, pen-test checklist, privacy review, device matrix, closed testing (Play internal/closed track, TestFlight), store listings, Data safety / privacy labels, accessibility declaration video, runbooks (backup restore, incident, deletion).
+## Phase 7 — Hardening & release ◐
+| ID | Task | Status |
+|---|---|---|
+| P7-01 | Account deletion (recent sign-in, full cleanup incl. Cognito) + data export | ◐ backend written + tests (CI pending); app Privacy screen written |
+| P7-02 | Local wipe | ◐ written |
+| P7-03 | Store preparation: accessibility declaration, demo-video script, Data safety answers, owner task list | ◐ `docs/STORE_PREP.md` (draft) |
+| P7-04 | Privacy policy | ◐ `docs/PRIVACY_POLICY_DRAFT.md` (needs legal review) |
+| P7-05 | Device matrix testing, closed testing track, accuracy gate G-2 | ☐ needs the owner's devices and Play Console |
+| P7-06 | Backup restore / incident runbooks | ☐ |
+| P7-07 | Independent security review | ☐ recommended before public release |
