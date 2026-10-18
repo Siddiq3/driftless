@@ -79,13 +79,13 @@ jobs:
         run: ls -la android/app/build/outputs/apk/debug/ > ci-logs/mobile/apk.txt 2>&1 || true
       - name: upload debug APK (for device accuracy testing)
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: driftless-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 14
           if-no-files-found: ignore
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with: { name: logs-mobile, path: ci-logs/mobile, include-hidden-files: true }
       - name: fail if any step failed
