@@ -1,7 +1,6 @@
 pnpm-lock.yaml
-**/dist
-**/cdk.out
-**/coverage
-apps/mobile/android
-apps/mobile/ios
+coverage
+android
+ios
+.expo
 *.md

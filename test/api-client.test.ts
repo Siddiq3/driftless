@@ -67,17 +67,15 @@ describe('api client', () => {
   });
 
   it('maps problem+json errors', async () => {
-    const f = jest
-      .fn()
-      .mockResolvedValue(
-        resp(409, {
-          type: 'x',
-          title: 'Conflict',
-          status: 409,
-          code: 'handle_taken',
-          detail: 'taken',
-        }),
-      );
+    const f = jest.fn().mockResolvedValue(
+      resp(409, {
+        type: 'x',
+        title: 'Conflict',
+        status: 409,
+        code: 'handle_taken',
+        detail: 'taken',
+      }),
+    );
     await expect(client(f).patchMe({ handle: 'sam' }, 1)).rejects.toMatchObject({
       status: 409,
       code: 'handle_taken',

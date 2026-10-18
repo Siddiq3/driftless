@@ -1,6 +1,6 @@
 # Test Plan
 
-Status: planned · **No tests have been executed yet** (no code exists as of 2026-10-18).
+Status: Phase 1 suites in place. Results below are from real CI runs only.
 
 ## 1. Layers
 | Layer | Tooling | Runs where |
@@ -43,4 +43,12 @@ Android: Pixel (stock, latest + previous major), Samsung One UI, Xiaomi/HyperOS 
 ## 5. Results log
 | Date | Phase | Suite | Result | Notes |
 |---|---|---|---|---|
-| — | — | — | — | Nothing executed yet |
+| 2026-10-18 | 1 | contracts (Vitest) | 33/33 passed | CI run 39133222400, commit e5fb168 |
+| 2026-10-18 | 1 | domain (Vitest) | 41/41 passed | coverage: lines 100%, functions 100%, branches 96.8% |
+| 2026-10-18 | 1 | design tokens (Vitest) | 22/22 passed | WCAG AA on all text pairs, both themes |
+| 2026-10-18 | 1 | API on DynamoDB Local | 31/31 passed | auth, cross-user isolation, revisions, handle uniqueness, idempotency, payload limits |
+| 2026-10-18 | 1 | CDK assertions | 8/8 passed | `cdk synth` failed (CDK v1 flag) — fixed, pending re-run |
+| 2026-10-18 | 1 | app (Jest) | 15/15 passed | migrations, outbox policy, API client |
+| 2026-10-18 | 1 | Android debug build | passed | `assembleDebug`, arm64-v8a, 566 s |
+| 2026-10-18 | 1 | gitleaks | no leaks | 7 commits scanned |
+| 2026-10-18 | 1 | app typecheck / lint / expo-doctor | failed | SDK 57 version alignment, removed `edgeToEdgeEnabled`, ESLint 10 incompatible with eslint-config-expo → fixes pending |

@@ -1,4 +1,4 @@
-import { Problem, v1 } from '@driftless/contracts';
+import { Problem, v1 } from '@siddiq3/driftless-contracts';
 import type { z } from 'zod';
 
 export class ApiError extends Error {

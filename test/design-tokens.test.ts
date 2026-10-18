@@ -1,5 +1,4 @@
-import { describe, expect, it } from 'vitest';
-import { contrast, dark, light, TEXT_PAIRS, type Theme } from '../src/index.js';
+import { contrast, dark, light, TEXT_PAIRS, type Theme } from '../src/design-tokens';
 
 describe('contrast()', () => {
   it('matches known WCAG values', () => {

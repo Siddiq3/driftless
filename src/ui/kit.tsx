@@ -6,7 +6,7 @@ import {
   space,
   type as typeScale,
   type Theme,
-} from '@driftless/design-tokens';
+} from '../design-tokens';
 import type { ReactNode } from 'react';
 import {
   ActivityIndicator,

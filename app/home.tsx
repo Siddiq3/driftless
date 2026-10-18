@@ -1,4 +1,4 @@
-import type { v1 } from '@driftless/contracts';
+import type { v1 } from '@siddiq3/driftless-contracts';
 import { Redirect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator } from 'react-native';

@@ -1,30 +1,29 @@
-# Driftless (working name)
+# Driftless (working name) — app
 
 Original digital-wellbeing app that helps people understand and reduce short-video scrolling.
-Android first (D-015); React Native/Expo + Kotlin, AWS serverless backend.
+Android first (D-015). Expo SDK 57 custom dev client + Kotlin native module.
+Backend and shared contracts: [Siddiq3/driftless-backend](https://github.com/Siddiq3/driftless-backend) (D-016).
 
 **Status: Phase 1 (foundations) in progress.** See [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
 
-## Layout
-
 | Path | What |
 |---|---|
-| `apps/mobile` | Expo SDK 57 app (custom dev client), `modules/tracking-android` Kotlin module |
-| `packages/contracts` | Shared zod API schemas (v1) + OpenAPI generation |
-| `packages/domain` | Pure TS: local dates, goals, streaks, Wick progression, reference view-counting rule |
-| `packages/design-tokens` | Colours, spacing, type; WCAG AA contrast enforced by tests |
-| `services/api` | Lambda HTTP API (Node 22) |
-| `infra` | AWS CDK app — synth only, nothing is deployed |
-| `docs` | Product spec, architecture, threat model, decisions, test plan |
+| `app/` | Screens (expo-router) |
+| `src/` | API client, auth (Cognito PKCE), local DB, UI kit, design tokens |
+| `modules/tracking-android` | Kotlin Expo module (tracking engine lands in Phase 2) |
+| `test/` | Jest unit tests |
+| `docs/` | Product spec, architecture, threat model, decisions, test plan |
 
-## Commands
+## Develop
+
+The shared contracts package comes from GitHub Packages, so you need a GitHub token with
+`read:packages`:
 
 ```sh
+export NODE_AUTH_TOKEN=<github token with read:packages>
 pnpm install
-pnpm build && pnpm lint && pnpm typecheck
-docker run -d -p 8000:8000 amazon/dynamodb-local
-DDB_ENDPOINT=http://localhost:8000 pnpm test
-pnpm --filter @driftless/infra synth
+pnpm typecheck && pnpm lint && pnpm test
+pnpm android        # builds and runs the dev client on a device/emulator
 ```
 
 CI publishes step logs for each push to `main` to the `ci-results` branch.

@@ -44,17 +44,23 @@ flowchart LR
   L2 --> Push[SNS mobile push / FCM + APNs]
 ```
 
-## 3. Repository layout
+## 3. Repository layout (D-016)
+
+**`Siddiq3/driftless` — app**
 ```
-apps/mobile                 Expo (SDK 57) custom dev build, expo-router, TS
-  modules/tracking-android  Expo module (Kotlin): service, classifier, Room DB, blocking
-  modules/screentime-ios    Expo module (Swift) + extension targets via config plugin
-packages/contracts          zod schemas, versioned (v1), generated TS types + OpenAPI
-packages/domain             pure TS: local-date math, streaks, Wick progression, goal eval
-packages/design-tokens      colours, spacing, type scale
+app/                        expo-router screens
+src/                        api client, auth, local DB (expo-sqlite), UI kit, design-tokens
+modules/tracking-android    Expo module (Kotlin): service, classifier, Room DB, blocking
+test/                       Jest unit tests
+docs/                       product, architecture, threat model, decisions, plans
+```
+**`Siddiq3/driftless-backend` — backend**
+```
+packages/contracts          @siddiq3/driftless-contracts: zod v1 schemas, OpenAPI, ./domain
 services/api                Lambda handlers (Node 22, TS, esbuild)
 infra                       AWS CDK v2 (TS)
 ```
+Contract changes: change + test in backend → bump version → tag `contracts-vX.Y.Z` → app bumps its pinned version.
 
 ## 4. Android tracking engine (Kotlin)
 
