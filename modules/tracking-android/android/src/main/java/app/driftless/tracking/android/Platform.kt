@@ -109,6 +109,70 @@ class TrackingPrefs(context: Context) {
         p.edit().putStringSet(KEY_SENT, sentAlerts(localDate) + keys).apply()
     }
 
+    /** Blocking config from the app (Pro). Stored natively so blocking works with the app closed. */
+    var blockConfig: app.driftless.tracking.core.BlockConfig
+        get() {
+            val raw = p.getString(KEY_BLOCK, null) ?: return app.driftless.tracking.core.BlockConfig(false, emptySet(), null, emptyList())
+            val o = org.json.JSONObject(raw)
+            val apps = o.getJSONArray("apps").let { a -> (0 until a.length()).map { a.getString(it) }.toSet() }
+            val sch = o.getJSONArray("schedules").let { a ->
+                (0 until a.length()).map {
+                    val x = a.getJSONObject(it)
+                    val days = x.getJSONArray("days").let { d -> (0 until d.length()).map { i -> d.getInt(i) }.toSet() }
+                    app.driftless.tracking.core.Schedule(days, x.getInt("startMinute"), x.getInt("endMinute"))
+                }
+            }
+            return app.driftless.tracking.core.BlockConfig(
+                o.getBoolean("enabled"),
+                apps,
+                if (o.isNull("dailyMinutes")) null else o.getInt("dailyMinutes"),
+                sch,
+            )
+        }
+        set(c) {
+            val o = org.json.JSONObject()
+                .put("enabled", c.enabled)
+                .put("apps", org.json.JSONArray(c.apps.toList()))
+                .put("dailyMinutes", c.dailyMinutes ?: org.json.JSONObject.NULL)
+                .put(
+                    "schedules",
+                    org.json.JSONArray().apply {
+                        c.schedules.forEach {
+                            put(
+                                org.json.JSONObject().put("days", org.json.JSONArray(it.days.toList()))
+                                    .put("startMinute", it.startMinute).put("endMinute", it.endMinute),
+                            )
+                        }
+                    },
+                )
+            p.edit().putString(KEY_BLOCK, o.toString()).apply()
+        }
+
+    /** Server-verified entitlement cache (never set from user input). */
+    var entitlement: app.driftless.tracking.core.CachedEntitlement
+        get() = app.driftless.tracking.core.CachedEntitlement(
+            p.getBoolean(KEY_PRO, false),
+            if (p.contains(KEY_PRO_UNTIL)) p.getLong(KEY_PRO_UNTIL, 0) else null,
+        )
+        set(e) {
+            p.edit().putBoolean(KEY_PRO, e.pro).apply {
+                if (e.validUntilMs == null) remove(KEY_PRO_UNTIL) else putLong(KEY_PRO_UNTIL, e.validUntilMs)
+            }.apply()
+        }
+
+    fun snoozedUntil(pkg: String): Long = p.getLong("$KEY_SNOOZE$pkg", 0)
+
+    fun snoozesToday(): Int {
+        val today = java.time.LocalDate.now().toString()
+        return if (p.getString(KEY_SNOOZE_DATE, null) == today) p.getInt(KEY_SNOOZE_COUNT, 0) else 0
+    }
+
+    fun snooze(pkg: String, untilMs: Long) {
+        val today = java.time.LocalDate.now().toString()
+        p.edit().putLong("$KEY_SNOOZE$pkg", untilMs).putString(KEY_SNOOZE_DATE, today)
+            .putInt(KEY_SNOOZE_COUNT, snoozesToday() + 1).apply()
+    }
+
     private fun String.hexToBytes(): ByteArray = ByteArray(length / 2) { substring(it * 2, it * 2 + 2).toInt(16).toByte() }
 
     companion object {
@@ -117,6 +181,12 @@ class TrackingPrefs(context: Context) {
         private const val KEY_SECRET = "fp_install_secret"
         private const val KEY_LIMITS = "goal_limits"
         private const val KEY_SENT = "alerts_sent"
+        private const val KEY_BLOCK = "block_config"
+        private const val KEY_PRO = "ent_pro"
+        private const val KEY_PRO_UNTIL = "ent_valid_until"
+        private const val KEY_SNOOZE = "snooze_until_"
+        private const val KEY_SNOOZE_DATE = "snooze_date"
+        private const val KEY_SNOOZE_COUNT = "snooze_count"
     }
 }
 

@@ -64,7 +64,7 @@ export default function Stats() {
           {s.goals.some((g) => g.enabled) ? ` · goal kept on ${kept} days` : ''}
         </T>
         <T v="caption" muted>
-          Dashed bars are days that weren't tracked — they are not counted as zero.
+          Dashed bars are days that weren’t tracked — they are not counted as zero.
         </T>
       </Card>
     </Screen>

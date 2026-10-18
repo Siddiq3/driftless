@@ -5,6 +5,7 @@ import { ActivityIndicator, Switch, View } from 'react-native';
 import { ApiError, createApiClient } from '@/api/client';
 import { useSession } from '@/auth/session';
 import { APP_VERSION, readEnv } from '@/config/env';
+import { cacheEntitlement } from '@/billing/pro';
 import { syncGoals } from '@/goals/sync';
 import { syncNow } from '@/sync/run';
 import { Button, Card, Notice, Screen, T } from '@/ui/kit';
@@ -46,7 +47,10 @@ export default function Home() {
     if (!api) return;
     api
       .getMe()
-      .then(({ data }) => setLoad({ state: 'ok', me: data }))
+      .then(({ data }) => {
+        cacheEntitlement(data.entitlement);
+        setLoad({ state: 'ok', me: data });
+      })
       .catch((e: unknown) =>
         setLoad({
           state: 'error',
@@ -162,6 +166,8 @@ export default function Home() {
       <Button label="Reels & Shorts counter" onPress={() => router.push('/tracking')} />
       <Button kind="secondary" label="History" onPress={() => router.push('/history')} />
       <Button kind="secondary" label="Wick & goals" onPress={() => router.push('/progress')} />
+      <Button kind="secondary" label="Pause apps (Pro)" onPress={() => router.push('/blocking')} />
+      <Button kind="secondary" label="Driftless Pro" onPress={() => router.push('/pro')} />
       <Button kind="secondary" label="Sign out" onPress={() => void s.signOut()} />
     </Screen>
   );

@@ -5,7 +5,8 @@
     "noUncheckedIndexedAccess": true,
     "paths": {
       "@/*": ["./src/*"],
-      "tracking-android": ["./modules/tracking-android/src"]
+      "tracking-android": ["./modules/tracking-android/src"],
+      "billing-android": ["./modules/billing-android/src"]
     },
     "types": ["jest", "node"]
   },

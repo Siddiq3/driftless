@@ -1,5 +1,5 @@
 import type { WickStage } from '@siddiq3/driftless-contracts/domain';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, View } from 'react-native';
 import { palette } from '../design-tokens';
 
@@ -22,7 +22,8 @@ export function wickLabel(stage: WickStage): string {
 
 export function Wick({ stage, glow }: { stage: WickStage; glow: number }) {
   const look = STAGE_LOOK[stage];
-  const pulse = useRef(new Animated.Value(0)).current;
+  // useState keeps one Animated.Value for the component's lifetime without reading a ref in render.
+  const [pulse] = useState(() => new Animated.Value(0));
   const [reduceMotion, setReduceMotion] = useState(false);
 
   useEffect(() => {

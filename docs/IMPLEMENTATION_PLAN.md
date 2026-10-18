@@ -55,7 +55,7 @@ Risks: bundled selectors are unvalidated guesses (structure capture exists to co
 | P3-07 | Minutes via Android Usage Access (works without the accessibility service) | ☑ native + 9 Kotlin tests; APK builds |
 Acceptance still open: totals identical across restart/reboot/offline on a real device; end-to-end sync against a deployed backend (nothing deployed yet).
 
-## Phase 4 — Engagement ◐
+## Phase 4 — Engagement ◐ (CI at 5fc48a9: all green except 2 lint errors, fixed)
 | ID | Task | Status |
 |---|---|---|
 | P4-01 | Goals: local-first (migration 3) + server backup `GET/PUT /v1/goals` (contracts 0.2.0) | ◐ backend ☑ (5 tests, published 0.2.0); app written, CI pending |
@@ -65,9 +65,18 @@ Acceptance still open: totals identical across restart/reboot/offline on a real 
 | P4-05 | Streaks & milestones from real outcomes only | ◐ written + Jest tests |
 Rule: video-count goals unlock only for accuracy-validated app versions; days without data are "not tracked", never 0.
 
-## Phase 5 — Restrictions & billing (gate G-6)
-P5-01 Android pause-screen blocking + schedules · P5-02 iOS shields + schedules *(iOS — deferred)* · P5-03 Recovery (permission loss, entitlement lapse ⇒ restrictions safely cleared, tracking continues) · P5-04 Play Billing client + `/billing/play/verify` + RTDN · P5-05 StoreKit 2 + App Store Server API + notifications *(iOS — deferred)* · P5-06 Reconciliation job · P5-07 Restore purchases.
-Acceptance: blocking works in airplane mode; refund/revoke removes Pro within one notification cycle.
+## Phase 5 — Restrictions & billing ◐ (gate G-6 open)
+| ID | Task | Status |
+|---|---|---|
+| P5-01 | Android pause screen (own activity, dismissible, 3 × 5-min snoozes/day), per-app daily limit, focus schedules incl. overnight | ◐ written; BlockPolicy Kotlin tests |
+| P5-02 | iOS shields | ⏸ deferred |
+| P5-03 | Recovery: blocking fails open when Pro lapses or the cached entitlement passes its offline grace (3 days) | ◐ in BlockPolicy + tests |
+| P5-04 | Play Billing client (Billing Library 8) + server verify + RTDN | ◐ backend written (tests fixed for token length); app module written |
+| P5-05 | StoreKit 2 | ⏸ deferred |
+| P5-06 | Reconciliation job (EventBridge) | ☐ entitlements are indexed by expiry (GSI1) for it; job not written yet |
+| P5-07 | Restore purchases | ◐ written |
+Needs the owner: a Google Play Console app with subscription product `driftless_pro`, a Play service account (JSON into the CDK secret), and a Pub/Sub topic + push subscription for RTDN. Until then billing cannot be tested end-to-end.
+Security note: the native entitlement cache is set by the app from the server's response. A modified app could switch on blocking for itself, which only restricts that user's own phone; it can never unlock server-side Pro.
 
 ## Phase 6 — Social
 P6-01 Handles & invites · P6-02 Friend requests · P6-03 Challenges · P6-04 Leaderboard snapshot job · P6-05 Push via SNS · P6-06 Anti-abuse (rate limits, plausibility, reporting/blocking users).

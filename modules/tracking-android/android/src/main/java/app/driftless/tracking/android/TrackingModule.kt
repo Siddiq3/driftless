@@ -156,6 +156,37 @@ class TrackingModule : Module() {
             GoalNotifier.check(ctx, SqliteStore.get(ctx), TrackingPrefs(ctx))
         }
 
+        /** Pro blocking settings. Enforcement also requires a server-verified entitlement (setEntitlement). */
+        Function("setBlocking") { c: Map<String, Any?> ->
+            @Suppress("UNCHECKED_CAST")
+            val schedules = (c["schedules"] as? List<Map<String, Any?>>).orEmpty().map { s ->
+                app.driftless.tracking.core.Schedule(
+                    (s["days"] as? List<*>).orEmpty().mapNotNull { (it as? Number)?.toInt() }.filter { it in 1..7 }.toSet(),
+                    ((s["startMinute"] as? Number)?.toInt() ?: 0).coerceIn(0, 1439),
+                    ((s["endMinute"] as? Number)?.toInt() ?: 0).coerceIn(0, 1439),
+                )
+            }
+            val known = RulesLoader.load(context).apps.keys
+            TrackingPrefs(context).blockConfig = app.driftless.tracking.core.BlockConfig(
+                enabled = c["enabled"] as? Boolean ?: false,
+                apps = (c["apps"] as? List<*>).orEmpty().mapNotNull { it as? String }.filter { it in known }.toSet(),
+                dailyMinutes = (c["dailyMinutes"] as? Number)?.toInt()?.coerceIn(1, 1440),
+                schedules = schedules,
+            )
+        }
+
+        /**
+         * Caches the entitlement the app received from the server (GET /v1/me or verify). Used only to
+         * decide whether local blocking may run offline; expires on its own (BlockPolicy.validUntil).
+         */
+        Function("setEntitlement") { tier: String, state: String, expiresAtMs: Double?, verifiedAtMs: Double ->
+            val pro = tier == "pro" && (state == "active" || state == "grace")
+            TrackingPrefs(context).entitlement = app.driftless.tracking.core.CachedEntitlement(
+                pro,
+                app.driftless.tracking.core.BlockPolicy.validUntil(expiresAtMs?.toLong(), verifiedAtMs.toLong()),
+            )
+        }
+
         Function("wipeLocalData") {
             SqliteStore.get(context).wipeAll()
         }

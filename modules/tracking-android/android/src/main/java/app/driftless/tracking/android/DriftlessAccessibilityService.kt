@@ -97,6 +97,35 @@ class DriftlessAccessibilityService : AccessibilityService() {
         val c = classifier.classify(A11yNode(root), appRules, saltFor(now))
         engine.onObservation(pkg, versionOf(pkg), c, pendingScroll, now)
         pendingScroll = false
+        maybePause(pkg, now)
+    }
+
+    private var lastPauseMs = 0L
+
+    /** Pro blocking: shows Driftless's own pause screen. Fails open on any error. */
+    private fun maybePause(pkg: String, now: Long) {
+        if (now - lastPauseMs < PAUSE_COOLDOWN_MS) return
+        runCatching {
+            val cfg = prefs.blockConfig
+            if (!cfg.enabled || pkg !in cfg.apps) return
+            val zone = ZoneId.systemDefault()
+            val at = java.time.Instant.ofEpochMilli(now).atZone(zone)
+            val row = SqliteStore.get(this).daily(at.toLocalDate().toString()).firstOrNull { it.pkg == pkg }
+            val minutes = row?.let { (maxOf(it.usageMs, it.surfaceMs + it.unknownMs) / 60_000L).toInt() }
+            val d = app.driftless.tracking.core.BlockPolicy.decide(
+                pkg, cfg, prefs.entitlement, minutes, at.dayOfWeek.value, at.hour * 60 + at.minute,
+                prefs.snoozedUntil(pkg), now,
+            )
+            if (d.block) {
+                lastPauseMs = now
+                startActivity(
+                    Intent(this, PauseActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        .putExtra(PauseActivity.EXTRA_PKG, pkg)
+                        .putExtra(PauseActivity.EXTRA_REASON, d.reason?.name),
+                )
+            }
+        }
     }
 
     private fun onTick() {
@@ -109,7 +138,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
         engine.activePackage?.let { active ->
             // Leave detection: only the foreground package name is read here, never content.
             val fg = rootInActiveWindow?.packageName?.toString()
-            if (fg != active) engine.onLeave(now)
+            if (fg != active) engine.onLeave(now) else maybePause(active, now)
         }
         engine.onTick(now)
         if (now - lastGoalCheckMs >= GOAL_CHECK_MS) {
@@ -198,6 +227,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
             private set
         const val TICK_MS = 2_000L
         const val GOAL_CHECK_MS = 60_000L
+        const val PAUSE_COOLDOWN_MS = 3_000L
         const val SETTLE_MS = 300L
         const val RETENTION_MS = 30L * 24 * 3600 * 1000
 

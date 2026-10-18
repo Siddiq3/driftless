@@ -92,6 +92,12 @@ export function createApiClient(o: ApiClientOptions) {
           headers: { 'idempotency-key': idempotencyKey },
         })
       ).data,
+    playVerify: async (productId: string, purchaseToken: string) =>
+      (
+        await request('POST', '/v1/billing/play/verify', v1.VerifyResponse, {
+          body: { productId, purchaseToken },
+        })
+      ).data,
     getGoals: async () => (await request('GET', '/v1/goals', v1.GoalsResponse)).data,
     putGoals: async (goals: v1.Goal[]) =>
       (await request('PUT', '/v1/goals', v1.GoalsResponse, { body: { goals } })).data,

@@ -59,7 +59,8 @@
     ],
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/src/$1",
-      "^tracking-android$": "<rootDir>/modules/tracking-android/src"
+      "^tracking-android$": "<rootDir>/modules/tracking-android/src",
+      "^billing-android$": "<rootDir>/modules/billing-android/src"
     }
   },
   "packageManager": "pnpm@10.28.0",

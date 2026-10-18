@@ -45,6 +45,15 @@ export type Daily = {
   apps: DailyApp[];
 };
 
+/** Days: 1 = Monday … 7 = Sunday. Minutes since local midnight; end may be < start (overnight). */
+export type FocusSchedule = { days: number[]; startMinute: number; endMinute: number };
+export type BlockingConfig = {
+  enabled: boolean;
+  apps: string[];
+  dailyMinutes: number | null;
+  schedules: FocusSchedule[];
+};
+
 type NativeTracking = {
   getHealth(): TrackingHealth;
   setDisclosureAccepted(accepted: boolean): void;
@@ -57,6 +66,13 @@ type NativeTracking = {
   lastStructureCapture(): string;
   setLimits(limits: { metric: 'views' | 'minutes'; dailyLimit: number }[]): void;
   checkGoals(): void;
+  setBlocking(config: BlockingConfig): void;
+  setEntitlement(
+    tier: string,
+    state: string,
+    expiresAtMs: number | null,
+    verifiedAtMs: number,
+  ): void;
   wipeLocalData(): void;
 };
 
@@ -75,5 +91,8 @@ export const Tracking = {
   setLimits: (limits: { metric: 'views' | 'minutes'; dailyLimit: number }[]) =>
     native.setLimits(limits),
   checkGoals: () => native.checkGoals(),
+  setBlocking: (config: BlockingConfig) => native.setBlocking(config),
+  setEntitlement: (tier: string, state: string, expiresAtMs: number | null, verifiedAtMs: number) =>
+    native.setEntitlement(tier, state, expiresAtMs, verifiedAtMs),
   wipeLocalData: () => native.wipeLocalData(),
 };

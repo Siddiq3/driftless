@@ -10,6 +10,14 @@
   </queries>
 
   <application>
+    <!-- Driftless's own dismissible pause screen (no SYSTEM_ALERT_WINDOW, no overlay). -->
+    <activity
+      android:name="app.driftless.tracking.android.PauseActivity"
+      android:exported="false"
+      android:excludeFromRecents="true"
+      android:launchMode="singleTask"
+      android:taskAffinity="app.driftless.pause"
+      android:noHistory="true" />
     <service
       android:name="app.driftless.tracking.android.DriftlessAccessibilityService"
       android:exported="false"
