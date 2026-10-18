@@ -1,9 +1,11 @@
 import { addDays, localDateOf } from '@siddiq3/driftless-contracts/domain';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
+import { View } from 'react-native';
 import { Tracking, type Daily, type TrackingHealth } from 'tracking-android';
 import { currentTimeZone } from '@/sync/run';
-import { Card, Notice, Screen, T } from '@/ui/kit';
+import { Button, Card, Notice, Screen, T, useTheme } from '@/ui/kit';
+import { Icon } from '@/ui/Icon';
 
 const DAYS = 14;
 
@@ -40,6 +42,7 @@ function toRow(d: Daily, h: TrackingHealth): Row {
 }
 
 export default function History() {
+  const t = useTheme();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,7 +60,7 @@ export default function History() {
 
   return (
     <Screen>
-      <T v="title">Last {DAYS} days</T>
+      <Button kind="secondary" label="Explore your stats ↗" onPress={() => router.push('/stats')} />
       {error && <Notice tone="warn" title="History could not be read" body={error} />}
       {rows?.every((r) => r.minutes === null && r.videos === null) && (
         <Notice
@@ -65,21 +68,49 @@ export default function History() {
           body="Turn on the counter or Usage Access to start building your history."
         />
       )}
-      {rows?.map((r) => (
-        <Card key={r.date}>
-          <T v="label">{r.date}</T>
-          {r.gap ? (
-            <T muted>Not tracked</T>
-          ) : (
-            <T muted>
-              {r.minutes === null ? 'Minutes not tracked' : `${r.minutes} min`}
-              {r.videos === null
-                ? ''
-                : ` · ${r.videos} videos${r.confirmed ? '' : ' (unconfirmed)'}`}
+      {rows && (
+        <Card>
+          {rows.map((r) => (
+            <View
+              key={r.date}
+              accessible
+              accessibilityLabel={`${r.date}: ${r.gap ? 'not tracked' : `${r.minutes ?? 'untracked'} minutes, ${r.videos ?? 'untracked'} videos${r.confirmed ? '' : ', unconfirmed'}`}`}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 12,
+                paddingVertical: 12,
+                borderBottomWidth: 0.5,
+                borderColor: t.border,
+              }}
+            >
+              <T v="label" style={{ flex: 1 }}>
+                {r.date.slice(5).replace('-', '/')}
+              </T>
+              {r.gap ? (
+                <T v="caption" muted>
+                  Not tracked
+                </T>
+              ) : (
+                <>
+                  <Icon name="clock" size={16} color={t.textMuted} />
+                  <T v="label">{r.minutes ?? '—'}m</T>
+                  <Icon name="play" size={16} />
+                  <T v="label">
+                    {r.videos ?? '—'}
+                    {r.videos !== null && !r.confirmed ? '*' : ''}
+                  </T>
+                </>
+              )}
+            </View>
+          ))}
+          {rows.some((r) => r.videos !== null && !r.confirmed) && (
+            <T v="caption" muted>
+              * Unconfirmed counts
             </T>
           )}
         </Card>
-      ))}
+      )}
     </Screen>
   );
 }

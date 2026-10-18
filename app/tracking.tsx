@@ -1,10 +1,11 @@
 import { router, useFocusEffect } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, AppState } from 'react-native';
+import { Alert, AppState, View } from 'react-native';
 import { Tracking, type Daily, type TrackingHealth } from 'tracking-android';
 import { STATE_COPY, trackingState } from '@/tracking/state';
-import { Button, Card, Notice, Screen, T } from '@/ui/kit';
+import { Button, Card, Notice, Screen, T, EmptyState, Details } from '@/ui/kit';
+import { AppIcon, Icon } from '@/ui/Icon';
 
 const minutes = (ms: number) => Math.round(ms / 60_000);
 
@@ -58,12 +59,14 @@ export default function TrackingScreen() {
 
   return (
     <Screen>
-      <T v="title">Reels & Shorts counter</T>
-      <Notice
-        tone={state.startsWith('tracking') ? 'info' : 'warn'}
-        title={copy.title}
-        body={copy.body}
-      />
+      {state.startsWith('tracking') ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Icon name="check" />
+          <T v="label">{copy.title}</T>
+        </View>
+      ) : (
+        <Notice tone="warn" title={copy.title} body={copy.body} />
+      )}
 
       {state === 'needs_disclosure' && (
         <Button label="How counting works" onPress={() => router.push('/disclosure')} />
@@ -73,7 +76,50 @@ export default function TrackingScreen() {
       )}
 
       <Card>
-        <T v="heading">Minutes (Usage Access)</T>
+        <T v="heading">Today on this phone</T>
+        {daily.apps.length === 0 ? (
+          <EmptyState
+            mark="▥"
+            title="A fresh start"
+            body="Your app totals will appear here as tracking records activity."
+          />
+        ) : (
+          daily.apps.map((a) => (
+            <View key={a.package} style={{ gap: 8, paddingVertical: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <AppIcon name={label(a.package)} />
+                <T v="label">{label(a.package)}</T>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 24 }}>
+                <View style={{ flex: 1 }}>
+                  <T v="display">{a.views}</T>
+                  <T v="caption" muted>
+                    Videos
+                    {health.apps.find((app) => app.package === a.package)?.validated
+                      ? ''
+                      : ' · unconfirmed'}
+                  </T>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <T v="display">
+                    {minutes(health.usageAccessGranted ? a.usageMs : a.surfaceMs + a.unknownMs)}
+                  </T>
+                  <T v="caption" muted>
+                    Minutes
+                  </T>
+                </View>
+              </View>
+              {a.adViews > 0 && (
+                <T v="caption" muted>
+                  {a.adViews} ads counted separately
+                </T>
+              )}
+            </View>
+          ))
+        )}
+      </Card>
+
+      <Details title="Minutes (Usage Access)" icon="clock">
         <T muted>
           {health.usageAccessGranted
             ? 'On. Minutes in Instagram and YouTube come from Android and work even when the counter is off.'
@@ -86,29 +132,15 @@ export default function TrackingScreen() {
             onPress={Tracking.openUsageAccessSettings}
           />
         )}
-      </Card>
-
-      <Card>
-        <T v="heading">Today on this phone</T>
-        {daily.apps.length === 0 ? (
-          <T muted>Nothing counted yet today.</T>
-        ) : (
-          daily.apps.map((a) => (
-            <T key={a.package} muted>
-              {label(a.package)}: {a.views} videos ·{' '}
-              {minutes(health.usageAccessGranted ? a.usageMs : a.surfaceMs + a.unknownMs)} min
-              {a.adViews > 0 ? ` · ${a.adViews} ads` : ''}
-            </T>
-          ))
-        )}
+      </Details>
+      <Details title="Tracking details" icon="help">
+        <T muted>{copy.body}</T>
         <T v="caption" muted>
-          Counter active for {daily.heartbeatMinutes} min today. Time when it was off is a gap, not
-          zero.
+          Counter active for {daily.heartbeatMinutes} minutes today. Time when it was off is a gap,
+          not zero.
         </T>
-      </Card>
-
-      <Card>
-        <T v="heading">Supported apps</T>
+      </Details>
+      <Details title="Supported apps" icon="play">
         {health.apps.map((a) => (
           <T key={a.package} muted>
             {a.label}: {a.installed ? `version ${a.version}` : 'not installed'}
@@ -119,11 +151,10 @@ export default function TrackingScreen() {
               : ''}
           </T>
         ))}
-      </Card>
+      </Details>
 
       {health.debugBuild && (
-        <Card>
-          <T v="heading">Accuracy testing (debug build)</T>
+        <Details title="Accuracy testing (debug build)" icon="settings">
           <T v="caption" muted>
             Exports contain only event times and ids — no content. See docs/ACCURACY_PROTOCOL.md.
           </T>
@@ -153,26 +184,28 @@ export default function TrackingScreen() {
             label="Share last capture"
             onPress={() => share(() => Tracking.lastStructureCapture())}
           />
-        </Card>
+        </Details>
       )}
 
-      <Button
-        kind="secondary"
-        label="Delete counts on this phone"
-        onPress={() =>
-          Alert.alert('Delete all counts?', 'This removes every count stored on this phone.', [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Delete',
-              style: 'destructive',
-              onPress: () => {
-                Tracking.wipeLocalData();
-                read();
+      <Details title="Manage local counts" icon="settings">
+        <Button
+          kind="danger"
+          label="Delete counts on this phone"
+          onPress={() =>
+            Alert.alert('Delete all counts?', 'This removes every count stored on this phone.', [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: () => {
+                  Tracking.wipeLocalData();
+                  read();
+                },
               },
-            },
-          ])
-        }
-      />
+            ])
+          }
+        />
+      </Details>
     </Screen>
   );
 }

@@ -10,44 +10,52 @@ export type Bar = { key: string; label: string; value: number | null; over?: boo
  */
 export function Bars({ bars, unit, limit }: { bars: Bar[]; unit: string; limit?: number }) {
   const t = useTheme();
-  const max = Math.max(1, limit ?? 0, ...bars.map((b) => b.value ?? 0));
+  const validLimit =
+    limit !== undefined && Number.isFinite(limit) && limit >= 0 ? limit : undefined;
+  const max = Math.max(1, validLimit ?? 0, ...bars.map((b) => b.value ?? 0));
   const H = 120;
   return (
-    <View>
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: H, gap: 4 }}>
-        {bars.map((b) => {
-          const h = b.value === null ? H * 0.3 : Math.max(2, (b.value / max) * H);
-          return (
-            <View
-              key={b.key}
-              accessible
-              accessibilityLabel={`${b.label}: ${b.value === null ? 'not tracked' : `${b.value} ${unit}`}${b.over ? ', over goal' : ''}`}
-              style={{
-                flex: 1,
-                height: h,
-                borderRadius: radius.sm / 2,
-                backgroundColor: b.value === null ? 'transparent' : b.over ? t.warning : t.accent,
-                borderWidth: b.value === null ? 1 : 0,
-                borderStyle: 'dashed',
-                borderColor: t.border,
-              }}
-            />
-          );
-        })}
+    <View style={{ gap: space.sm }}>
+      <View style={{ height: H }}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: H, gap: 6 }}>
+          {bars.map((b) => {
+            const h = b.value === null ? H * 0.3 : Math.max(2, (b.value / max) * H);
+            return (
+              <View
+                key={b.key}
+                accessible
+                accessibilityLabel={`${b.label}: ${b.value === null ? 'not tracked' : `${b.value} ${unit}`}${b.over ? ', over goal' : ''}`}
+                style={{
+                  flex: 1,
+                  height: h,
+                  borderTopLeftRadius: radius.sm,
+                  borderTopRightRadius: radius.sm,
+                  borderBottomLeftRadius: 3,
+                  borderBottomRightRadius: 3,
+                  backgroundColor: b.value === null ? 'transparent' : b.over ? t.warning : t.accent,
+                  borderWidth: b.value === null ? 1 : 0,
+                  borderStyle: b.value === null ? 'dashed' : 'solid',
+                  borderColor: t.border,
+                }}
+              />
+            );
+          })}
+        </View>
+        {validLimit !== undefined && (
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: (validLimit / max) * H,
+              borderTopWidth: 1,
+              borderStyle: 'dashed',
+              borderColor: t.textMuted,
+            }}
+          />
+        )}
       </View>
-      {limit !== undefined && (
-        <View
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            bottom: (limit / max) * H,
-            borderTopWidth: 1,
-            borderColor: t.textMuted,
-          }}
-        />
-      )}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: space.xs }}>
         <T v="caption" muted>
           {bars[0]?.label ?? ''}
@@ -56,6 +64,11 @@ export function Bars({ bars, unit, limit }: { bars: Bar[]; unit: string; limit?:
           {bars.at(-1)?.label ?? ''}
         </T>
       </View>
+      {validLimit !== undefined && (
+        <T v="caption" muted>
+          Daily goal · {validLimit} {unit}
+        </T>
+      )}
     </View>
   );
 }

@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { Tracking } from 'tracking-android';
 import { Button, Card, Screen, T } from '@/ui/kit';
+import { Icon } from '@/ui/Icon';
 
 /**
  * Google Play prominent disclosure for AccessibilityService use (PLATFORM_CAPABILITIES S1):
@@ -21,13 +22,8 @@ export default function Disclosure() {
 
   return (
     <Screen>
-      <T v="title">How Driftless counts Reels and Shorts</T>
-      <T muted>
-        To count videos, Driftless uses Android’s Accessibility Service. Please read what that means
-        before you turn it on.
-      </T>
-
       <Card>
+        <Icon name="counter" />
         <T v="heading">What it reads</T>
         <T muted>
           • Only Instagram and YouTube — no other apps.{'\n'}• The layout of the video player, and
@@ -37,6 +33,7 @@ export default function Disclosure() {
       </Card>
 
       <Card>
+        <Icon name="lock" />
         <T v="heading">What it keeps</T>
         <T muted>
           The labels are turned into an unreadable code immediately and are never saved. Driftless
@@ -45,6 +42,7 @@ export default function Disclosure() {
       </Card>
 
       <Card>
+        <Icon name="shield" />
         <T v="heading">What it never does</T>
         <T muted>
           It never reads your messages, never takes screenshots, never taps, types or scrolls for
@@ -54,6 +52,7 @@ export default function Disclosure() {
       </Card>
 
       <Card>
+        <Icon name="settings" />
         <T v="heading">You stay in control</T>
         <T muted>
           You can switch it off any time in Settings › Accessibility, or delete the counts from this

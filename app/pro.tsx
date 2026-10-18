@@ -1,18 +1,16 @@
 import type { Offer } from 'billing-android';
-import { Redirect, router } from 'expo-router';
+import { Redirect } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Linking } from 'react-native';
+import { Linking, View } from 'react-native';
 import { createApiClient } from '@/api/client';
 import { useSession } from '@/auth/session';
 import { buyPro, loadOffers, MANAGE_URL, restorePro } from '@/billing/pro';
 import { APP_VERSION, readEnv } from '@/config/env';
-import { Button, Card, Notice, Screen, T } from '@/ui/kit';
+import { Button, Card, Notice, Screen, T, LoadingState } from '@/ui/kit';
+import { VisualBanner } from '@/ui/Focus';
+import { Icon } from '@/ui/Icon';
 
-const FEATURES = [
-  'Pause Instagram or YouTube when you reach your daily limit',
-  'Focus schedules, like work hours or bedtime',
-  'Longer history and trends',
-];
+const FEATURES = ['App pauses at your limit', 'Focus & bedtime schedules', 'More history & trends'];
 
 export default function Pro() {
   const s = useSession();
@@ -70,12 +68,19 @@ export default function Pro() {
 
   return (
     <Screen>
-      <T v="title">Driftless Pro</T>
+      <VisualBanner art="focus" title="More room for life" />
       <Card>
-        {FEATURES.map((f) => (
-          <T key={f} muted>
-            • {f}
-          </T>
+        <T v="heading">What’s included</T>
+        {FEATURES.map((f, i) => (
+          <View
+            key={f}
+            style={{ flexDirection: 'row', gap: 12, alignItems: 'center', paddingVertical: 8 }}
+          >
+            <Icon name={i === 0 ? 'lock' : i === 1 ? 'clock' : 'chart'} />
+            <T muted style={{ flex: 1 }}>
+              {f}
+            </T>
+          </View>
         ))}
       </Card>
       <T v="caption" muted>
@@ -83,6 +88,7 @@ export default function Pro() {
         Play; cancel any time in Google Play.
       </T>
       {note && <Notice tone={note.warn ? 'warn' : 'info'} title={note.title} body={note.body} />}
+      {offers === null && !note && <LoadingState label="Checking plans in Google Play…" />}
       {offers?.length === 0 && (
         <Notice title="Not available yet" body="Pro isn't on sale in this build." />
       )}
@@ -121,7 +127,6 @@ export default function Pro() {
         label="Manage subscription in Google Play"
         onPress={() => void Linking.openURL(MANAGE_URL)}
       />
-      <Button kind="secondary" label="Back" onPress={() => router.back()} />
     </Screen>
   );
 }

@@ -1,11 +1,13 @@
 import type { v1 } from '@siddiq3/driftless-contracts';
 import { addDays, localDateOf } from '@siddiq3/driftless-contracts/domain';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Share, TextInput } from 'react-native';
+import { Share, View } from 'react-native';
 import { useApi } from '@/api/useApi';
 import { currentTimeZone } from '@/sync/run';
-import { Button, Card, Notice, Screen, T, useTheme } from '@/ui/kit';
+import { Button, Card, Notice, Screen, T, Field, EmptyState, LoadingState } from '@/ui/kit';
+import { VisualBanner } from '@/ui/Focus';
+import { Icon } from '@/ui/Icon';
 
 const METRIC: Record<v1.ChallengeSummary['metric'], { label: string; unit: string }> = {
   fewest_minutes: { label: 'Fewest minutes a day', unit: 'min/day' },
@@ -31,14 +33,21 @@ function Leaderboard({ id }: { id: string }) {
         {err}
       </T>
     );
-  if (!lb) return null;
+  if (!lb) return <LoadingState label="Loading the scores…" />;
   return (
     <>
-      {lb.entries.length === 0 && <T muted>No scores yet — they appear once members sync a day.</T>}
+      {lb.entries.length === 0 && <T muted>Scores appear after your first synced day.</T>}
       {lb.entries.map((e) => (
-        <T key={e.userId} muted>
-          {e.rank}. @{e.handle} — {e.score}
-        </T>
+        <View
+          key={e.userId}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 }}
+        >
+          <Icon name="trophy" size={e.rank === 1 ? 28 : 22} />
+          <View style={{ flex: 1 }}>
+            <T v="label">@{e.handle}</T>
+          </View>
+          <T v="title">{e.score}</T>
+        </View>
       ))}
       {(lb.hiddenMembers ?? 0) > 0 && (
         <T v="caption" muted>
@@ -51,7 +60,6 @@ function Leaderboard({ id }: { id: string }) {
 
 export default function Challenges() {
   const api = useApi();
-  const t = useTheme();
   const [list, setList] = useState<v1.ChallengeSummary[] | null>(null);
   const [code, setCode] = useState('');
   const [note, setNote] = useState<{ title: string; warn?: boolean } | null>(null);
@@ -73,6 +81,7 @@ export default function Challenges() {
           title="Sign in for challenges"
           body="Challenges are with friends and need an account."
         />
+        <Button label="Go to sign in" onPress={() => router.push('/welcome')} />
       </Screen>
     );
   }
@@ -102,10 +111,9 @@ export default function Challenges() {
 
   return (
     <Screen>
-      <T v="title">Challenges</T>
-      <T muted>With friends only. No prizes — just a friendly nudge.</T>
       {note && <Notice tone={note.warn ? 'warn' : 'info'} title={note.title} body="" />}
 
+      <VisualBanner art="friends" title="A little friendly competition" />
       <Card>
         <T v="heading">Start a 7-day challenge</T>
         <Button label={METRIC.fewest_minutes.label} onPress={() => createWeek('fewest_minutes')} />
@@ -121,21 +129,12 @@ export default function Challenges() {
 
       <Card>
         <T v="heading">Join with a code</T>
-        <TextInput
-          accessibilityLabel="Challenge code"
-          style={{
-            borderWidth: 1,
-            borderColor: t.border,
-            color: t.text,
-            borderRadius: 12,
-            padding: 12,
-            fontSize: 16,
-          }}
+        <Field
+          label="Challenge code"
           autoCapitalize="none"
           value={code}
           onChangeText={setCode}
           placeholder="paste the code your friend shared"
-          placeholderTextColor={t.textMuted}
         />
         <Button
           label="Join"
@@ -143,6 +142,16 @@ export default function Challenges() {
         />
       </Card>
 
+      {list === null && !note && <LoadingState label="Loading your challenges…" />}
+      {list?.length === 0 && (
+        <Card>
+          <EmptyState
+            mark="⚑"
+            title="Your next week starts here"
+            body="Create a challenge above or join one with a friend’s code."
+          />
+        </Card>
+      )}
       {list?.map((c) => (
         <Card key={c.challengeId}>
           <T v="heading">{c.title}</T>

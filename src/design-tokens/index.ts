@@ -1,5 +1,5 @@
 /**
- * Driftless design tokens — original identity: deep-indigo night sky, warm amber lantern glow.
+ * Driftless design tokens — dark cocoa surfaces, cream counters and warm lantern accents.
  * Every foreground/background pair used for text is listed in TEXT_PAIRS and must meet WCAG AA.
  */
 
@@ -29,38 +29,44 @@ export type Theme = {
   success: string;
   warning: string;
   border: string;
+  hero: string;
+  warm: string;
 };
 
 export const dark: Theme = {
-  bg: palette.night900,
-  surface: palette.night800,
-  surfaceRaised: palette.night700,
-  text: palette.mist100,
-  textMuted: palette.mist300,
-  accent: palette.amber400,
-  onAccent: palette.night900,
-  success: palette.sage400,
-  warning: palette.coral400,
-  border: palette.night500,
+  bg: '#120E09',
+  surface: '#1D1811',
+  surfaceRaised: '#2B2217',
+  text: '#FFF9ED',
+  textMuted: '#C4B69D',
+  accent: '#FFE8B0',
+  onAccent: '#643800',
+  success: '#BEDC93',
+  warning: '#FFAE94',
+  border: '#51412A',
+  hero: '#291C0C',
+  warm: '#3A2915',
 };
 
 export const light: Theme = {
-  bg: palette.mist100,
-  surface: palette.white,
-  surfaceRaised: palette.white,
-  text: palette.night900,
-  textMuted: '#4E4868',
-  accent: '#9A5B00',
-  onAccent: palette.white,
-  success: '#1F6B47',
+  bg: '#FFF9ED',
+  surface: '#FFFFFF',
+  surfaceRaised: '#F7EDDA',
+  text: '#281C10',
+  textMuted: '#69553F',
+  accent: '#754400',
+  onAccent: '#FFF5DF',
+  success: '#356123',
   warning: '#A8321F',
-  border: palette.mist300,
+  border: '#DECEB3',
+  hero: '#F8EACD',
+  warm: '#FFE8B0',
 };
 
 /** 4-pt spacing scale. */
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, xxxl: 48 } as const;
 
-export const radius = { sm: 8, md: 14, lg: 22, pill: 999 } as const;
+export const radius = { sm: 10, md: 22, lg: 30, pill: 999 } as const;
 
 /** Type scale in sp/pt. Components must allow font scaling (dynamic type) — never fix heights. */
 export const type = {
@@ -82,11 +88,20 @@ export const TEXT_PAIRS: readonly (readonly [keyof Theme, keyof Theme])[] = [
   ['text', 'surfaceRaised'],
   ['textMuted', 'bg'],
   ['textMuted', 'surface'],
+  ['textMuted', 'surfaceRaised'],
+  ['text', 'hero'],
+  ['textMuted', 'hero'],
+  ['accent', 'hero'],
+  ['text', 'warm'],
+  ['textMuted', 'warm'],
+  ['accent', 'warm'],
   ['accent', 'bg'],
   ['accent', 'surface'],
+  ['accent', 'surfaceRaised'],
   ['onAccent', 'accent'],
   ['success', 'surface'],
   ['warning', 'surface'],
+  ['warning', 'surfaceRaised'],
 ];
 
 function channel(c: number): number {

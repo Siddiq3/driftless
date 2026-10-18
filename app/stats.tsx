@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { useProgress } from '@/goals/useProgress';
 import { Bars } from '@/ui/Bars';
-import { Button, Card, Notice, Screen, T } from '@/ui/kit';
+import { Button, Card, Notice, Screen, T, useTheme, Details } from '@/ui/kit';
 
 const short = (d: string) => d.slice(5).replace('-', '/');
 
 export default function Stats() {
+  const t = useTheme();
   const [range, setRange] = useState<7 | 30>(7);
   const [s] = useProgress(30);
   if (s.state === 'loading') return <Screen>{null}</Screen>;
@@ -24,10 +25,11 @@ export default function Stats() {
     ? Math.round(tracked.reduce((n, d) => n + d.minutes!, 0) / tracked.length)
     : null;
   const kept = days.filter((d) => d.outcome === 'kept').length;
+  const counted = days.filter((d) => d.views !== null);
+  const totalViews = counted.length ? counted.reduce((n, d) => n + d.views!, 0) : null;
 
   return (
     <Screen>
-      <T v="title">Stats</T>
       <View style={{ flexDirection: 'row', gap: 12 }}>
         <View style={{ flex: 1 }}>
           <Button
@@ -45,7 +47,41 @@ export default function Stats() {
         </View>
       </View>
       <Card>
-        <T v="heading">Minutes per day</T>
+        <T v="heading">Reels & Shorts</T>
+        <Bars
+          unit="videos"
+          bars={days.map((d) => ({ key: d.localDate, label: short(d.localDate), value: d.views }))}
+        />
+        <View
+          style={{
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            backgroundColor: t.accent,
+            borderRadius: 22,
+            padding: 20,
+            gap: 16,
+          }}
+        >
+          <View style={{ flex: 1, minWidth: 100 }}>
+            <T v="display" style={{ color: t.onAccent }}>
+              {totalViews === null ? '—' : totalViews.toLocaleString()}
+            </T>
+            <T v="caption" style={{ color: t.onAccent }}>
+              Total videos
+            </T>
+          </View>
+          <View style={{ flex: 1, minWidth: 100 }}>
+            <T v="display" style={{ color: t.onAccent }}>
+              {totalViews === null ? '—' : Math.round(totalViews / counted.length).toLocaleString()}
+            </T>
+            <T v="caption" style={{ color: t.onAccent }}>
+              Daily average
+            </T>
+          </View>
+        </View>
+      </Card>
+      <Card>
+        <T v="heading">Minutes</T>
         <Bars
           unit="minutes"
           limit={minuteGoal?.dailyLimit}
@@ -57,6 +93,11 @@ export default function Stats() {
               minuteGoal !== undefined && d.minutes !== null && d.minutes > minuteGoal.dailyLimit,
           }))}
         />
+      </Card>
+      <Details title="About these numbers" icon="help">
+        <T v="caption" muted>
+          Based on {counted.length} days with confirmed counts. Untracked days are excluded.
+        </T>
         <T muted>
           {avg === null
             ? 'No tracked days in this range'
@@ -66,7 +107,7 @@ export default function Stats() {
         <T v="caption" muted>
           Dashed bars are days that weren’t tracked — they are not counted as zero.
         </T>
-      </Card>
+      </Details>
     </Screen>
   );
 }

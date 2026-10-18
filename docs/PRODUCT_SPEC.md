@@ -5,8 +5,8 @@ Status: Draft for Phase 0 review · Reviewed 2026-10-18
 ## 1. Product identity
 - **Name:** Driftless (placeholder; requires trademark + store-name search — D-001).
 - **Promise:** "See how much you drift into short-video feeds, and steer back." Calm, non-shaming tone.
-- **Mascot:** an original character — a small, lantern-like brain sprite called **"Wick"** whose glow brightens with mindful days and dims (never "rots") with heavy-scroll days. All artwork, animation and copy are original; nothing is derived from the reference app's branding, UI, or assets.
-- **Visual language:** deep indigo night background, warm amber glow accents, rounded geometric type (candidate: Inter for UI, an open-licence display face for headings — licence check in Phase 1).
+- **Mascot:** an original character — a small, lantern-like brain sprite called **"Wick"** whose glow brightens with mindful days and dims (never "rots") with heavy-scroll days. Artwork, animation, branding and copy remain Driftless’s own.
+- **Visual language:** dark cocoa surfaces, cream count panels, warm lantern accents and rounded cards. BrainPal: Quit Scrolling (`com.brainrot.android`) is a reference for count-led dashboards, companion prominence and readable progress charts; Driftless uses its own layouts, language and assets. Screens prioritize character illustrations, concise labels, vector icons and primary counts. Supporting explanations use expandable sections; account and cloud controls live in Settings. The same visual system covers every app screen, including tracking setup, goals, friends, challenges, app pauses, privacy, Pro and the native Android pause activity.
 
 ## 2. Target users
 Adults (18+ for the initial release, D-010) who want to reduce compulsive short-video use on their own device. No parent/child monitoring in v1.

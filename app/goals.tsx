@@ -2,7 +2,7 @@ import type { v1 } from '@siddiq3/driftless-contracts';
 import { randomUUID } from 'expo-crypto';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Switch, View } from 'react-native';
+import { View } from 'react-native';
 import { getDb } from '@/db';
 import { canUseViewGoals } from '@/goals/progress';
 import {
@@ -13,7 +13,8 @@ import {
 import { loadGoals, saveGoal } from '@/goals/store';
 import { Tracking } from 'tracking-android';
 import { useProgress } from '@/goals/useProgress';
-import { Button, Card, Notice, Screen, T } from '@/ui/kit';
+import { Details, MetricPanel, Toggle, Button, Card, Notice, Screen, T } from '@/ui/kit';
+import { VisualBanner } from '@/ui/Focus';
 
 const STEPS: Record<v1.Goal['metric'], number[]> = {
   minutes: [10, 15, 20, 30, 45, 60, 90, 120],
@@ -57,8 +58,10 @@ function GoalEditor({
   return (
     <Card>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <T v="heading">{metric === 'minutes' ? 'Minutes a day' : 'Videos a day'}</T>
-        <Switch
+        <T v="heading" style={{ flex: 1 }}>
+          {metric === 'minutes' ? 'Minutes a day' : 'Videos a day'}
+        </T>
+        <Toggle
           accessibilityLabel={`${metric} goal`}
           value={enabled}
           disabled={!enabledAllowed}
@@ -73,9 +76,10 @@ function GoalEditor({
           Available once video counting accuracy is confirmed for your app versions.
         </T>
       )}
-      <T v="display" accessibilityRole="text">
-        {limit}
-      </T>
+      <MetricPanel
+        value={limit}
+        label={metric === 'minutes' ? 'minutes per day' : 'videos per day'}
+      />
       <View style={{ flexDirection: 'row', gap: 12 }}>
         <View style={{ flex: 1 }}>
           <Button
@@ -124,9 +128,9 @@ function EveningReminder() {
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <View style={{ flex: 1 }}>
           <T v="heading">Evening check-in</T>
-          <T muted>A gentle reminder at 9 pm to look at your day.</T>
+          <T muted>9 pm reminder</T>
         </View>
-        <Switch
+        <Toggle
           accessibilityLabel="Evening check-in reminder"
           value={on}
           onValueChange={(v) => {
@@ -169,15 +173,16 @@ export default function Goals() {
   const find = (m: v1.Goal['metric']) => s.goals.find((g) => g.metric === m);
   return (
     <Screen>
-      <T v="title">Daily goals</T>
-      <T muted>A day counts as kept when you stay within every goal you switch on.</T>
+      <VisualBanner art="wick" />
       <GoalEditor metric="minutes" existing={find('minutes')} enabledAllowed />
       <GoalEditor
         metric="views"
         existing={find('views')}
         enabledAllowed={canUseViewGoals(s.health)}
       />
-      <EveningReminder />
+      <Details title="Reminders" icon="clock">
+        <EveningReminder />
+      </Details>
       <Button label="Done" onPress={() => router.back()} />
     </Screen>
   );

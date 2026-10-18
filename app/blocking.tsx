@@ -1,10 +1,12 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Switch, View } from 'react-native';
+import { View } from 'react-native';
 import { Tracking, type BlockingConfig } from 'tracking-android';
 import { loadBlocking, PRESETS, saveBlocking } from '@/billing/blocking';
 import { getDb } from '@/db';
-import { Button, Card, Notice, Screen, T } from '@/ui/kit';
+import { Toggle, Button, Card, Notice, Screen, T, MetricPanel, Details } from '@/ui/kit';
+import { VisualBanner } from '@/ui/Focus';
+import { AppIcon, Icon } from '@/ui/Icon';
 
 const LIMITS = [15, 20, 30, 45, 60, 90, 120];
 
@@ -26,10 +28,15 @@ function Row({
         gap: 12,
       }}
     >
+      {/Instagram|YouTube/i.test(label) ? (
+        <AppIcon name={label} />
+      ) : (
+        <Icon name={label.startsWith('Pause') ? 'lock' : 'clock'} size={22} />
+      )}
       <View style={{ flex: 1 }}>
         <T muted>{label}</T>
       </View>
-      <Switch accessibilityLabel={label} value={value} onValueChange={onChange} />
+      <Toggle accessibilityLabel={label} value={value} onValueChange={onChange} />
     </View>
   );
 }
@@ -37,6 +44,7 @@ function Row({
 export default function Blocking() {
   const [cfg, setCfg] = useState<BlockingConfig | null>(null);
   const [running, setRunning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -46,25 +54,34 @@ export default function Blocking() {
           setCfg(c);
           setRunning(Tracking.health().serviceRunning);
         })
-        .catch(() => undefined);
+        .catch((e: unknown) =>
+          setError(e instanceof Error ? e.message : 'Try opening this screen again.'),
+        );
     }, []),
   );
 
-  if (!cfg) return <Screen>{null}</Screen>;
+  if (!cfg)
+    return (
+      <Screen>
+        {error ? <Notice tone="warn" title="App pauses could not be loaded" body={error} /> : null}
+      </Screen>
+    );
   const update = (next: BlockingConfig) => {
+    setError(null);
     setCfg(next);
-    void getDb().then((db) => saveBlocking(db, next));
+    void getDb()
+      .then((db) => saveBlocking(db, next))
+      .catch((e: unknown) =>
+        setError(e instanceof Error ? e.message : 'Could not save app pauses.'),
+      );
   };
   const apps = Tracking.health().apps;
   const idx = Math.max(0, LIMITS.indexOf(cfg.dailyMinutes ?? 30));
 
   return (
     <Screen>
-      <T v="title">Pause apps (Pro)</T>
-      <T muted>
-        When a limit is reached or a focus time starts, Driftless shows its own pause screen. You
-        can always close it, take 5 more minutes (3 times a day), or turn this off.
-      </T>
+      {error && <Notice tone="warn" title="App pauses need attention" body={error} />}
+      <VisualBanner art="focus" />
       {!running && (
         <Notice
           tone="warn"
@@ -73,14 +90,14 @@ export default function Blocking() {
         />
       )}
       <Card>
+        <T v="heading">Your pause switch</T>
         <Row
           label="Pause apps"
           value={cfg.enabled}
           onChange={(v) => update({ ...cfg, enabled: v })}
         />
         <T v="caption" muted>
-          Works only while your Pro subscription is verified. If it lapses, pausing stops — tracking
-          keeps working.
+          Requires an active Pro subscription.
         </T>
       </Card>
       <Card>
@@ -100,6 +117,15 @@ export default function Blocking() {
         ))}
       </Card>
       <Card>
+        <MetricPanel
+          value={cfg.dailyMinutes ?? '—'}
+          label="minutes per app each day"
+          detail={
+            cfg.dailyMinutes === null
+              ? 'Daily limit is off'
+              : 'A pause begins when you reach this limit'
+          }
+        />
         <Row
           label={`Daily limit per app: ${cfg.dailyMinutes ?? 30} min`}
           value={cfg.dailyMinutes !== null}
@@ -162,6 +188,13 @@ export default function Blocking() {
           );
         })}
       </Card>
+      <Details title="How app pauses work" icon="help">
+        {' '}
+        <T muted>
+          When a limit is reached or a focus time starts, Driftless shows its own pause screen. You
+          can always close it, take 5 more minutes (3 times a day), or turn this off.
+        </T>
+      </Details>
       <Button kind="secondary" label="Driftless Pro" onPress={() => router.push('/pro')} />
     </Screen>
   );

@@ -30,7 +30,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <SessionProvider env={env}>
-        <StatusBar style="auto" />
+        <StatusBar style="light" />
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: t.bg } }} />
       </SessionProvider>
     </SafeAreaProvider>

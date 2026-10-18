@@ -11,7 +11,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   scheme: 'driftless',
   version: '0.1.0',
   orientation: 'portrait',
-  userInterfaceStyle: 'automatic',
+  userInterfaceStyle: 'dark',
   platforms: ['android'],
   android: {
     package: 'com.siddiqkolimi.driftless',

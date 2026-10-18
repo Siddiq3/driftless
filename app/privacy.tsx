@@ -6,7 +6,8 @@ import { ApiError } from '@/api/client';
 import { useApi } from '@/api/useApi';
 import { useSession } from '@/auth/session';
 import { getDb } from '@/db';
-import { Button, Card, Notice, Screen, T } from '@/ui/kit';
+import { Button, Card, Notice, Screen, T, Details } from '@/ui/kit';
+import { VisualBanner } from '@/ui/Focus';
 
 /** Wipes everything Driftless stored on this phone (native counts + app database). */
 async function wipePhone(): Promise<void> {
@@ -64,16 +65,15 @@ export default function Privacy() {
 
   return (
     <Screen>
-      <T v="title">Privacy & data</T>
+      <VisualBanner art="focus" title="Your data stays yours" />
       {note && <Notice tone={note.warn ? 'warn' : 'info'} title={note.title} body={note.body} />}
 
-      <Card>
-        <T v="heading">What Driftless keeps</T>
+      <Details title="What we store" icon="shield">
         <T muted>
           On this phone: counts, minutes and goals. In the cloud (only if you turned on backup):
           daily totals, goals, profile, friends. Never what you watched, messages or screenshots.
         </T>
-      </Card>
+      </Details>
 
       <Card>
         <T v="heading">Turn counting off</T>
@@ -120,14 +120,14 @@ export default function Privacy() {
                 .finally(() => setBusy(false));
             }}
           />
-          <Button kind="secondary" label="Delete my account" busy={busy} onPress={deleteAccount} />
+          <Button kind="danger" label="Delete my account" busy={busy} onPress={deleteAccount} />
         </Card>
       )}
 
       <Card>
         <T v="heading">This phone</T>
         <Button
-          kind="secondary"
+          kind="danger"
           label="Delete everything on this phone"
           onPress={() =>
             confirm(

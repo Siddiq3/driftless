@@ -20,7 +20,7 @@ export function wickLabel(stage: WickStage): string {
   return STAGE_LOOK[stage].label;
 }
 
-export function Wick({ stage, glow }: { stage: WickStage; glow: number }) {
+export function Wick({ stage, glow, size }: { stage: WickStage; glow: number; size?: number }) {
   const look = STAGE_LOOK[stage];
   // useState keeps one Animated.Value for the component's lifetime without reading a ref in render.
   const [pulse] = useState(() => new Animated.Value(0));
@@ -59,20 +59,20 @@ export function Wick({ stage, glow }: { stage: WickStage; glow: number }) {
     return () => loop.stop();
   }, [pulse, reduceMotion]);
 
-  const s = look.size;
+  const s = (size ?? look.size * 2) / 1.8;
   const haloOpacity = pulse.interpolate({
     inputRange: [0, 1],
     outputRange: [0.15 + 0.35 * glow, 0.3 + 0.5 * glow],
   });
   const haloScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] });
-  const sway = pulse.interpolate({ inputRange: [0, 1], outputRange: ['-4deg', '4deg'] });
+  const float = pulse.interpolate({ inputRange: [0, 1], outputRange: [0, -6] });
 
   return (
     <View
       accessible
       accessibilityRole="image"
       accessibilityLabel={`Wick, ${look.label} stage, glow ${Math.round(glow * 100)} percent`}
-      style={{ width: s * 1.8, height: s * 1.9, alignItems: 'center', justifyContent: 'flex-end' }}
+      style={{ width: s * 1.8, height: s * 1.8, alignItems: 'center', justifyContent: 'flex-end' }}
     >
       <Animated.View
         style={{
@@ -86,62 +86,16 @@ export function Wick({ stage, glow }: { stage: WickStage; glow: number }) {
           transform: [{ scale: haloScale }],
         }}
       />
-      {/* wick thread */}
-      <Animated.View
+      <Animated.Image
+        source={require('../../assets/illustrations/wick.png')}
+        resizeMode="contain"
         style={{
-          width: 4,
-          height: s * 0.22,
-          borderRadius: 2,
-          backgroundColor: '#5A4632',
-          marginBottom: -2,
-          transform: [{ rotate: sway }],
+          width: s * 1.8,
+          height: s * 1.8,
+          opacity: 0.75 + 0.25 * glow,
+          transform: [{ translateY: float }],
         }}
       />
-      {/* body: a soft drop, rounder at the bottom */}
-      <View
-        style={{
-          width: s,
-          height: s * 1.1,
-          backgroundColor: look.body,
-          borderTopLeftRadius: s * 0.5,
-          borderTopRightRadius: s * 0.5,
-          borderBottomLeftRadius: s * 0.55,
-          borderBottomRightRadius: s * 0.55,
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginBottom: s * 0.25,
-        }}
-      >
-        <View style={{ flexDirection: 'row', gap: s * 0.22, marginTop: s * 0.08 }}>
-          <View
-            style={{
-              width: s * 0.1,
-              height: s * 0.14,
-              borderRadius: s,
-              backgroundColor: palette.night900,
-            }}
-          />
-          <View
-            style={{
-              width: s * 0.1,
-              height: s * 0.14,
-              borderRadius: s,
-              backgroundColor: palette.night900,
-            }}
-          />
-        </View>
-        <View
-          style={{
-            width: s * 0.22,
-            height: s * 0.08,
-            borderBottomLeftRadius: s,
-            borderBottomRightRadius: s,
-            backgroundColor: palette.night900,
-            marginTop: s * 0.08,
-            opacity: 0.25 + 0.75 * glow,
-          }}
-        />
-      </View>
     </View>
   );
 }

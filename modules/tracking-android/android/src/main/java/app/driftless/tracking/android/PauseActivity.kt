@@ -9,8 +9,12 @@ import android.util.TypedValue
 import android.view.Gravity
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.ImageView
+import android.widget.ScrollView
 import android.widget.TextView
+import android.graphics.Typeface
 import app.driftless.tracking.core.BlockPolicy
+import app.driftless.tracking.R
 
 /**
  * Driftless's own full-screen pause (D-013). It is a normal activity, not an overlay: the user can
@@ -37,11 +41,11 @@ class PauseActivity : Activity() {
             this.text = s
             isAllCaps = false
             minHeight = dp(48)
-            setTextColor(if (primary) Color.parseColor("#0E0B1F") else Color.parseColor("#FFB547"))
+            setTextColor(if (primary) Color.parseColor("#643800") else Color.parseColor("#FFE8B0"))
             background = GradientDrawable().apply {
                 cornerRadius = dp(24).toFloat()
-                setColor(if (primary) Color.parseColor("#FFB547") else Color.TRANSPARENT)
-                setStroke(dp(2), Color.parseColor("#FFB547"))
+                setColor(if (primary) Color.parseColor("#FFE8B0") else Color.parseColor("#2B2217"))
+                setStroke(dp(1), Color.parseColor("#51412A"))
             }
             setOnClickListener { onClick() }
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
@@ -58,13 +62,26 @@ class PauseActivity : Activity() {
         val snoozesLeft = BlockPolicy.MAX_SNOOZES_PER_DAY - prefs.snoozesToday()
 
         setContentView(
-            LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER
-                setBackgroundColor(Color.parseColor("#0E0B1F"))
-                setPadding(dp(32), dp(32), dp(32), dp(32))
-                addView(text(title, 26f, Color.parseColor("#F4F1FA")))
-                addView(text(body, 16f, Color.parseColor("#C9C3DC")))
+            ScrollView(this).apply {
+                isFillViewport = true
+                setBackgroundColor(Color.parseColor("#120E09"))
+                addView(LinearLayout(this@PauseActivity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER
+                    setPadding(dp(32), dp(32), dp(32), dp(32))
+                    addView(text("DRIFTLESS · TAKE A BREATH", 12f, Color.parseColor("#FFE8B0")))
+                    addView(ImageView(this@PauseActivity).apply {
+                        setImageResource(R.drawable.wick_focus)
+                        scaleType = ImageView.ScaleType.FIT_CENTER
+                        contentDescription = "Wick taking a pause"
+                        layoutParams = LinearLayout.LayoutParams(dp(220), dp(220)).apply {
+                            gravity = Gravity.CENTER_HORIZONTAL
+                            topMargin = dp(16)
+                            bottomMargin = dp(16)
+                        }
+                    })
+                addView(text(title, 30f, Color.parseColor("#FFF9ED")).apply { setTypeface(typeface, Typeface.BOLD) })
+                addView(text(body, 16f, Color.parseColor("#C4B69D")))
                 addView(button("Close $label", primary = true) { goHome() })
                 if (snoozesLeft > 0) {
                     addView(
@@ -80,7 +97,8 @@ class PauseActivity : Activity() {
                         finish()
                     },
                 )
-                addView(text("You can turn blocking off in Driftless or in Settings › Accessibility.", 12f, Color.parseColor("#9A93B4")))
+                addView(text("You can turn blocking off in Driftless or in Settings › Accessibility.", 12f, Color.parseColor("#C4B69D")))
+                })
             },
         )
     }
