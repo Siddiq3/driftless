@@ -1,0 +1,22 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Needed on Android 11+ to read the installed version of the supported apps (rule gating). -->
+  <queries>
+    <package android:name="com.instagram.android" />
+    <package android:name="com.google.android.youtube" />
+  </queries>
+
+  <application>
+    <service
+      android:name="app.driftless.tracking.android.DriftlessAccessibilityService"
+      android:exported="false"
+      android:label="@string/driftless_a11y_label"
+      android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+      <intent-filter>
+        <action android:name="android.accessibilityservice.AccessibilityService" />
+      </intent-filter>
+      <meta-data
+        android:name="android.accessibilityservice"
+        android:resource="@xml/driftless_accessibility" />
+    </service>
+  </application>
+</manifest>

@@ -3,8 +3,8 @@ coverage/
 .expo/
 dist/
 web-build/
-android/
-ios/
+/android/
+/ios/
 expo-env.d.ts
 *.keystore
 !debug.keystore
@@ -13,3 +13,5 @@ expo-env.d.ts
 .DS_Store
 *.log
 ci-logs/
+__pycache__/
+*.pyc
