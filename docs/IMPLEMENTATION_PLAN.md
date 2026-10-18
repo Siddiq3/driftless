@@ -7,8 +7,8 @@ Dependency-ordered. `→` = depends on. Each phase ends with: run tests, builds,
 - ☑ P0-02 Official policy research (S1–S11)
 - ☑ P0-03 Docs set
 - ☐ P0-04 Owner review & approval of DECISIONS.md
-- ☐ P0-05 GitHub repository created by owner; push `main`
-- ☐ P0-06 Apple Family Controls distribution request submitted (long lead time)
+- ◐ P0-05 GitHub repository — session cannot create repos (HTTP 403); owner to create `Siddiq3/driftless` (empty), then push
+- ◐ P0-06 Apple Family Controls distribution request — draft ready in APPLE_FAMILY_CONTROLS_REQUEST.md; owner to submit
 
 ## Phase 1 — Foundations
 | ID | Task | Depends | Acceptance |
