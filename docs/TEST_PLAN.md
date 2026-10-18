@@ -63,4 +63,6 @@ Android: Pixel (stock, latest + previous major), Samsung One UI, Xiaomi/HyperOS 
 | 2026-10-18 | 5 | app CI at 43b3464 (run 39140081429) | all steps passed: Jest 65/65, Kotlin 65/65, APK built with Play Billing | |
 | 2026-10-18 | 5 | backend billing (run for 398eaad) | 70/70 API tests | state mapping, verify, RTDN, abuse cases |
 | 2026-10-18 | 6 | backend social (run for e190b02) | 83/83 API tests (166 backend total) | friends, invites, rate limits, challenges, leaderboard privacy, devices |
+| 2026-10-18 | 6–7 | app CI at b591ff6 | all steps passed: Jest 65/65, Kotlin 65/65, APK built | friends, challenges, privacy screens |
+| 2026-10-18 | 7 | backend CI at 3a1ebd5 | 172/172 (contracts+domain 74, API 88, infra 10); synth, pack, gitleaks OK | deletion/export, reconcile job |
 | — | 2 | G-2 device accuracy | **not run** | requires labelled sessions on a real phone (ACCURACY_PROTOCOL.md) |
