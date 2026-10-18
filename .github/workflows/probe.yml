@@ -1,10 +1,15 @@
 name: probe
 on: { push: { branches: [ci-probe] } }
+permissions: { contents: write }
 jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - run: node -v && npm view zod version && npm view expo@57 version | tail -1 && npm view aws-cdk-lib version && npm view vitest version && npm view typescript version && npm view turbo version && npm view zod@4 version | tail -1
-      - run: echo hello > probe.txt
-      - uses: actions/upload-artifact@v4
-        with: { name: probe, path: probe.txt }
+      - run: |
+          mkdir out && cd out
+          { node -v; for p in zod expo@57 expo@58 aws-cdk-lib aws-cdk vitest typescript turbo typescript-eslint eslint @eslint/js prettier @types/node expo-sqlite@57 expo-router@57 expo-secure-store@57 expo-dev-client@57 react-native@0.86 @aws-sdk/client-dynamodb @aws-sdk/lib-dynamodb aws-jwt-verify esbuild @types/aws-lambda constructs uuidv7 jest-expo@57 react@19.2 @testing-library/react-native expo-build-properties@57 expo-crypto@57 expo-localization@57 react-native-safe-area-context react-native-screens; do echo "$p => $(npm view "$p" version 2>&1 | tail -1)"; done; } > versions.txt 2>&1
+      - name: publish results
+        run: |
+          cd out && git init -q -b ci-results && git add -A
+          git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "probe ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}" ci-results
