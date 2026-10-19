@@ -10,7 +10,15 @@ import java.time.temporal.ChronoUnit
 
 /** Local-only derived statistics. No video labels, fingerprints, raw IDs or timestamps are synced. */
 object WrappedDetails {
-    fun read(context: Context, from: String, to: String): Map<String, Any> {
+    /** Recaps retain the existing accuracy gate. */
+    fun read(context: Context, from: String, to: String): Map<String, Any> =
+        read(context, from, to, localActivity = false)
+
+    /** Local chart data only; never a source for synced aggregates or competitive scores. */
+    fun readLocalActivity(context: Context, from: String, to: String): Map<String, Any> =
+        read(context, from, to, localActivity = true)
+
+    private fun read(context: Context, from: String, to: String, localActivity: Boolean): Map<String, Any> {
         val first = LocalDate.parse(from)
         val last = LocalDate.parse(to)
         require(!last.isBefore(first) && ChronoUnit.DAYS.between(first, last) < 14) { "Invalid recap range" }
@@ -19,7 +27,9 @@ object WrappedDetails {
         val since = first.minusDays(1).atStartOfDay(ZoneId.of("UTC")).toInstant().toEpochMilli()
         val events = SqliteStore.get(context).events(since).filter { e ->
             e.localDate >= from && e.localDate <= to && e.kind == ViewKind.VIEW &&
-                e.ruleVersion == rules.version && rules.apps[e.pkg]?.let { isValidatedVersion(it, e.appVersion) } == true
+                e.ruleVersion == rules.version && rules.apps[e.pkg]?.let {
+                    localActivity || isValidatedVersion(it, e.appVersion)
+                } == true
         }
         val days = events.groupBy { it.localDate }.map { (date, rows) ->
             val hours = IntArray(24)

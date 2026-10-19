@@ -1,4 +1,5 @@
 import type { Daily, TrackingHealth } from 'tracking-android';
+import { activityData } from '../src/activity/model';
 import { ApiError } from '../src/api/client';
 import { aggregateDay, valuesKey } from '../src/sync/aggregate';
 import { flush, MemorySyncRepo, stage, type SyncClient } from '../src/sync/engine';
@@ -232,4 +233,28 @@ describe('sync engine', () => {
     expect(c.calls[0]!.days).toHaveLength(31);
     expect(await repo.pendingDays()).toHaveLength(9);
   });
+});
+
+it('syncing and restaging local activity neither validates it nor duplicates local hourly counts', async () => {
+  const raw = daily();
+  const h = health();
+  const hourlyViews = Array<number>(24).fill(0);
+  hourlyViews[12] = 30;
+  const details = {
+    available: true,
+    days: [{ localDate: raw.localDate, hourlyViews, sessions: [] }],
+  };
+  const readLocal = () => activityData('daily', 0, raw.localDate, h, () => raw, details);
+  const before = readLocal();
+  expect(before.views.value).toBe(30);
+  expect(before.bars[12]!.value).toBe(30);
+  const repo = new MemorySyncRepo();
+  const client = okClient();
+  await stage(repo, [aggregateDay(raw, h, DEV, 'Asia/Kolkata')]);
+  expect(await flush(repo, client, ids, 1000)).toMatchObject({ kind: 'sent' });
+  expect(await stage(repo, [aggregateDay(raw, h, DEV, 'Asia/Kolkata')])).toBe(0);
+  expect(await flush(repo, client, ids, 2000)).toEqual({ kind: 'idle' });
+  expect(client.calls).toHaveLength(1);
+  expect(client.calls[0]!.days[0]).toMatchObject({ views: null, adViews: null });
+  expect(readLocal()).toEqual(before);
 });

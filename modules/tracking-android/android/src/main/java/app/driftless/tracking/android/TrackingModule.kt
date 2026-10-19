@@ -121,6 +121,7 @@ class TrackingModule : Module() {
             UsageReader.refresh(ctx, SqliteStore.get(ctx), RulesLoader.load(ctx).apps.keys, days)
         }
 
+        Function("getLocalActivityDetails") { from: String, to: String -> WrappedDetails.readLocalActivity(context, from, to) }
         Function("getWrappedDetails") { from: String, to: String -> WrappedDetails.read(context, from, to) }
 
         Function("getDaily") { localDate: String? ->

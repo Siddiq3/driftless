@@ -24,7 +24,7 @@ export function useActivity(period: ActivityPeriod, offset: number) {
       let details: WrapDetails = { available: false, days: [] };
       if (period === 'daily')
         try {
-          details = Tracking.wrappedDetails(bounds.from, bounds.from) ?? details;
+          details = Tracking.localActivityDetails(bounds.from, bounds.from) ?? details;
         } catch {
           /* An older binary still has daily totals. */
         }

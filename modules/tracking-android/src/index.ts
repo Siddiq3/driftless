@@ -77,6 +77,7 @@ type NativeTracking = {
   resumeFloatingCount(): void;
   floatingCountEnabled(): boolean;
   setFloatingCountEnabled(enabled: boolean): void;
+  getLocalActivityDetails(from: string, to: string): WrapDetails;
   getWrappedDetails(from: string, to: string): WrapDetails;
   widgetSupported(): boolean;
   requestCountWidget(): boolean;
@@ -118,6 +119,9 @@ export const Tracking = {
   resumeFloatingCount: () => native.resumeFloatingCount?.(),
   floatingCountEnabled: () => native.floatingCountEnabled?.() ?? false,
   setFloatingCountEnabled: (enabled: boolean) => native.setFloatingCountEnabled?.(enabled),
+  /** Local recorded events; do not use for sync, goals or battle scoring. */
+  localActivityDetails: (from: string, to: string): WrapDetails =>
+    native.getLocalActivityDetails?.(from, to) ?? { available: false, days: [] },
   wrappedDetails: (from: string, to: string): WrapDetails =>
     native.getWrappedDetails?.(from, to) ?? { available: false, days: [] },
   widgetSupported: () => native.widgetSupported?.() ?? false,

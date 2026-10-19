@@ -22,9 +22,25 @@ export function activityData(
   details: WrapDetails,
 ) {
   const bounds = activityBounds(period, offset, today);
+  const packages = new Set(health.apps.map((app) => app.package));
   const rows = bounds.dates.map((date) => {
     const raw = readDay(date);
-    return { raw, day: aggregateDay(raw, health, 'phone', 'UTC') };
+    const day = aggregateDay(raw, health, 'phone', 'UTC');
+    if (period === 'daily') {
+      // Match the popup's saved supported-app totals, independently of cloud accuracy gates.
+      const localViews = raw.apps
+        .filter((app) => packages.has(app.package))
+        .reduce((sum, app) => sum + app.views, 0);
+      return {
+        raw,
+        day: {
+          ...day,
+          views:
+            packages.size > 0 && (raw.heartbeatMinutes > 0 || localViews > 0) ? localViews : null,
+        },
+      };
+    }
+    return { raw, day };
   });
   const total = (key: 'views' | 'minutes') => {
     const known = rows.filter((r) => r.day[key] !== null);
@@ -70,7 +86,7 @@ export function activityData(
     .map((app) => ({
       ...app,
       views:
-        !app.installed || !app.validated || views.value === null
+        views.value === null || (period !== 'daily' && (!app.installed || !app.validated))
           ? null
           : rows
               .filter((r) => r.day.views !== null)
