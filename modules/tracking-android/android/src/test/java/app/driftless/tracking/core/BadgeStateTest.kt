@@ -14,11 +14,11 @@ class BadgeStateTest {
         assertFalse(showCountBadge(true,true,true,false,true,Surface.OTHER))
         assertFalse(showCountBadge(true,true,true,false,true,Surface.UNKNOWN))
     }
-    @Test fun unconfirmedAndMissingIdentityAreNeverPresentedAsConfirmed() {
+    @Test fun savedCountStaysVisibleWhileNextVideoIsBeingIdentified() {
         assertEquals(CountBadgeValue("7","Today"),countBadgeValue(7,true,true))
-        assertEquals(CountBadgeValue("~7","Unconfirmed"),countBadgeValue(7,false,true))
-        assertEquals(CountBadgeValue("—","Not detected",CountBadgeMood.UNKNOWN),countBadgeValue(7,false,false))
-        assertEquals(CountBadgeValue("—","Not detected",CountBadgeMood.UNKNOWN),countBadgeValue(7,true,false))
+        assertEquals(CountBadgeValue("7","Unconfirmed"),countBadgeValue(7,false,true))
+        assertEquals(CountBadgeValue("7","Not detected",CountBadgeMood.HAPPY),countBadgeValue(7,false,false))
+        assertEquals(CountBadgeValue("7","Not detected",CountBadgeMood.HAPPY),countBadgeValue(7,true,false))
         assertEquals("0",countBadgeValue(-1,true,true).text)
     }
     @Test fun happyThroughTheLimitAndDrainedOnlyAboveIt() {
@@ -30,11 +30,22 @@ class BadgeStateTest {
             assertEquals(CountBadgeMood.HAPPY, countBadgeValue(0,true,true,limit).mood)
         }
     }
-    @Test fun moodDoesNotCertifyUnvalidatedCountsOrGuessMissingIdentity() {
-        assertEquals(CountBadgeValue("~101","Unconfirmed",CountBadgeMood.DRAINED),countBadgeValue(101,false,true,100))
-        assertEquals(CountBadgeMood.UNKNOWN,countBadgeValue(101,true,false,100).mood)
+    @Test fun moodReflectsSavedCountEvenWhileIdentityIsPending() {
+        assertEquals(CountBadgeValue("101","Unconfirmed",CountBadgeMood.DRAINED),countBadgeValue(101,false,true,100))
+        assertEquals(CountBadgeMood.DRAINED,countBadgeValue(101,true,false,100).mood)
         assertEquals(CountBadgeMood.HAPPY,countBadgeValue(101,true,true,null).mood)
         assertEquals(CountBadgeMood.HAPPY,countBadgeValue(101,true,true,0).mood)
         assertEquals(CountBadgeMood.HAPPY,countBadgeValue(101,true,true,150).mood)
     }
+    @Test fun reelTransitionOnlyChangesNumberWhenSavedCountChanges() {
+        val first = countBadgeValue(1, false, true, 100)
+        val loadingNext = countBadgeValue(1, false, false, 100)
+        val nextCounted = countBadgeValue(2, false, true, 100)
+        assertEquals("1", first.text)
+        assertEquals(first.text, loadingNext.text)
+        assertEquals(first.mood, loadingNext.mood)
+        assertEquals("2", nextCounted.text)
+        assertEquals("0", countBadgeValue(0, false, false).text)
+    }
+
 }

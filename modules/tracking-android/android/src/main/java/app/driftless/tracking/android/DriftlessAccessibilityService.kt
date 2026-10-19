@@ -205,7 +205,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
         val foreground = rootInActiveWindow?.packageName?.toString()
         val power = getSystemService(PowerManager::class.java)
         val keyguard = getSystemService(KeyguardManager::class.java)
-        if (!showCountBadge(prefs.floatingCountEnabled, prefs.disclosureAccepted, power.isInteractive,
+        if (!showCountBadge(prefs.floatingCountEnabled && now >= prefs.floatingCountPausedUntil, prefs.disclosureAccepted, power.isInteractive,
                 keyguard.isKeyguardLocked, pkg != null && foreground == pkg, badgeSurface)) {
             floatingBadge.hide(); memeCard.hide(); return
         }

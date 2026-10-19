@@ -30,7 +30,22 @@ class TrackingModule : Module() {
 
         Function("floatingCountEnabled") { TrackingPrefs(context).floatingCountEnabled }
         Function("setFloatingCountEnabled") { enabled: Boolean ->
-            TrackingPrefs(context).floatingCountEnabled = enabled
+            TrackingPrefs(context).apply {
+                floatingCountEnabled = enabled
+                if (enabled) floatingCountPausedUntil = 0L
+            }
+            DriftlessAccessibilityService.current?.refreshFloatingCount()
+        }
+        Function("floatingCountPreferences") {
+            val p = TrackingPrefs(context)
+            mapOf("size" to p.floatingCountSize, "pausedUntil" to p.floatingCountPausedUntil)
+        }
+        Function("setFloatingCountSize") { size: Int ->
+            TrackingPrefs(context).floatingCountSize = size
+            DriftlessAccessibilityService.current?.refreshFloatingCount()
+        }
+        Function("resumeFloatingCount") {
+            TrackingPrefs(context).floatingCountPausedUntil = 0L
             DriftlessAccessibilityService.current?.refreshFloatingCount()
         }
         Function("memePreferences") {

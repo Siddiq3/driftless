@@ -80,9 +80,15 @@ export function T({
 export function Screen({
   children,
   contentStyle,
+  hideHeader = false,
+  hideTabs = false,
+  backgroundColor,
 }: {
   children: ReactNode;
   contentStyle?: ViewStyle;
+  hideHeader?: boolean;
+  hideTabs?: boolean;
+  backgroundColor?: string;
 }) {
   const t = useTheme();
   const path = usePathname();
@@ -107,7 +113,7 @@ export function Screen({
     },
   ] as const;
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: backgroundColor ?? t.bg }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -118,7 +124,7 @@ export function Screen({
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
         >
-          {details && (
+          {details && !hideHeader && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48 }}>
               {!primary && (
                 <Pressable
@@ -142,13 +148,13 @@ export function Screen({
           {children ?? <LoadingState />}
         </ScrollView>
       </KeyboardAvoidingView>
-      {(primary || path === '/challenges') && (
+      {!hideTabs && (primary || path === '/challenges') && (
         <View
           style={[
             styles.tabs,
             {
-              backgroundColor: path === '/progress' ? t.bg : t.surface,
-              borderColor: path === '/progress' ? t.bg : t.border,
+              backgroundColor: backgroundColor ?? (path === '/progress' ? t.bg : t.surface),
+              borderColor: backgroundColor ?? (path === '/progress' ? t.bg : t.border),
             },
           ]}
         >

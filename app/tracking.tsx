@@ -10,19 +10,23 @@ import { AppIcon, Icon } from '@/ui/Icon';
 const minutes = (ms: number) => Math.round(ms / 60_000);
 
 export default function TrackingScreen() {
+  const [now, setNow] = useState(() => Date.now());
   const [health, setHealth] = useState<TrackingHealth | null>(null);
   const [daily, setDaily] = useState<Daily | null>(null);
+  const [badgePrefs, setBadgePrefs] = useState({ size: 54, pausedUntil: 0 });
   const [badgeEnabled, setBadgeEnabled] = useState(false);
   const [memes, setMemes] = useState<MemePreferences>({ enabled: true });
   const [error, setError] = useState<string | null>(null);
 
   const read = useCallback(() => {
     try {
+      setNow(Date.now());
       Tracking.refreshUsage(1);
       const h = Tracking.health();
       const d = Tracking.daily();
       setHealth(h);
       setBadgeEnabled(Tracking.floatingCountEnabled());
+      setBadgePrefs(Tracking.floatingCountPreferences());
       setMemes(Tracking.memePreferences());
       setDaily(d);
       setError(null);
@@ -30,6 +34,15 @@ export default function TrackingScreen() {
       setError(e instanceof Error ? e.message : 'unknown error');
     }
   }, []);
+
+  useEffect(() => {
+    if (!badgePrefs.pausedUntil) return;
+    const timer = setTimeout(
+      () => setNow(Date.now()),
+      Math.max(0, badgePrefs.pausedUntil - Date.now()) + 100,
+    );
+    return () => clearTimeout(timer);
+  }, [badgePrefs.pausedUntil]);
 
   // Re-read when the screen gains focus and when the user returns from Settings.
   useFocusEffect(read);
@@ -84,7 +97,8 @@ export default function TrackingScreen() {
           <View style={{ flex: 1, gap: 4 }}>
             <T v="heading">Floating brain counter</T>
             <T v="caption" muted>
-              Shows over detected Reels &amp; Shorts. Swipes pass through.
+              Shows over Reels &amp; Shorts. Tap to open Driftless. Long press and drag to move
+              anywhere.
             </T>
           </View>
           <Toggle
@@ -95,6 +109,7 @@ export default function TrackingScreen() {
               try {
                 Tracking.setFloatingCountEnabled(enabled);
                 setBadgeEnabled(enabled);
+                setBadgePrefs(Tracking.floatingCountPreferences());
               } catch {
                 setError('Could not change the floating counter.');
               }
@@ -110,8 +125,55 @@ export default function TrackingScreen() {
           <Button label="How counting works" onPress={() => router.push('/disclosure')} />
         )}
         <T v="caption" muted>
-          ~ means unconfirmed. — means the video could not be identified. Turn off here any time.
+          Long press, then drag to the pause target at the bottom to hide for one hour or one day. —
+          means the video could not be identified.
         </T>
+        {Tracking.floatingCountCustomizationSupported() && (
+          <>
+            <T v="label">Popup icon size</T>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {[
+                { label: 'Small', size: 40 },
+                { label: 'Medium', size: 54 },
+                { label: 'Large', size: 72 },
+              ].map((option) => (
+                <Button
+                  key={option.size}
+                  label={`${option.label}${badgePrefs.size === option.size ? ' ✓' : ''}`}
+                  kind="secondary"
+                  onPress={() => {
+                    try {
+                      Tracking.setFloatingCountSize(option.size);
+                      setBadgePrefs(Tracking.floatingCountPreferences());
+                    } catch {
+                      setError('Could not change popup size.');
+                    }
+                  }}
+                />
+              ))}
+            </View>
+            {badgePrefs.pausedUntil > now && (
+              <>
+                <T v="caption" muted>
+                  Popup paused until {new Date(badgePrefs.pausedUntil).toLocaleString()}. Counting
+                  continues.
+                </T>
+                <Button
+                  label="Resume popup now"
+                  kind="secondary"
+                  onPress={() => {
+                    try {
+                      Tracking.resumeFloatingCount();
+                      setBadgePrefs(Tracking.floatingCountPreferences());
+                    } catch {
+                      setError('Could not resume the popup.');
+                    }
+                  }}
+                />
+              </>
+            )}
+          </>
+        )}
       </Section>
 
       <Section>

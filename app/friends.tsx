@@ -16,12 +16,16 @@ import {
   EmptyState,
   LoadingState,
 } from '@/ui/kit';
-import { InviteButton } from '@/social/InviteButton';
+import { CircleBoard } from '@/social/CircleBoard';
 import { VisualBanner } from '@/ui/Focus';
 
 type State = { me: v1.MeResponse; friends: v1.Friend[] };
 
 export default function Friends() {
+  return <CircleBoard friendsPanel={<FriendsManager />} />;
+}
+
+function FriendsManager() {
   const api = useApi();
   const session = useSession();
   const [s, setS] = useState<State | null>(null);
@@ -59,18 +63,17 @@ export default function Friends() {
 
   if (session.status === 'loading')
     return (
-      <Screen>
+      <Screen hideHeader hideTabs>
         <LoadingState label="Loading your friends…" />
       </Screen>
     );
   if (!api) {
     const unavailable = session.status === 'unconfigured';
     return (
-      <Screen>
+      <Screen hideHeader hideTabs>
         <VisualBanner art="friends" />
-        <InviteButton />
         <T v="caption" muted>
-          Share Driftless without an account. Linking friends and comparing progress needs sign-in.
+          Sign in to invite friends, share progress, and start a battle.
         </T>
         <Notice
           title={unavailable ? 'Friends aren’t available in this build' : 'Sign in to add friends'}
@@ -89,7 +92,7 @@ export default function Friends() {
   }
   if (!s)
     return (
-      <Screen>
+      <Screen hideHeader hideTabs>
         <VisualBanner art="friends" />
         {note ? (
           <Notice tone="warn" title={note.title} body={note.body} />
@@ -105,7 +108,7 @@ export default function Friends() {
   const sent = s.friends.filter((f) => f.status === 'pending_out');
 
   return (
-    <Screen>
+    <Screen hideHeader hideTabs>
       <VisualBanner art="friends" />
       {note && <Notice tone={note.warn ? 'warn' : 'info'} title={note.title} body={note.body} />}
 

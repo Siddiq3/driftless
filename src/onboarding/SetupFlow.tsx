@@ -227,6 +227,10 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
     }
   };
   const share = async () => {
+    if (session.status !== 'signedIn') {
+      await signIn();
+      return;
+    }
     setBusy(true);
     setError(null);
     try {

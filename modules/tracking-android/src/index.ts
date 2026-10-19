@@ -72,6 +72,9 @@ export type MemePreferences = { enabled: boolean };
 type NativeTracking = {
   memePreferences(): MemePreferences;
   setMemePreferences(enabled: boolean, legacyLanguage: string): void;
+  floatingCountPreferences(): { size: number; pausedUntil: number };
+  setFloatingCountSize(size: number): void;
+  resumeFloatingCount(): void;
   floatingCountEnabled(): boolean;
   setFloatingCountEnabled(enabled: boolean): void;
   getWrappedDetails(from: string, to: string): WrapDetails;
@@ -108,6 +111,11 @@ export const Tracking = {
   memePreferences: (): MemePreferences => native.memePreferences?.() ?? { enabled: true },
   setMemePreferences: (enabled: boolean) => native.setMemePreferences?.(enabled, 'auto'),
   floatingCountSupported: () => typeof native.setFloatingCountEnabled === 'function',
+  floatingCountCustomizationSupported: () => typeof native.setFloatingCountSize === 'function',
+  floatingCountPreferences: () =>
+    native.floatingCountPreferences?.() ?? { size: 54, pausedUntil: 0 },
+  setFloatingCountSize: (size: number) => native.setFloatingCountSize?.(size),
+  resumeFloatingCount: () => native.resumeFloatingCount?.(),
   floatingCountEnabled: () => native.floatingCountEnabled?.() ?? false,
   setFloatingCountEnabled: (enabled: boolean) => native.setFloatingCountEnabled?.(enabled),
   wrappedDetails: (from: string, to: string): WrapDetails =>

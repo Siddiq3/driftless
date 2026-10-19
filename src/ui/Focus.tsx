@@ -42,7 +42,7 @@ export function AnimatedCount({
           fontVariant: ['tabular-nums'],
         }}
       >
-        {value === null ? '—' : `${approximate ? '~' : ''}${value.toLocaleString()}`}
+        {value === null ? '—' : value.toLocaleString()}
       </T>
     </Animated.View>
   );
@@ -101,15 +101,14 @@ export function FocusHero() {
           <T v="label" muted>
             Short videos today
           </T>
-          {state.state === 'ok' && data?.today.views === null && (
-            <T v="caption" muted>
-              {experimental !== null
-                ? 'Experimental · not accuracy-confirmed'
-                : !active
-                  ? 'Counting is off'
-                  : 'Count unconfirmed'}
-            </T>
-          )}
+          {state.state === 'ok' &&
+            data?.today.views === null &&
+            experimental === null &&
+            !active && (
+              <T v="caption" muted>
+                Counting is off
+              </T>
+            )}
         </View>
       </View>
       {state.state === 'error' && (

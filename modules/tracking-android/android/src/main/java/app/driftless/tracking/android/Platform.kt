@@ -82,6 +82,21 @@ class TrackingPrefs(context: Context) {
         get() = p.getBoolean("floating_count_enabled", true)
         set(v) = p.edit().putBoolean("floating_count_enabled", v).apply()
 
+    var floatingCountSize: Int
+        get() = p.getInt("floating_count_size", 54).coerceIn(40, 80)
+        set(v) = p.edit().putInt("floating_count_size", v.coerceIn(40, 80)).apply()
+
+    var floatingCountPausedUntil: Long
+        get() = p.getLong("floating_count_paused_until", 0L)
+        set(v) = p.edit().putLong("floating_count_paused_until", v).apply()
+
+    var badgeX: Float
+        get() = p.getFloat("badge_x", 0.5f)
+        set(v) = p.edit().putFloat("badge_x", v.coerceIn(0f, 1f)).apply()
+    var badgeY: Float
+        get() = p.getFloat("badge_y", 0f)
+        set(v) = p.edit().putFloat("badge_y", v.coerceIn(0f, 1f)).apply()
+
     var memeCardsEnabled: Boolean
         get() = p.getBoolean("meme_cards_enabled", true)
         set(v) = p.edit().putBoolean("meme_cards_enabled", v).apply()
