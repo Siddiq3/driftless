@@ -10,11 +10,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   slug: 'driftless',
   scheme: 'driftless',
   version: '0.1.0',
+  icon: './assets/branding/app-icon.png',
   orientation: 'portrait',
   userInterfaceStyle: 'dark',
   platforms: ['android'],
   android: {
     package: 'com.siddiqkolimi.driftless',
+    adaptiveIcon: {
+      foregroundImage: './assets/branding/adaptive-foreground.png',
+      backgroundColor: '#FFE6AD',
+    },
     // Local usage data must not leave the device via cloud backup (THREAT_MODEL T4).
     allowBackup: false,
     // Phase 1 requests no dangerous permissions. Accessibility / Usage Access arrive in Phase 2
@@ -33,12 +38,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-localization',
     'expo-system-ui',
     'expo-notifications',
+    './plugins/withDriftlessBrand.cjs',
     ['expo-build-properties', { android: { usesCleartextTraffic: false } }],
   ],
   experiments: { typedRoutes: true },
   extra: {
     apiUrl: process.env.EXPO_PUBLIC_API_URL ?? null,
-    cognitoDomain: process.env.EXPO_PUBLIC_COGNITO_DOMAIN ?? null,
-    cognitoClientId: process.env.EXPO_PUBLIC_COGNITO_CLIENT_ID ?? null,
+    googleWebClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? null,
   },
 });

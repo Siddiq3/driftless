@@ -1,71 +1,68 @@
 import { router } from 'expo-router';
+import { useState } from 'react';
+import { Pressable, ScrollView, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Tracking } from 'tracking-android';
-import { Button, Card, Screen, T } from '@/ui/kit';
-import { Icon } from '@/ui/Icon';
+import { Notice, T } from '@/ui/kit';
+import { SetupButton, SETUP_COLORS as C } from '@/onboarding/Visuals';
+import { AccessibilityWalkthrough } from '@/permissions/AccessibilityWalkthrough';
 
-/**
- * Google Play prominent disclosure for AccessibilityService use (PLATFORM_CAPABILITIES S1):
- * shown in-app before the system setting, describes what is accessed and how it is used,
- * requires an affirmative tap, and is separate from the privacy policy.
- * "Not now" leaves the app fully usable without counting.
- */
+/** Prominent consent remains visible before opening Android's real permission screen. */
 export default function Disclosure() {
+  const [error, setError] = useState<string | null>(null);
+  const [alreadyAgreed] = useState(() => {
+    try {
+      return Tracking.health().disclosureAccepted;
+    } catch {
+      return false;
+    }
+  });
   const agree = () => {
-    Tracking.setDisclosureAccepted(true);
-    Tracking.openAccessibilitySettings();
-    router.back();
+    try {
+      Tracking.setDisclosureAccepted(true);
+      Tracking.openAccessibilityGuide();
+      router.back();
+    } catch {
+      setError('Android settings could not be opened. Please try again.');
+    }
   };
-  const decline = () => {
-    Tracking.setDisclosureAccepted(false);
-    router.back();
-  };
-
   return (
-    <Screen>
-      <Card>
-        <Icon name="counter" />
-        <T v="heading">What it reads</T>
-        <T muted>
-          • Only Instagram and YouTube — no other apps.{'\n'}• The layout of the video player, and
-          the labels on the current video (for example its description), so it can tell one video
-          from the next.{'\n'}• Which app is on screen, so it knows when you leave.
-        </T>
-      </Card>
-
-      <Card>
-        <Icon name="lock" />
-        <T v="heading">What it keeps</T>
-        <T muted>
-          The labels are turned into an unreadable code immediately and are never saved. Driftless
-          keeps only counts and times — for example “12 Reels, 18 minutes today” — on this phone.
-        </T>
-      </Card>
-
-      <Card>
-        <Icon name="shield" />
-        <T v="heading">What it never does</T>
-        <T muted>
-          It never reads your messages, never takes screenshots, never taps, types or scrolls for
-          you, and never sends what you watched anywhere. If you later turn on cloud sync, only
-          daily totals are shared.
-        </T>
-      </Card>
-
-      <Card>
-        <Icon name="settings" />
-        <T v="heading">You stay in control</T>
-        <T muted>
-          You can switch it off any time in Settings › Accessibility, or delete the counts from this
-          app.
-        </T>
-      </Card>
-
-      <Button
-        label="I agree, open Settings"
-        onPress={agree}
-        accessibilityHint="Opens Accessibility settings"
-      />
-      <Button kind="secondary" label="Not now" onPress={decline} />
-    </Screen>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#666666' }}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 16 }}>
+        <View
+          style={{
+            width: '100%',
+            maxWidth: 440,
+            alignSelf: 'center',
+            borderRadius: 20,
+            overflow: 'hidden',
+            backgroundColor: C.surface,
+            paddingBottom: 16,
+            gap: 12,
+          }}
+        >
+          <AccessibilityWalkthrough />
+          {!alreadyAgreed && (
+            <T style={{ color: '#E3DFD1', fontSize: 12, lineHeight: 17, paddingHorizontal: 16 }}>
+              Driftless reads Instagram and YouTube player layouts and video labels to count reels.
+              Labels become one-way codes; only counts and times are saved on this phone. No
+              messages, passwords or screenshots. Optional cloud sync shares daily totals only.
+            </T>
+          )}
+          {error && <Notice tone="warn" title="Please try again" body={error} />}
+          <View style={{ paddingHorizontal: 16, gap: 4 }}>
+            <SetupButton label={alreadyAgreed ? 'Got it' : 'Got it · I agree'} onPress={agree} />
+            <Pressable
+              onPress={() => router.back()}
+              accessibilityLabel="Not now"
+              accessibilityRole="button"
+              style={{ minHeight: 48, justifyContent: 'center' }}
+            >
+              <T style={{ color: C.muted, textAlign: 'center' }}>Not now</T>
+            </Pressable>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }

@@ -1,57 +1,211 @@
+import { WrapEntry } from '@/wrapped/Entry';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
-import { radius, space } from '../design-tokens';
-import { T, useTheme } from './kit';
-import { Wick } from './Wick';
-import { Icon, iconForMark, type IconName } from './Icon';
-import { Illustration } from './Illustration';
+import { Animated, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import type { ReactNode } from 'react';
+import { Button, Details, T, useTheme } from './kit';
+import { BrainCharacter } from './BrainCharacter';
+import { BrandMark } from './BrandMark';
+import { AppIcon, Icon, iconForMark, type IconName } from './Icon';
 import { useProgress } from '@/goals/useProgress';
+import { brainPresentation } from './brainState';
+import { useDataMotion } from './motion';
+import { trackingState } from '@/tracking/state';
+import { candidateCount } from '@/tracking/candidateCount';
 
-export function FocusHero() {
+export function AnimatedCount({
+  value,
+  approximate = false,
+}: {
+  value: number | null;
+  approximate?: boolean;
+}) {
+  const transition = useDataMotion(value);
   const t = useTheme();
-  const [state] = useProgress(7);
-  const data = state.state === 'ok' ? state.p : null;
-  const count = data?.today.views;
   return (
-    <View style={styles.hero}>
-      <View style={[styles.halo, { backgroundColor: t.warm }]} />
-      <Wick stage={data?.wick.stage ?? 'ember'} glow={data?.wick.glow ?? 0} size={230} />
-      <View style={[styles.count, { backgroundColor: t.accent }]}>
-        <Icon name="play" color={t.onAccent} size={24} />
-        <T
-          v="display"
-          accessibilityRole="text"
-          style={{ color: t.onAccent, fontSize: 48, lineHeight: 56 }}
-        >
-          {count == null ? '—' : count.toLocaleString()}
-        </T>
-        <T v="label" style={{ color: t.onAccent }}>
-          Reels & Shorts today
-        </T>
-      </View>
-      {state.state === 'loading' && (
-        <T v="caption" muted>
-          Loading your count…
-        </T>
-      )}
-      {state.state === 'error' && (
-        <Pressable accessibilityRole="button" onPress={() => router.push('/tracking')}>
-          <T v="caption" style={{ color: t.warning }}>
-            Check tracking status
-          </T>
-        </Pressable>
-      )}
-      {state.state === 'ok' && count == null && (
-        <Pressable accessibilityRole="button" onPress={() => router.push('/tracking')}>
-          <T v="caption" muted>
-            No confirmed count · Set up tracking
-          </T>
-        </Pressable>
-      )}
-    </View>
+    <Animated.View
+      style={transition}
+      accessible
+      accessibilityLabel={
+        value === null
+          ? 'Count unavailable'
+          : `${value} short videos${approximate ? ', unconfirmed' : ''}`
+      }
+    >
+      <T
+        accessibilityRole="text"
+        style={{
+          fontSize: 60,
+          lineHeight: 70,
+          fontWeight: '900',
+          letterSpacing: -3,
+          color: t.text,
+          fontVariant: ['tabular-nums'],
+        }}
+      >
+        {value === null ? '—' : `${approximate ? '~' : ''}${value.toLocaleString()}`}
+      </T>
+    </Animated.View>
   );
 }
 
+export function FocusHero() {
+  const t = useTheme();
+  const { width, height } = useWindowDimensions();
+  const [state, refresh] = useProgress(61, true);
+  const data = state.state === 'ok' ? state.p : null;
+  const brain = brainPresentation(state);
+  const health = state.state === 'ok' ? state.health : null;
+  const status = health ? trackingState(health) : null;
+  const active = health?.implemented && status?.startsWith('tracking');
+  const unit = brain.goal?.metric === 'minutes' ? 'min' : 'videos';
+  const phrase =
+    state.state === 'loading'
+      ? 'Waking up…'
+      : state.state === 'error'
+        ? 'Let’s reconnect.'
+        : {
+            idle: 'Finding your rhythm.',
+            tracking: 'Room to breathe.',
+            'goal-reached': 'Look at you grow.',
+            'high-usage': 'Pause with me?',
+            'limit-reached': 'Let’s take a breather.',
+            unavailable: 'Ready when you are.',
+          }[brain.mood];
+  const daily = state.state === 'ok' ? state.daily : null;
+  const experimental = data?.today.views === null ? candidateCount(daily, health) : null;
+  return (
+    <>
+      <View style={styles.hero}>
+        <View
+          style={{
+            backgroundColor: t.accent,
+            borderRadius: 24,
+            paddingHorizontal: 20,
+            paddingVertical: 10,
+          }}
+        >
+          <T v="label" style={{ color: t.onAccent, textAlign: 'center', fontWeight: '600' }}>
+            {phrase}
+          </T>
+        </View>
+        <BrainCharacter
+          pose={brain.mood === 'high-usage' || brain.mood === 'limit-reached' ? 'tired' : 'wave'}
+          size={Math.min(width - 72, height < 760 ? 160 : 190)}
+          still={brain.mood === 'unavailable'}
+        />
+        <View style={{ alignItems: 'center', gap: 4 }}>
+          <AnimatedCount
+            value={data?.today.views ?? experimental}
+            approximate={experimental !== null}
+          />
+          <T v="label" muted>
+            Short videos today
+          </T>
+          {state.state === 'ok' && data?.today.views === null && (
+            <T v="caption" muted>
+              {experimental !== null
+                ? 'Experimental · not accuracy-confirmed'
+                : !active
+                  ? 'Counting is off'
+                  : 'Count unconfirmed'}
+            </T>
+          )}
+        </View>
+      </View>
+      {state.state === 'error' && (
+        <>
+          <Button label="Try again" onPress={refresh} />
+          <Details title="Activity unavailable">
+            <T v="caption" muted>
+              {state.message}
+            </T>
+          </Details>
+        </>
+      )}
+      {state.state === 'ok' && (
+        <>
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              alignSelf: 'center',
+              justifyContent: 'center',
+              backgroundColor: t.surfaceRaised,
+              borderRadius: 28,
+              paddingHorizontal: 12,
+              gap: 4,
+            }}
+          >
+            {health?.apps
+              .filter((app) => app.installed)
+              .map((app) => {
+                const count =
+                  app.validated && (daily?.heartbeatMinutes ?? 0) > 0
+                    ? (daily?.apps.find((a) => a.package === app.package)?.views ?? 0)
+                    : null;
+                return (
+                  <Pressable
+                    key={app.package}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${app.label}: ${count === null ? 'count unconfirmed' : `${count} videos`}. Open Counter`}
+                    onPress={() => router.push('/tracking')}
+                    style={({ pressed }) => ({
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 9,
+                      paddingHorizontal: 10,
+                      minHeight: 52,
+                      opacity: pressed ? 0.7 : 1,
+                    })}
+                  >
+                    <AppIcon name={app.label} size={26} />
+                    <T v="heading">{count === null ? '—' : count.toLocaleString()}</T>
+                  </Pressable>
+                );
+              })}
+            {!health?.apps.some((app) => app.installed) && (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push('/tracking')}
+                style={styles.textAction}
+              >
+                <T v="label" muted>
+                  Supported apps →
+                </T>
+              </Pressable>
+            )}
+          </View>
+          {!active ? (
+            <Button label="Enable counting" onPress={() => router.push('/tracking')} />
+          ) : (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                brain.remaining === null
+                  ? 'Set or review daily goals'
+                  : `${brain.remaining} ${unit} left of ${brain.goal?.dailyLimit}. Review daily goals`
+              }
+              onPress={() => router.push('/goals')}
+              style={[styles.goalLink, { borderColor: t.border }]}
+            >
+              <Icon name="target" size={18} color={t.success} />
+              <T v="label" muted>
+                {brain.remaining === null
+                  ? brain.goal
+                    ? 'Review daily goal'
+                    : 'Set a daily goal'
+                  : `${brain.remaining} ${unit} left today`}
+              </T>
+              <Icon name="chevron" size={16} color={t.textMuted} />
+            </Pressable>
+          )}
+        </>
+      )}
+    </>
+  );
+}
+
+/** Compact, open introduction for task screens, with meaningful original vector symbols. */
 export function VisualBanner({
   art,
   title,
@@ -63,74 +217,45 @@ export function VisualBanner({
 }) {
   const t = useTheme();
   return (
-    <View
-      style={{
-        alignItems: 'center',
-        backgroundColor: t.hero,
-        borderRadius: radius.lg,
-        padding: 16,
-        gap: 4,
-      }}
-    >
-      <Illustration name={art} size={180} />
-      {title && (
-        <T v="title" style={{ textAlign: 'center' }}>
-          {title}
-        </T>
-      )}
-      {subtitle && (
-        <T v="caption" muted style={{ textAlign: 'center' }}>
-          {subtitle}
-        </T>
-      )}
+    <View style={{ paddingVertical: 16, gap: 12, alignItems: 'flex-start' }}>
+      <View
+        style={{
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          backgroundColor: t.warm,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Icon
+          name={art === 'friends' ? 'friends' : art === 'focus' ? 'target' : 'flame'}
+          size={28}
+        />
+      </View>
+      <T v="display">
+        {title ??
+          (art === 'focus'
+            ? 'Find your focus.'
+            : art === 'friends'
+              ? 'Better, together.'
+              : 'Small goals. Real change.')}
+      </T>
+      {subtitle && <T muted>{subtitle}</T>}
     </View>
   );
 }
 
-export function FeatureTile({
-  label,
-  art,
-  icon,
-  onPress,
-}: {
-  label: string;
-  art?: 'focus' | 'friends' | 'wick';
-  icon?: IconName;
-  onPress: () => void;
-}) {
-  const t = useTheme();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.tile,
-        { backgroundColor: t.surface, borderColor: t.border, opacity: pressed ? 0.75 : 1 },
-      ]}
-    >
-      {art ? (
-        <Illustration name={art} size={112} />
-      ) : (
-        <View style={{ height: 112, alignItems: 'center', justifyContent: 'center' }}>
-          <Icon name={icon ?? 'chart'} size={48} />
-        </View>
-      )}
-      <T v="label" style={{ textAlign: 'center', fontWeight: '600' }}>
-        {label}
-      </T>
-    </Pressable>
-  );
-}
-
-export function Dashboard({ guest = false }: { guest?: boolean }) {
+export function Dashboard({ guest = false, account }: { guest?: boolean; account?: ReactNode }) {
   const t = useTheme();
   return (
     <>
       <View style={styles.brand}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Icon name="flame" size={26} />
-          <T v="title">driftless</T>
+          <BrandMark size={34} />
+          <T v="title" style={{ letterSpacing: -0.8 }}>
+            driftless.
+          </T>
         </View>
         <Pressable
           accessibilityRole="button"
@@ -138,16 +263,30 @@ export function Dashboard({ guest = false }: { guest?: boolean }) {
           onPress={() => router.push(guest ? '/privacy' : '/settings')}
           style={styles.iconButton}
         >
-          <Icon name={guest ? 'shield' : 'settings'} size={22} color={t.textMuted} />
+          <Icon name={guest ? 'shield' : 'settings'} size={23} color={t.textMuted} />
         </Pressable>
       </View>
+      {account}
       <FocusHero />
-      <View style={styles.grid}>
-        <FeatureTile label="Focus" art="focus" onPress={() => router.push('/blocking')} />
-        <FeatureTile label="Friends" art="friends" onPress={() => router.push('/friends')} />
-        <FeatureTile label="Daily goals" icon="target" onPress={() => router.push('/goals')} />
-        <FeatureTile label="Progress" icon="chart" onPress={() => router.push('/stats')} />
-      </View>
+      <WrapEntry prompt />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Focus and app pauses. Requires Pro."
+        onPress={() => router.push('/blocking')}
+        style={({ pressed }) => [
+          styles.focusLink,
+          { backgroundColor: t.warm, opacity: pressed ? 0.75 : 1 },
+        ]}
+      >
+        <Icon name="lock" size={20} />
+        <T v="label" style={{ flex: 1, fontWeight: '600' }}>
+          Focus & app pauses
+        </T>
+        <T v="caption" style={{ color: t.accent, fontWeight: '700' }}>
+          PRO
+        </T>
+        <Icon name="chevron" size={18} />
+      </Pressable>
     </>
   );
 }
@@ -172,49 +311,76 @@ export function ActionCard({
       onPress={onPress}
       style={({ pressed }) => [
         styles.action,
-        { backgroundColor: t.surface, borderColor: t.border, opacity: pressed ? 0.75 : 1 },
+        { borderColor: t.border, opacity: pressed ? 0.65 : 1 },
       ]}
     >
-      <Icon name={iconForMark(mark)} />
-      <T v="label" style={{ flex: 1 }}>
-        {title}
-      </T>
+      <Icon name={iconForMark(mark)} size={23} />
+      <View style={{ flex: 1, gap: 3 }}>
+        <T v="label" style={{ fontWeight: '600' }}>
+          {title}
+        </T>
+        {body && (
+          <T v="caption" muted>
+            {body}
+          </T>
+        )}
+      </View>
       <Icon name="chevron" size={18} color={t.textMuted} />
     </Pressable>
   );
 }
 
+// Kept for consumers outside the current routes; uses the same open navigation treatment.
+export function FeatureTile({
+  label,
+  icon = 'target',
+  onPress,
+}: {
+  label: string;
+  art?: 'focus' | 'friends' | 'wick';
+  icon?: IconName;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={styles.action}
+    >
+      <Icon name={icon} />
+      <T v="label">{label}</T>
+    </Pressable>
+  );
+}
 const styles = StyleSheet.create({
   brand: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  iconButton: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
-  hero: { alignItems: 'center', gap: space.md, paddingVertical: space.md },
-  halo: { position: 'absolute', width: 220, height: 220, borderRadius: 110, top: 16, opacity: 0.5 },
-  count: {
-    borderRadius: radius.pill,
-    paddingHorizontal: space.xl,
-    paddingVertical: space.md,
+  iconButton: { minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
+  hero: { alignItems: 'center', gap: 10, paddingTop: 8, paddingBottom: 4 },
+  textAction: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 12 },
+  goalLink: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 0,
-    marginTop: -30,
-    minWidth: 210,
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    minHeight: 48,
   },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  tile: {
-    flexGrow: 1,
-    flexBasis: '45%',
-    minWidth: 120,
-    borderRadius: radius.md,
-    padding: 12,
+  focusLink: {
+    flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
+    gap: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    minHeight: 56,
+    borderRadius: 18,
   },
   action: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: 18,
-    gap: 14,
-    minHeight: 64,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingVertical: 20,
+    gap: 16,
+    minHeight: 72,
   },
 });

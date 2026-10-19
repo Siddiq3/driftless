@@ -1,5 +1,5 @@
 /**
- * Driftless design tokens — dark cocoa surfaces, cream counters and warm lantern accents.
+ * Driftless design tokens — dark cocoa, warm cream and apricot accents.
  * Every foreground/background pair used for text is listed in TEXT_PAIRS and must meet WCAG AA.
  */
 
@@ -34,18 +34,18 @@ export type Theme = {
 };
 
 export const dark: Theme = {
-  bg: '#120E09',
-  surface: '#1D1811',
-  surfaceRaised: '#2B2217',
+  bg: '#0B0B08',
+  surface: '#201B16',
+  surfaceRaised: '#30271F',
   text: '#FFF9ED',
   textMuted: '#C4B69D',
-  accent: '#FFE8B0',
-  onAccent: '#643800',
+  accent: '#FFD09D',
+  onAccent: '#492B16',
   success: '#BEDC93',
   warning: '#FFAE94',
-  border: '#51412A',
-  hero: '#291C0C',
-  warm: '#3A2915',
+  border: '#4A3E32',
+  hero: '#231A13',
+  warm: '#35261B',
 };
 
 export const light: Theme = {
@@ -80,6 +80,9 @@ export const type = {
 
 /** Minimum touch target (dp/pt). */
 export const MIN_TOUCH = 48;
+
+/** Restrained native-driver motion; disabled by the OS reduced-motion preference. */
+export const motion = { breathe: 2400, update: 420, press: 100 } as const;
 
 /** [foreground key, background key] pairs rendered as text in the UI. */
 export const TEXT_PAIRS: readonly (readonly [keyof Theme, keyof Theme])[] = [

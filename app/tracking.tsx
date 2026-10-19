@@ -2,9 +2,9 @@ import { router, useFocusEffect } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, AppState, View } from 'react-native';
-import { Tracking, type Daily, type TrackingHealth } from 'tracking-android';
+import { Tracking, type Daily, type TrackingHealth, type MemePreferences } from 'tracking-android';
 import { STATE_COPY, trackingState } from '@/tracking/state';
-import { Button, Card, Notice, Screen, T, EmptyState, Details } from '@/ui/kit';
+import { Button, Section, Notice, Screen, T, EmptyState, Details, Toggle } from '@/ui/kit';
 import { AppIcon, Icon } from '@/ui/Icon';
 
 const minutes = (ms: number) => Math.round(ms / 60_000);
@@ -12,6 +12,8 @@ const minutes = (ms: number) => Math.round(ms / 60_000);
 export default function TrackingScreen() {
   const [health, setHealth] = useState<TrackingHealth | null>(null);
   const [daily, setDaily] = useState<Daily | null>(null);
+  const [badgeEnabled, setBadgeEnabled] = useState(false);
+  const [memes, setMemes] = useState<MemePreferences>({ enabled: true });
   const [error, setError] = useState<string | null>(null);
 
   const read = useCallback(() => {
@@ -20,6 +22,8 @@ export default function TrackingScreen() {
       const h = Tracking.health();
       const d = Tracking.daily();
       setHealth(h);
+      setBadgeEnabled(Tracking.floatingCountEnabled());
+      setMemes(Tracking.memePreferences());
       setDaily(d);
       setError(null);
     } catch (e) {
@@ -72,10 +76,74 @@ export default function TrackingScreen() {
         <Button label="How counting works" onPress={() => router.push('/disclosure')} />
       )}
       {(state === 'needs_service' || state === 'enabled_not_running') && (
-        <Button label="Open Accessibility settings" onPress={Tracking.openAccessibilitySettings} />
+        <Button label="Enable accessibility" onPress={() => router.push('/disclosure')} />
       )}
 
-      <Card>
+      <Section>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+          <View style={{ flex: 1, gap: 4 }}>
+            <T v="heading">Floating brain counter</T>
+            <T v="caption" muted>
+              Shows over detected Reels &amp; Shorts. Swipes pass through.
+            </T>
+          </View>
+          <Toggle
+            accessibilityLabel="Floating brain counter"
+            value={badgeEnabled}
+            disabled={!Tracking.floatingCountSupported() || !health.disclosureAccepted}
+            onValueChange={(enabled) => {
+              try {
+                Tracking.setFloatingCountEnabled(enabled);
+                setBadgeEnabled(enabled);
+              } catch {
+                setError('Could not change the floating counter.');
+              }
+            }}
+          />
+        </View>
+        {!Tracking.floatingCountSupported() && (
+          <T v="caption" muted>
+            Rebuild the Android app to use the floating counter.
+          </T>
+        )}
+        {!health.disclosureAccepted && (
+          <Button label="How counting works" onPress={() => router.push('/disclosure')} />
+        )}
+        <T v="caption" muted>
+          ~ means unconfirmed. — means the video could not be identified. Turn off here any time.
+        </T>
+      </Section>
+
+      <Section>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+          <View style={{ flex: 1, gap: 4 }}>
+            <T v="heading">Meme breaks</T>
+            <T v="caption" muted>
+              Every 50 Reels &amp; Shorts. One tiny reality check.
+            </T>
+          </View>
+          <Toggle
+            accessibilityLabel="Meme break cards"
+            value={memes.enabled}
+            disabled={!Tracking.memeCardsSupported()}
+            onValueChange={(enabled) => {
+              try {
+                Tracking.setMemePreferences(enabled);
+                setMemes({ ...memes, enabled });
+              } catch {
+                setError('Could not change meme breaks.');
+              }
+            }}
+          />
+        </View>
+        {!badgeEnabled && (
+          <T v="caption" muted>
+            Turn on the floating counter to see meme breaks.
+          </T>
+        )}
+      </Section>
+
+      <Section>
         <T v="heading">Today on this phone</T>
         {daily.apps.length === 0 ? (
           <EmptyState
@@ -117,7 +185,7 @@ export default function TrackingScreen() {
             </View>
           ))
         )}
-      </Card>
+      </Section>
 
       <Details title="Minutes (Usage Access)" icon="clock">
         <T muted>

@@ -3,10 +3,11 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Share, View } from 'react-native';
 import { useApi } from '@/api/useApi';
+import { useSession } from '@/auth/session';
 import {
   Toggle,
   Button,
-  Card,
+  Section,
   Notice,
   Screen,
   T,
@@ -15,12 +16,14 @@ import {
   EmptyState,
   LoadingState,
 } from '@/ui/kit';
+import { InviteButton } from '@/social/InviteButton';
 import { VisualBanner } from '@/ui/Focus';
 
 type State = { me: v1.MeResponse; friends: v1.Friend[] };
 
 export default function Friends() {
   const api = useApi();
+  const session = useSession();
   const [s, setS] = useState<State | null>(null);
   const [input, setInput] = useState('');
   const [handle, setHandle] = useState('');
@@ -54,15 +57,33 @@ export default function Friends() {
         }),
       );
 
+  if (session.status === 'loading')
+    return (
+      <Screen>
+        <LoadingState label="Loading your friends…" />
+      </Screen>
+    );
   if (!api) {
+    const unavailable = session.status === 'unconfigured';
     return (
       <Screen>
         <VisualBanner art="friends" />
+        <InviteButton />
+        <T v="caption" muted>
+          Share Driftless without an account. Linking friends and comparing progress needs sign-in.
+        </T>
         <Notice
-          title="Sign in to add friends"
-          body="Friends and challenges need an account. Counting works without one."
+          title={unavailable ? 'Friends aren’t available in this build' : 'Sign in to add friends'}
+          body={
+            unavailable
+              ? 'Counting and goals still work on this phone.'
+              : 'Friends and challenges need an account. Counting works without one.'
+          }
         />
-        <Button label="Go to sign in" onPress={() => router.push('/welcome')} />
+        <Button
+          label={unavailable ? 'Back to today' : 'Go to sign in'}
+          onPress={() => router.push(unavailable ? '/' : '/welcome')}
+        />
       </Screen>
     );
   }
@@ -89,7 +110,7 @@ export default function Friends() {
       {note && <Notice tone={note.warn ? 'warn' : 'info'} title={note.title} body={note.body} />}
 
       {!p.handle ? (
-        <Card>
+        <Section>
           <T v="heading">Choose a handle</T>
           <T muted>Friends find you by this name. Lowercase letters, numbers and _ only.</T>
           <Field
@@ -104,9 +125,9 @@ export default function Friends() {
             label="Save handle"
             onPress={() => act(() => api.patchMe({ handle }, p.rev), 'Handle saved')}
           />
-        </Card>
+        </Section>
       ) : (
-        <Card>
+        <Section>
           <T v="heading">@{p.handle}</T>
           <Details title="Progress sharing" icon="shield">
             {' '}
@@ -147,7 +168,7 @@ export default function Friends() {
               })
             }
           />
-        </Card>
+        </Section>
       )}
 
       {p.handle && (
@@ -174,7 +195,7 @@ export default function Friends() {
       )}
 
       {pending.length > 0 && (
-        <Card>
+        <Section>
           <T v="heading">Requests</T>
           {pending.map((f) => (
             <View key={f.userId} style={{ gap: 8 }}>
@@ -196,10 +217,10 @@ export default function Friends() {
               </View>
             </View>
           ))}
-        </Card>
+        </Section>
       )}
 
-      <Card>
+      <Section>
         <T v="heading">Your friends</T>
         {accepted.length === 0 && (
           <EmptyState
@@ -232,7 +253,7 @@ export default function Friends() {
             Waiting: {sent.map((f) => `@${f.handle}`).join(', ')}
           </T>
         )}
-      </Card>
+      </Section>
       <Button kind="secondary" label="Challenges" onPress={() => router.push('/challenges')} />
     </Screen>
   );

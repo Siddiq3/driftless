@@ -84,4 +84,23 @@ class ClassifierTest {
         assertFalse(isValidatedVersion(rules, "400.10"))
         assertFalse(isValidatedVersion(rules, null))
     }
+    @Test fun youtubeCaptionIdentityIsScopedAndIgnoresChangingControls() {
+        val modern = rules.copy(surfaceViewIds=setOf("reel_recycler"), itemParts=listOf(ItemPart("reel_player_page_container",Field.CAPTION_TEXT)))
+        fun player(caption:String?,likes:String="100",hidden:Boolean=false) = FakeNode(children=listOf(
+            FakeNode(text="Outside the player"),
+            FakeNode(viewId="reel_recycler",children=listOf(FakeNode(viewId="reel_player_page_container",children=listOf(
+                FakeNode(className="android.view.ViewGroup",text=caption,isVisible=!hidden),
+                FakeNode(className="android.widget.Button",contentDesc=likes,children=listOf(FakeNode(text=likes))),
+                FakeNode(className="android.widget.SeekBar",text="00:02"),
+            )))),
+        ))
+        val first=c.classify(player("First video"),modern,salt)
+        assertEquals(Surface.SHORT_VIDEO,first.surface)
+        assertNotNull(first.fingerprint)
+        assertEquals(first.fingerprint,c.classify(player("First video","101"),modern,salt).fingerprint)
+        assertNotEquals(first.fingerprint,c.classify(player("Second video"),modern,salt).fingerprint)
+        assertNull(c.classify(player(null),modern,salt).fingerprint)
+        assertNull(c.classify(player("Hidden video",hidden=true),modern,salt).fingerprint)
+    }
+
 }

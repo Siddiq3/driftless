@@ -1,36 +1,41 @@
 import { useState } from 'react';
+import { View } from 'react-native';
 import { useSession } from '@/auth/session';
-import { Button, Notice, Screen } from '@/ui/kit';
+import { Button, Notice, Screen, T, useTheme } from '@/ui/kit';
 import { Dashboard } from '@/ui/Focus';
 
 export default function Welcome() {
   const session = useSession();
   const [busy, setBusy] = useState(false);
+  const t = useTheme();
   return (
     <Screen>
-      <Dashboard guest />
-      {session.status === 'unconfigured' && (
-        <Notice
-          title="Use without an account"
-          body="Tracking and goals work on this phone. Sign-in isn’t configured in this build."
-        />
-      )}
-      {session.status === 'signedOut' && (
-        <>
-          {session.error && (
-            <Notice tone="warn" title="Sign-in didn’t complete" body={session.error} />
-          )}
-          <Button
-            label="Sign in"
-            busy={busy}
-            accessibilityHint="Opens a secure sign-in page"
-            onPress={() => {
-              setBusy(true);
-              void session.signIn().finally(() => setBusy(false));
-            }}
-          />
-        </>
-      )}
+      <Dashboard
+        guest
+        account={
+          session.status === 'signedOut' ? (
+            <View style={{ backgroundColor: t.surface, borderRadius: 18, padding: 12, gap: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <T v="label" style={{ flex: 1 }}>
+                  Your Driftless account
+                </T>
+                <Button
+                  label="Sign in with Google"
+                  busy={busy}
+                  accessibilityHint="Opens Google sign-in"
+                  onPress={() => {
+                    setBusy(true);
+                    void session.signIn().finally(() => setBusy(false));
+                  }}
+                />
+              </View>
+              {session.error && (
+                <Notice tone="warn" title="Sign-in didn’t complete" body={session.error} />
+              )}
+            </View>
+          ) : undefined
+        }
+      />
     </Screen>
   );
 }

@@ -1,5 +1,7 @@
 # Architecture — Driftless
 
+> Authentication update (19 October 2026): the user selected Google-only native sign-in instead of Cognito. [Current implementation and setup](GOOGLE_SIGN_IN.md) supersede the identity/Hosted UI sections below.
+
 Status: [PROPOSED] for Phase 0 review · 2026-10-18
 
 ## 1. Principles
@@ -164,3 +166,5 @@ Errors: RFC 9457 problem+json. Replays with the same `Idempotency-Key` and ident
 
 ## 8. Time & dates
 Days are **device-local calendar days** recorded with the IANA zone in effect at day end. A time-zone change mid-day closes the counter under the old zone's date and continues under the new zone; duplicate local dates (travel westward) merge by summing within the same `localDate` key. Server never re-buckets device data.
+
+**Optional floating counter:** the existing AccessibilityService owns `FloatingCountBadge`, a non-focusable/non-touchable `TYPE_ACCESSIBILITY_OVERLAY` showing the current supported app's local daily count. The switch defaults on after counting disclosure/Accessibility is enabled and is stored in TrackingPrefs. Surface recognition, foreground package, lock/interactive state and disclosure gate visibility. Native ticks update it independently of React Native. Service stop, app/player exit, consent withdrawal, screen-off and local wipe remove it. It uses the existing brain raster resource, requires no SYSTEM_ALERT_WINDOW grant, and does not alter classifier validation. Unknown identities show a dash; candidate versions carry `~` and an explicit unconfirmed status.

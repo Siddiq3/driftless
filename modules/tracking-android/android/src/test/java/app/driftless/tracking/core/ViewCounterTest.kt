@@ -98,4 +98,22 @@ class ViewCounterTest {
         val restarted = ViewCounter(first.ringSnapshot())
         assertEquals(0, run(listOf(o(10 * s, "a", scrolled = false)), 20 * s, restarted).views)
     }
+    @Test fun delayedCaptionAfterUnknownEntryStillCounts() {
+        val t = run(listOf(o(0,null,scrolled=false),o(300,"a",scrolled=false)),2500)
+        assertEquals(1,t.views)
+        assertEquals(300L,t.unknownMs)
+    }
+    @Test fun swipeBeforeCaptionArrivesStillCountsTheNextVideoOnce() {
+        val obs=listOf(o(0,"a",scrolled=false),o(3000,"a"),o(3300,null,scrolled=false),o(3600,"b",scrolled=false),o(3800,"b",scrolled=false))
+        assertEquals(2,run(obs,6000).views)
+    }
+    @Test fun delayedIdentityCannotBorrowExpiredOrConsumedSwipe() {
+        assertEquals(1,run(listOf(o(0,"a",scrolled=false),o(3000,"a"),o(4500,"edit",scrolled=false)),7000).views)
+        assertEquals(1,run(listOf(o(0,"a",scrolled=false),o(3000,"b"),o(3300,"edit",scrolled=false)),6000).views)
+    }
+    @Test fun leavingClearsPendingIdentityAndSkippedItemDoesNotCount() {
+        assertEquals(0,run(listOf(o(0,null),leave(300),o(600,null,scrolled=false),o(2000,"late",scrolled=false)),5000).views)
+        assertEquals(1,run(listOf(o(0,null),o(300,"skip",scrolled=false),o(600,"watched")),3000).views)
+    }
+
 }

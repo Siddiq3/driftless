@@ -41,6 +41,7 @@ object RulesLoader {
                         when (p.getString("field")) {
                             "contentDesc" -> Field.CONTENT_DESC
                             "text" -> Field.TEXT
+                            "captionText" -> Field.CAPTION_TEXT
                             else -> throw IllegalArgumentException("unknown field ${p.getString("field")}")
                         },
                     )
@@ -76,6 +77,26 @@ class TrackingPrefs(context: Context) {
     var disclosureAccepted: Boolean
         get() = p.getBoolean(KEY_CONSENT, false)
         set(v) = p.edit().putBoolean(KEY_CONSENT, v).putLong(KEY_CONSENT_AT, System.currentTimeMillis()).apply()
+
+    var floatingCountEnabled: Boolean
+        get() = p.getBoolean("floating_count_enabled", true)
+        set(v) = p.edit().putBoolean("floating_count_enabled", v).apply()
+
+    var memeCardsEnabled: Boolean
+        get() = p.getBoolean("meme_cards_enabled", true)
+        set(v) = p.edit().putBoolean("meme_cards_enabled", v).apply()
+
+    fun shownMemeMilestone(date: String): Int =
+        if (p.getString("meme_date", null) == date) p.getInt("meme_milestone", 0) else 0
+
+    fun markMemeMilestone(date: String, milestone: Int) {
+        p.edit().putString("meme_date", date).putInt("meme_milestone", milestone).commit()
+    }
+
+    fun clearMemeHistory() {
+        p.edit().remove("meme_date").remove("meme_milestone").remove("meme_language")
+            .remove("meme_cards_enabled").apply()
+    }
 
     val installSecret: ByteArray
         @Synchronized get() {

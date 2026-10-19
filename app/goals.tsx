@@ -13,7 +13,7 @@ import {
 import { loadGoals, saveGoal } from '@/goals/store';
 import { Tracking } from 'tracking-android';
 import { useProgress } from '@/goals/useProgress';
-import { Details, MetricPanel, Toggle, Button, Card, Notice, Screen, T } from '@/ui/kit';
+import { Details, MetricPanel, Toggle, Button, Section, Notice, Screen, T } from '@/ui/kit';
 import { VisualBanner } from '@/ui/Focus';
 
 const STEPS: Record<v1.Goal['metric'], number[]> = {
@@ -56,7 +56,7 @@ function GoalEditor({
   };
 
   return (
-    <Card>
+    <Section>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <T v="heading" style={{ flex: 1 }}>
           {metric === 'minutes' ? 'Minutes a day' : 'Videos a day'}
@@ -109,7 +109,7 @@ function GoalEditor({
           {saved}
         </T>
       )}
-    </Card>
+    </Section>
   );
 }
 
@@ -124,7 +124,7 @@ function EveningReminder() {
   }, []);
   if (on === null) return null;
   return (
-    <Card>
+    <Section>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <View style={{ flex: 1 }}>
           <T v="heading">Evening check-in</T>
@@ -156,7 +156,7 @@ function EveningReminder() {
       <T v="caption" muted>
         You also get a notice at 80% and 100% of a goal (needs the counter or Usage Access).
       </T>
-    </Card>
+    </Section>
   );
 }
 

@@ -9,7 +9,7 @@ Backend and shared contracts: [Siddiq3/driftless-backend](https://github.com/Sid
 | Path | What |
 |---|---|
 | `app/` | Screens (expo-router) |
-| `src/` | API client, auth (Cognito PKCE), local DB, UI kit, design tokens |
+| `src/` | API client, auth (direct Google sign-in), local DB, UI kit, design tokens |
 | `modules/tracking-android` | Kotlin Expo module (tracking engine lands in Phase 2) |
 | `test/` | Jest unit tests |
 | `docs/` | Product spec, architecture, threat model, decisions, test plan |
@@ -27,3 +27,9 @@ pnpm android        # builds and runs the dev client on a device/emulator
 ```
 
 CI publishes step logs for each push to `main` to the `ci-results` branch.
+
+## Account login
+
+Google is the only login provider; local tracking remains available to guests. See [Google sign-in setup](docs/GOOGLE_SIGN_IN.md) for OAuth client IDs, Android signing certificates and the matching backend audience.
+
+Daily/weekly story recaps and build requirements: [Wrapped](docs/WRAPPED.md).

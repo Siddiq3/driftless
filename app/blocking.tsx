@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import { Tracking, type BlockingConfig } from 'tracking-android';
 import { loadBlocking, PRESETS, saveBlocking } from '@/billing/blocking';
 import { getDb } from '@/db';
-import { Toggle, Button, Card, Notice, Screen, T, MetricPanel, Details } from '@/ui/kit';
+import { Toggle, Button, Section, Notice, Screen, T, MetricPanel, Details } from '@/ui/kit';
 import { VisualBanner } from '@/ui/Focus';
 import { AppIcon, Icon } from '@/ui/Icon';
 
@@ -89,7 +89,7 @@ export default function Blocking() {
           body="Pausing needs the Driftless counter switched on in Accessibility settings."
         />
       )}
-      <Card>
+      <Section>
         <T v="heading">Your pause switch</T>
         <Row
           label="Pause apps"
@@ -99,8 +99,8 @@ export default function Blocking() {
         <T v="caption" muted>
           Requires an active Pro subscription.
         </T>
-      </Card>
-      <Card>
+      </Section>
+      <Section>
         <T v="heading">Apps</T>
         {apps.map((a) => (
           <Row
@@ -115,8 +115,8 @@ export default function Blocking() {
             }
           />
         ))}
-      </Card>
-      <Card>
+      </Section>
+      <Section>
         <MetricPanel
           value={cfg.dailyMinutes ?? '—'}
           label="minutes per app each day"
@@ -151,8 +151,8 @@ export default function Blocking() {
             </View>
           </View>
         )}
-      </Card>
-      <Card>
+      </Section>
+      <Section>
         <T v="heading">Focus times</T>
         {PRESETS.map((p) => {
           const on = cfg.schedules.some(
@@ -187,7 +187,7 @@ export default function Blocking() {
             />
           );
         })}
-      </Card>
+      </Section>
       <Details title="How app pauses work" icon="help">
         {' '}
         <T muted>

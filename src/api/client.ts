@@ -81,6 +81,14 @@ export function createApiClient(o: ApiClientOptions) {
   }
 
   return {
+    wrapped: async (period: 'daily' | 'weekly', end: string) =>
+      (
+        await request(
+          'GET',
+          `/v1/wrapped?period=${period}&end=${encodeURIComponent(end)}`,
+          v1.WrapResponse,
+        )
+      ).data,
     getMe: () =>
       request(
         'GET',

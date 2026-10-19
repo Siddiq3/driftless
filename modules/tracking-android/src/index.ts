@@ -54,10 +54,35 @@ export type BlockingConfig = {
   schedules: FocusSchedule[];
 };
 
+export type WrapSession = {
+  package: string;
+  startMs: number;
+  endMs: number;
+  startMinute: number;
+  endMinute: number;
+  views: number;
+};
+export type WrapDetails = {
+  available: boolean;
+  days: { localDate: string; hourlyViews: number[]; sessions: WrapSession[] }[];
+};
+
+export type MemePreferences = { enabled: boolean };
+
 type NativeTracking = {
+  memePreferences(): MemePreferences;
+  setMemePreferences(enabled: boolean, legacyLanguage: string): void;
+  floatingCountEnabled(): boolean;
+  setFloatingCountEnabled(enabled: boolean): void;
+  getWrappedDetails(from: string, to: string): WrapDetails;
+  widgetSupported(): boolean;
+  requestCountWidget(): boolean;
+  refreshCountWidget(): void;
+  openSupportedApp(pkg: string): void;
   getHealth(): TrackingHealth;
   setDisclosureAccepted(accepted: boolean): void;
   openAccessibilitySettings(): void;
+  openAccessibilityGuide(): void;
   openUsageAccessSettings(): void;
   refreshUsage(days: number): number;
   getDaily(localDate: string | null): Daily;
@@ -79,9 +104,25 @@ type NativeTracking = {
 const native = requireNativeModule<NativeTracking>('DriftlessTracking');
 
 export const Tracking = {
+  memeCardsSupported: () => typeof native.setMemePreferences === 'function',
+  memePreferences: (): MemePreferences => native.memePreferences?.() ?? { enabled: true },
+  setMemePreferences: (enabled: boolean) => native.setMemePreferences?.(enabled, 'auto'),
+  floatingCountSupported: () => typeof native.setFloatingCountEnabled === 'function',
+  floatingCountEnabled: () => native.floatingCountEnabled?.() ?? false,
+  setFloatingCountEnabled: (enabled: boolean) => native.setFloatingCountEnabled?.(enabled),
+  wrappedDetails: (from: string, to: string): WrapDetails =>
+    native.getWrappedDetails?.(from, to) ?? { available: false, days: [] },
+  widgetSupported: () => native.widgetSupported?.() ?? false,
+  requestCountWidget: () => native.requestCountWidget?.() ?? false,
+  refreshCountWidget: () => native.refreshCountWidget?.(),
+  openSupportedApp: (pkg: string) => native.openSupportedApp(pkg),
   health: () => native.getHealth(),
   setDisclosureAccepted: (v: boolean) => native.setDisclosureAccepted(v),
   openAccessibilitySettings: () => native.openAccessibilitySettings(),
+  openAccessibilityGuide: () =>
+    typeof native.openAccessibilityGuide === 'function'
+      ? native.openAccessibilityGuide()
+      : native.openAccessibilitySettings(),
   openUsageAccessSettings: () => native.openUsageAccessSettings(),
   refreshUsage: (days = 7) => native.refreshUsage(days),
   daily: (localDate: string | null = null) => native.getDaily(localDate),

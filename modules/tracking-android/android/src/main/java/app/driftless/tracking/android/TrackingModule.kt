@@ -23,7 +23,34 @@ class TrackingModule : Module() {
 
     override fun definition() = ModuleDefinition {
         Name("DriftlessTracking")
+        View(GuideVideoView::class) {
+            Prop("source") { view: GuideVideoView, source: String -> view.setSource(source) }
+            Prop("playing") { view: GuideVideoView, playing: Boolean -> view.setPlaying(playing) }
+        }
 
+        Function("floatingCountEnabled") { TrackingPrefs(context).floatingCountEnabled }
+        Function("setFloatingCountEnabled") { enabled: Boolean ->
+            TrackingPrefs(context).floatingCountEnabled = enabled
+            DriftlessAccessibilityService.current?.refreshFloatingCount()
+        }
+        Function("memePreferences") {
+            val p = TrackingPrefs(context)
+            mapOf("enabled" to p.memeCardsEnabled)
+        }
+        Function("setMemePreferences") { enabled: Boolean, _: String ->
+            val p = TrackingPrefs(context)
+            p.memeCardsEnabled = enabled
+            DriftlessAccessibilityService.current?.refreshFloatingCount()
+        }
+        Function("widgetSupported") { CountWidget.supported(context) }
+        Function("requestCountWidget") { CountWidget.request(context) }
+        Function("refreshCountWidget") { CountWidget.update(context) }
+        Function("openSupportedApp") { pkg: String ->
+            if (pkg !in RulesLoader.load(context).apps.keys) throw CodedException("UNSUPPORTED_APP", "App is not supported", null)
+            val launch = context.packageManager.getLaunchIntentForPackage(pkg)
+                ?: throw CodedException("NOT_INSTALLED", "App is not installed", null)
+            context.startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
         Function("getHealth") {
             val ctx = context
             val rules = RulesLoader.load(ctx)
@@ -57,6 +84,12 @@ class TrackingModule : Module() {
 
         Function("setDisclosureAccepted") { accepted: Boolean ->
             TrackingPrefs(context).disclosureAccepted = accepted
+            DriftlessAccessibilityService.current?.refreshFloatingCount()
+        }
+
+        Function("openAccessibilityGuide") {
+            if (!TrackingPrefs(context).disclosureAccepted) throw CodedException("CONSENT_REQUIRED", "Read and accept the counting disclosure first", null)
+            context.startActivity(Intent(context, AccessibilityGuideActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
         }
 
         Function("openAccessibilitySettings") {
@@ -72,6 +105,8 @@ class TrackingModule : Module() {
             val ctx = context
             UsageReader.refresh(ctx, SqliteStore.get(ctx), RulesLoader.load(ctx).apps.keys, days)
         }
+
+        Function("getWrappedDetails") { from: String, to: String -> WrappedDetails.read(context, from, to) }
 
         Function("getDaily") { localDate: String? ->
             val ctx = context
@@ -188,7 +223,11 @@ class TrackingModule : Module() {
         }
 
         Function("wipeLocalData") {
+            TrackingPrefs(context).floatingCountEnabled = false
+            DriftlessAccessibilityService.current?.refreshFloatingCount()
+            TrackingPrefs(context).clearMemeHistory()
             SqliteStore.get(context).wipeAll()
+            CountWidget.update(context)
         }
     }
 

@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react';
 import { View } from 'react-native';
 import { Tracking, type Daily, type TrackingHealth } from 'tracking-android';
 import { currentTimeZone } from '@/sync/run';
-import { Button, Card, Notice, Screen, T, useTheme } from '@/ui/kit';
+import { Button, Section, Notice, Screen, T, useTheme } from '@/ui/kit';
 import { Icon } from '@/ui/Icon';
 
 const DAYS = 14;
@@ -69,7 +69,7 @@ export default function History() {
         />
       )}
       {rows && (
-        <Card>
+        <Section>
           {rows.map((r) => (
             <View
               key={r.date}
@@ -109,7 +109,7 @@ export default function History() {
               * Unconfirmed counts
             </T>
           )}
-        </Card>
+        </Section>
       )}
     </Screen>
   );

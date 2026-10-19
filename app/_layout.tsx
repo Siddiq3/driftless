@@ -5,12 +5,16 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { SessionProvider } from '@/auth/session';
 import { readEnv } from '@/config/env';
 import { getDb } from '@/db';
+import { useReducedMotion } from '@/ui/motion';
+import { OnboardingProvider } from '@/onboarding/context';
+import { FirstLaunchRedirect } from '@/onboarding/FirstLaunchRedirect';
 import { Notice, Screen, useTheme } from '@/ui/kit';
 
 const env = readEnv();
 
 export default function RootLayout() {
   const t = useTheme();
+  const reduced = useReducedMotion();
   const [dbError, setDbError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -29,10 +33,19 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <SessionProvider env={env}>
-        <StatusBar style="light" />
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: t.bg } }} />
-      </SessionProvider>
+      <OnboardingProvider>
+        <SessionProvider env={env}>
+          <StatusBar style="light" />
+          <FirstLaunchRedirect />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              animation: reduced ? 'none' : 'fade_from_bottom',
+              contentStyle: { backgroundColor: t.bg },
+            }}
+          />
+        </SessionProvider>
+      </OnboardingProvider>
     </SafeAreaProvider>
   );
 }

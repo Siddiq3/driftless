@@ -6,7 +6,7 @@ import { createApiClient } from '@/api/client';
 import { useSession } from '@/auth/session';
 import { buyPro, loadOffers, MANAGE_URL, restorePro } from '@/billing/pro';
 import { APP_VERSION, readEnv } from '@/config/env';
-import { Button, Card, Notice, Screen, T, LoadingState } from '@/ui/kit';
+import { Button, Section, Notice, Screen, T, LoadingState } from '@/ui/kit';
 import { VisualBanner } from '@/ui/Focus';
 import { Icon } from '@/ui/Icon';
 
@@ -69,7 +69,7 @@ export default function Pro() {
   return (
     <Screen>
       <VisualBanner art="focus" title="More room for life" />
-      <Card>
+      <Section>
         <T v="heading">What’s included</T>
         {FEATURES.map((f, i) => (
           <View
@@ -82,7 +82,7 @@ export default function Pro() {
             </T>
           </View>
         ))}
-      </Card>
+      </Section>
       <T v="caption" muted>
         Counting, goals, Wick and your history stay free. Pro is verified by our server with Google
         Play; cancel any time in Google Play.

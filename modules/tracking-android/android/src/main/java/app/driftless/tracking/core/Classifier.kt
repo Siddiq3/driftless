@@ -17,7 +17,7 @@ interface UiNode {
 }
 
 /** Which node attribute contributes to the item fingerprint. */
-enum class Field { CONTENT_DESC, TEXT }
+enum class Field { CONTENT_DESC, TEXT, CAPTION_TEXT }
 
 data class ItemPart(val viewId: String, val field: Field)
 
@@ -50,13 +50,24 @@ class Classifier(private val maxNodes: Int = MAX_NODES, private val maxDepth: In
         var visited = 0
 
         // Breadth-first, bounded: never walk an unbounded tree on the UI-event hot path.
-        val queue = ArrayDeque<Pair<UiNode, Int>>()
-        queue.addLast(root to 0)
+        data class Work(val node: UiNode, val depth: Int, val scopes: Set<ItemPart>, val controls: Boolean)
+        val captions = HashMap<ItemPart, LinkedHashSet<String>>()
+        val queue = ArrayDeque<Work>()
+        queue.addLast(Work(root, 0, emptySet(), false))
         while (queue.isNotEmpty() && visited < maxNodes) {
-            val (n, depth) = queue.removeFirst()
+            val (n, depth, inheritedScopes, insideControl) = queue.removeFirst()
             visited++
             if (!n.isVisible) continue
+            val cls = n.className?.substringAfterLast('.')
+            val controls = insideControl || cls in setOf("Button", "ImageButton", "RadioButton", "CheckBox", "Switch", "SeekBar")
             val id = n.viewId
+            val scopes = inheritedScopes + rules.itemParts.filter { it.viewId == id && it.field == Field.CAPTION_TEXT }
+            // YouTube's anonymous caption groups carry text, while buttons contain changing
+            // likes/playback labels. Never use those controls or content outside the player.
+            if (!controls && scopes.isNotEmpty()) {
+                val text = n.text?.trim()?.take(512)
+                if (!text.isNullOrEmpty()) scopes.forEach { captions.getOrPut(it) { linkedSetOf() }.add(text) }
+            }
             if (id != null) {
                 if (id in rules.surfaceViewIds) surface = true
                 if (id in rules.adViewIds) ad = true
@@ -65,6 +76,7 @@ class Classifier(private val maxNodes: Int = MAX_NODES, private val maxDepth: In
                         val v = when (p.field) {
                             Field.CONTENT_DESC -> n.contentDesc
                             Field.TEXT -> n.text
+                            Field.CAPTION_TEXT -> null
                         }
                         if (!v.isNullOrBlank()) parts[p] = v.trim()
                     }
@@ -75,10 +87,11 @@ class Classifier(private val maxNodes: Int = MAX_NODES, private val maxDepth: In
                 if (label != null && label in rules.adLabels) ad = true
             }
             if (depth < maxDepth) {
-                for (i in 0 until n.childCount) n.child(i)?.let { queue.addLast(it to depth + 1) }
+                for (i in 0 until n.childCount) n.child(i)?.let { queue.addLast(Work(it, depth + 1, scopes, controls)) }
             }
         }
 
+        captions.forEach { (part, text) -> if (text.isNotEmpty()) parts[part] = text.joinToString("\n") }
         if (!surface) return Classification(Surface.OTHER, null, isAd = false, nodesVisited = visited)
         // Identity needs every configured part; a partial match would merge different items.
         val fp =

@@ -9,7 +9,7 @@ import { cacheEntitlement } from '@/billing/pro';
 import { syncGoals } from '@/goals/sync';
 import { registerPush } from '@/sync/push';
 import { syncNow } from '@/sync/run';
-import { Details, Toggle, Button, Card, Notice, Screen, T } from '@/ui/kit';
+import { Details, Toggle, Button, Section, Notice, Screen, T } from '@/ui/kit';
 
 const CAPABILITY_LABELS: Record<keyof v1.Capabilities, string> = {
   videoCounting: 'Reels & Shorts counting',
@@ -121,11 +121,11 @@ export default function Settings() {
       )}
       {load.state === 'ok' && (
         <>
-          <Card>
+          <Section>
             <T v="heading">{load.me.profile.displayName ?? 'Welcome'}</T>
             <T muted>Plan: {load.me.entitlement.tier === 'pro' ? 'Pro' : 'Free'}</T>
-          </Card>
-          <Card>
+          </Section>
+          <Section>
             <View
               style={{
                 flexDirection: 'row',
@@ -151,7 +151,7 @@ export default function Settings() {
                 {syncNote}
               </T>
             )}
-          </Card>
+          </Section>
           <Details title="Device support" icon="help">
             <T v="heading">What works on this phone</T>
             {(Object.keys(CAPABILITY_LABELS) as (keyof v1.Capabilities)[]).map((k) => (

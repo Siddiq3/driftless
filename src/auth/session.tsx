@@ -1,14 +1,6 @@
-import {
-  exchangeCodeAsync,
-  makeRedirectUri,
-  refreshAsync,
-  ResponseType,
-  revokeAsync,
-  useAuthRequest,
-  type DiscoveryDocument,
-} from 'expo-auth-session';
+import { TurboModuleRegistry } from 'react-native';
+import type { GoogleSignin as GoogleSDK } from '@react-native-google-signin/google-signin';
 import * as SecureStore from 'expo-secure-store';
-import * as WebBrowser from 'expo-web-browser';
 import {
   createContext,
   useCallback,
@@ -20,174 +12,136 @@ import {
   type ReactNode,
 } from 'react';
 import type { Env } from '../config/env';
+import { googleIdentity } from './google';
 
-WebBrowser.maybeCompleteAuthSession();
-
-const STORE_KEY = 'driftless.tokens.v1';
-/** Refresh a little before expiry to avoid racing the server clock. */
-const EXPIRY_SKEW_MS = 60_000;
-
-type Tokens = { accessToken: string; refreshToken: string | null; expiresAt: number };
-
-export function discoveryFor(env: Env): DiscoveryDocument {
-  const d = env.cognitoDomain.replace(/\/+$/, '');
-  return {
-    authorizationEndpoint: `${d}/oauth2/authorize`,
-    tokenEndpoint: `${d}/oauth2/token`,
-    revocationEndpoint: `${d}/oauth2/revoke`,
-  };
-}
-
-async function load(): Promise<Tokens | null> {
-  const raw = await SecureStore.getItemAsync(STORE_KEY);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as Tokens;
-  } catch {
-    await SecureStore.deleteItemAsync(STORE_KEY);
-    return null;
-  }
-}
-
-async function save(t: Tokens | null): Promise<void> {
-  if (t) {
-    // Keychain/Keystore-backed; not synced, not readable before first unlock.
-    await SecureStore.setItemAsync(STORE_KEY, JSON.stringify(t), {
-      keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
-    });
-  } else {
-    await SecureStore.deleteItemAsync(STORE_KEY);
-  }
-}
-
+// Stores only the user's choice to stay signed in. Credentials are managed by Google's SDK.
+const ENABLED_KEY = 'driftless.google.enabled.v1';
+const LEGACY_KEY = 'driftless.tokens.v1';
 type SessionState =
   | { status: 'loading' }
   | { status: 'unconfigured' }
-  | { status: 'signedOut'; signIn: () => Promise<void>; error: string | null }
+  | {
+      status: 'signedOut';
+      googleSupported: boolean;
+      signIn: () => Promise<void>;
+      error: string | null;
+    }
   | {
       status: 'signedIn';
       getAccessToken: () => Promise<string | null>;
       signOut: () => Promise<void>;
+      disconnect: () => Promise<void>;
     };
-
 const Ctx = createContext<SessionState>({ status: 'loading' });
-
-export function useSession(): SessionState {
-  return useContext(Ctx);
-}
+export const useSession = () => useContext(Ctx);
 
 export function SessionProvider({ env, children }: { env: Env | null; children: ReactNode }) {
-  if (!env) return <Ctx.Provider value={{ status: 'unconfigured' }}>{children}</Ctx.Provider>;
-  return <ConfiguredSession env={env}>{children}</ConfiguredSession>;
+  if (!env || !TurboModuleRegistry.get('RNGoogleSignin'))
+    return <Ctx.Provider value={{ status: 'unconfigured' }}>{children}</Ctx.Provider>;
+  return <GoogleSession env={env}>{children}</GoogleSession>;
 }
 
-function ConfiguredSession({ env, children }: { env: Env; children: ReactNode }) {
-  const discovery = useMemo(() => discoveryFor(env), [env]);
-  const redirectUri = useMemo(
-    () => makeRedirectUri({ scheme: 'driftless', path: 'auth/callback' }),
+function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
+  const GoogleSignin = useMemo(
+    // Lazy load after checking native availability, so guest mode works in older dev clients.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    () => require('@react-native-google-signin/google-signin').GoogleSignin as typeof GoogleSDK,
     [],
   );
-  const [tokens, setTokens] = useState<Tokens | null | undefined>(undefined);
+  const [signedIn, setSignedIn] = useState<boolean | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
-  const refreshing = useRef<Promise<Tokens | null> | null>(null);
-
-  const [request, response, promptAsync] = useAuthRequest(
-    {
-      clientId: env.cognitoClientId,
-      redirectUri,
-      scopes: ['openid', 'email'],
-      responseType: ResponseType.Code,
-      usePKCE: true,
-    },
-    discovery,
-  );
+  const generation = useRef({ value: 0 });
+  const enabled = useRef(false);
+  const tokenRequest = useRef<Promise<string | null> | null>(null);
+  const signingIn = useRef(false);
 
   useEffect(() => {
-    void load().then(setTokens);
-  }, []);
+    let active = true;
+    const lifetime = generation.current;
+    GoogleSignin.configure({ webClientId: env.googleWebClientId, offlineAccess: false });
+    (async () => {
+      // Existing Cognito sessions must never be reused as Google credentials.
+      await SecureStore.deleteItemAsync(LEGACY_KEY);
+      const staySignedIn = await SecureStore.getItemAsync(ENABLED_KEY);
+      const token = staySignedIn === 'true' ? await googleIdentity(GoogleSignin, false) : null;
+      if (active) {
+        enabled.current = Boolean(token);
+        setSignedIn(Boolean(token));
+      }
+    })().catch(() => {
+      if (active) setSignedIn(false);
+    });
+    return () => {
+      active = false;
+      lifetime.value++;
+    };
+  }, [env.googleWebClientId, GoogleSignin]);
 
-  useEffect(() => {
-    if (response?.type !== 'success' || !request?.codeVerifier) return;
-    exchangeCodeAsync(
-      {
-        clientId: env.cognitoClientId,
-        code: response.params.code ?? '',
-        redirectUri,
-        extraParams: { code_verifier: request.codeVerifier },
-      },
-      discovery,
-    )
-      .then(async (r) => {
-        const t: Tokens = {
-          accessToken: r.accessToken,
-          refreshToken: r.refreshToken ?? null,
-          expiresAt: Date.now() + (r.expiresIn ?? 3600) * 1000,
-        };
-        await save(t);
-        setTokens(t);
-        setError(null);
-      })
-      .catch(() => setError('could not complete sign-in'));
-  }, [response, request, env.cognitoClientId, redirectUri, discovery]);
+  const signIn = useCallback(async () => {
+    if (signingIn.current) return;
+    signingIn.current = true;
+    setError(null);
+    try {
+      const token = await googleIdentity(GoogleSignin, true);
+      if (!token) return;
+      await SecureStore.setItemAsync(ENABLED_KEY, 'true');
+      generation.current.value++;
+      enabled.current = true;
+      setSignedIn(true);
+    } catch {
+      setError('Google sign-in could not complete. Please try again.');
+    } finally {
+      signingIn.current = false;
+    }
+  }, [GoogleSignin]);
 
   const signOut = useCallback(async () => {
-    const t = tokens;
-    await save(null);
-    setTokens(null);
-    if (t?.refreshToken) {
-      await revokeAsync({ clientId: env.cognitoClientId, token: t.refreshToken }, discovery).catch(
-        () => undefined,
-      );
+    await SecureStore.setItemAsync(ENABLED_KEY, 'false');
+    generation.current.value++;
+    tokenRequest.current = null;
+    enabled.current = false;
+    setSignedIn(false);
+    await GoogleSignin.signOut();
+  }, [GoogleSignin]);
+
+  const disconnect = useCallback(async () => {
+    // Revokes this app's Google grant after deleting its cloud data; never deletes a Google account.
+    try {
+      await GoogleSignin.revokeAccess();
+    } finally {
+      await signOut();
     }
-  }, [tokens, env.cognitoClientId, discovery]);
+  }, [signOut, GoogleSignin]);
 
   const getAccessToken = useCallback(async (): Promise<string | null> => {
-    const t = tokens;
-    if (!t) return null;
-    if (t.expiresAt - EXPIRY_SKEW_MS > Date.now()) return t.accessToken;
-    if (!t.refreshToken) return null;
-    refreshing.current ??= refreshAsync(
-      { clientId: env.cognitoClientId, refreshToken: t.refreshToken },
-      discovery,
-    )
-      .then(async (r) => {
-        const next: Tokens = {
-          accessToken: r.accessToken,
-          refreshToken: r.refreshToken ?? t.refreshToken,
-          expiresAt: Date.now() + (r.expiresIn ?? 3600) * 1000,
-        };
-        await save(next);
-        setTokens(next);
-        return next;
-      })
-      .catch(async () => {
-        // Refresh token revoked/expired: sign out locally. Local tracking is unaffected.
-        await save(null);
-        setTokens(null);
-        return null;
-      })
-      .finally(() => {
-        refreshing.current = null;
+    if (!signedIn || !enabled.current) return null;
+    const current = generation.current.value;
+    // Silent sign-in obtains the current Google ID token without opening a browser/account picker.
+    // Share a concurrent refresh; an explicit sign-out invalidates its result.
+    if (!tokenRequest.current) {
+      const request = googleIdentity(GoogleSignin, false)
+        .then((token) => {
+          if (!token && generation.current.value === current) {
+            enabled.current = false;
+            setSignedIn(false);
+          }
+          return token;
+        })
+        .catch(() => null);
+      tokenRequest.current = request;
+      void request.finally(() => {
+        if (tokenRequest.current === request) tokenRequest.current = null;
       });
-    return (await refreshing.current)?.accessToken ?? null;
-  }, [tokens, env.cognitoClientId, discovery]);
+    }
+    const token = await tokenRequest.current;
+    return enabled.current && generation.current.value === current ? token : null;
+  }, [signedIn, GoogleSignin]);
 
   const value: SessionState =
-    tokens === undefined
+    signedIn === undefined
       ? { status: 'loading' }
-      : tokens
-        ? { status: 'signedIn', getAccessToken, signOut }
-        : {
-            status: 'signedOut',
-            // Errors from the browser round-trip are derived from the response, not copied into state.
-            error:
-              error ??
-              (response?.type === 'error' ? (response.error?.message ?? 'sign-in failed') : null),
-            signIn: async () => {
-              setError(null);
-              await promptAsync();
-            },
-          };
-
+      : signedIn
+        ? { status: 'signedIn', getAccessToken, signOut, disconnect }
+        : { status: 'signedOut', googleSupported: true, signIn, error };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

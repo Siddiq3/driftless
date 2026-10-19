@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { useProgress } from '@/goals/useProgress';
 import { Bars } from '@/ui/Bars';
-import { Button, Card, Notice, Screen, T, useTheme, Details } from '@/ui/kit';
+import { Button, Section, Notice, Screen, T, useTheme, Details } from '@/ui/kit';
 
 const short = (d: string) => d.slice(5).replace('-', '/');
 
@@ -46,7 +46,7 @@ export default function Stats() {
           />
         </View>
       </View>
-      <Card>
+      <Section>
         <T v="heading">Reels & Shorts</T>
         <Bars
           unit="videos"
@@ -56,31 +56,29 @@ export default function Stats() {
           style={{
             flexDirection: 'row',
             flexWrap: 'wrap',
-            backgroundColor: t.accent,
-            borderRadius: 22,
-            padding: 20,
+            paddingVertical: 16,
             gap: 16,
           }}
         >
           <View style={{ flex: 1, minWidth: 100 }}>
-            <T v="display" style={{ color: t.onAccent }}>
+            <T v="display" style={{ color: t.accent }}>
               {totalViews === null ? '—' : totalViews.toLocaleString()}
             </T>
-            <T v="caption" style={{ color: t.onAccent }}>
+            <T v="caption" style={{ color: t.accent }}>
               Total videos
             </T>
           </View>
           <View style={{ flex: 1, minWidth: 100 }}>
-            <T v="display" style={{ color: t.onAccent }}>
+            <T v="display" style={{ color: t.accent }}>
               {totalViews === null ? '—' : Math.round(totalViews / counted.length).toLocaleString()}
             </T>
-            <T v="caption" style={{ color: t.onAccent }}>
+            <T v="caption" style={{ color: t.accent }}>
               Daily average
             </T>
           </View>
         </View>
-      </Card>
-      <Card>
+      </Section>
+      <Section>
         <T v="heading">Minutes</T>
         <Bars
           unit="minutes"
@@ -93,7 +91,7 @@ export default function Stats() {
               minuteGoal !== undefined && d.minutes !== null && d.minutes > minuteGoal.dailyLimit,
           }))}
         />
-      </Card>
+      </Section>
       <Details title="About these numbers" icon="help">
         <T v="caption" muted>
           Based on {counted.length} days with confirmed counts. Untracked days are excluded.

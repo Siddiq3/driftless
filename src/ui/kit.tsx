@@ -4,6 +4,8 @@ import { Icon, iconForMark, type IconName } from './Icon';
 import { router, usePathname } from 'expo-router';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -26,9 +28,8 @@ type Variant = keyof typeof typeScale;
 
 const PAGE_DETAILS: Record<string, { title: string; mark: string }> = {
   '/tracking': { title: 'Counter', mark: '▥' },
-  '/progress': { title: 'Your Wick', mark: '✦' },
   '/history': { title: 'History', mark: '▤' },
-  '/stats': { title: 'Progress', mark: '↗' },
+  '/stats': { title: 'Your activity', mark: '↗' },
   '/goals': { title: 'Daily goals', mark: '◎' },
   '/blocking': { title: 'Focus', mark: 'Ⅱ' },
   '/friends': { title: 'Friends', mark: '♡' },
@@ -76,7 +77,13 @@ export function T({
   );
 }
 
-export function Screen({ children }: { children: ReactNode }) {
+export function Screen({
+  children,
+  contentStyle,
+}: {
+  children: ReactNode;
+  contentStyle?: ViewStyle;
+}) {
   const t = useTheme();
   const path = usePathname();
   const primary = [
@@ -90,44 +97,61 @@ export function Screen({ children }: { children: ReactNode }) {
   ].includes(path);
   const details = PAGE_DETAILS[path];
   const tabs = [
-    { label: 'Home', mark: '◉', href: '/welcome', active: ['/welcome', '/home'] },
-    { label: 'Counter', mark: '▥', href: '/tracking', active: ['/tracking'] },
-    { label: 'Wick', mark: '✦', href: '/progress', active: ['/progress'] },
-    { label: 'History', mark: '▤', href: '/history', active: ['/history', '/stats'] },
+    { label: 'Today', mark: '◉', href: '/welcome', active: ['/welcome', '/home', '/tracking'] },
     { label: 'Circle', mark: '♡', href: '/friends', active: ['/friends', '/challenges'] },
+    {
+      label: 'Progress',
+      mark: '↗',
+      href: '/progress',
+      active: ['/progress', '/history', '/stats'],
+    },
   ] as const;
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.screen}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {details && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48 }}>
-            {!primary && (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Go back"
-                onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-                style={{ minWidth: 48, minHeight: 48, justifyContent: 'center' }}
-              >
-                <Icon name="back" />
-              </Pressable>
-            )}
-            <T v="title" style={{ flex: 1 }}>
-              {details.title}
-            </T>
-            <Icon
-              name={path === '/settings' ? 'settings' : iconForMark(details.mark)}
-              color={t.textMuted}
-            />
-          </View>
-        )}
-        {children ?? <LoadingState />}
-      </ScrollView>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[styles.screen, contentStyle]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
+          {details && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48 }}>
+              {!primary && (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Go back"
+                  onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+                  style={{ minWidth: 48, minHeight: 48, justifyContent: 'center' }}
+                >
+                  <Icon name="back" />
+                </Pressable>
+              )}
+              <T v="title" style={{ flex: 1, letterSpacing: -0.6 }}>
+                {details.title}
+              </T>
+              <Icon
+                name={path === '/settings' ? 'settings' : iconForMark(details.mark)}
+                color={t.textMuted}
+              />
+            </View>
+          )}
+          {children ?? <LoadingState />}
+        </ScrollView>
+      </KeyboardAvoidingView>
       {(primary || path === '/challenges') && (
-        <View style={[styles.tabs, { backgroundColor: t.surface, borderColor: t.border }]}>
+        <View
+          style={[
+            styles.tabs,
+            {
+              backgroundColor: path === '/progress' ? t.bg : t.surface,
+              borderColor: path === '/progress' ? t.bg : t.border,
+            },
+          ]}
+        >
           {tabs.map((tab) => {
             const selected = tab.active.some((p) => p === path);
             return (
@@ -137,7 +161,7 @@ export function Screen({ children }: { children: ReactNode }) {
                 accessibilityLabel={tab.label}
                 accessibilityState={{ selected }}
                 onPress={() => router.replace(tab.href === '/welcome' ? '/' : tab.href)}
-                style={[styles.tab, { backgroundColor: selected ? t.hero : 'transparent' }]}
+                style={styles.tab}
               >
                 <Icon
                   name={iconForMark(tab.mark)}
@@ -148,6 +172,8 @@ export function Screen({ children }: { children: ReactNode }) {
                   v="caption"
                   style={{
                     color: selected ? t.accent : t.textMuted,
+                    textAlign: 'center',
+                    alignSelf: 'stretch',
                     fontWeight: selected ? '700' : '400',
                   }}
                 >
@@ -159,6 +185,26 @@ export function Screen({ children }: { children: ReactNode }) {
         </View>
       )}
     </SafeAreaView>
+  );
+}
+
+/** Open section for related content without a repeated dashboard container. */
+export function Section({ children, style }: { children: ReactNode; style?: ViewStyle }) {
+  const t = useTheme();
+  return (
+    <View
+      style={[
+        {
+          paddingVertical: 20,
+          gap: 16,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderColor: t.border,
+        },
+        style,
+      ]}
+    >
+      {children}
+    </View>
   );
 }
 
@@ -200,7 +246,8 @@ export function Button({
         {
           backgroundColor: primary ? t.accent : t.surfaceRaised,
           borderColor: danger ? t.warning : primary ? t.accent : t.border,
-          opacity: pressed ? 0.85 : 1,
+          opacity: pressed ? 0.8 : 1,
+          transform: [{ scale: pressed ? 0.985 : 1 }],
         },
       ]}
     >
@@ -212,6 +259,7 @@ export function Button({
           style={{
             color: danger ? t.warning : primary ? t.onAccent : t.accent,
             textAlign: 'center',
+            fontWeight: '600',
           }}
         >
           {label}
@@ -237,7 +285,7 @@ export function Notice({
       accessibilityRole="summary"
       style={[
         styles.notice,
-        { backgroundColor: t.surfaceRaised, borderColor: tone === 'warn' ? t.warning : t.border },
+        { backgroundColor: t.surface, borderColor: tone === 'warn' ? t.warning : t.border },
       ]}
     >
       <T v="label">{title}</T>
@@ -253,12 +301,12 @@ export function Notice({
 export function LoadingState({ label = 'Getting things ready…' }: { label?: string }) {
   const t = useTheme();
   return (
-    <Card>
+    <View>
       <View style={{ alignItems: 'center', paddingVertical: space.xl, gap: space.lg }}>
         <ActivityIndicator color={t.accent} accessibilityLabel={label} />
         <T muted>{label}</T>
       </View>
-    </Card>
+    </View>
   );
 }
 
@@ -279,9 +327,7 @@ export function Details({
   return (
     <View
       style={{
-        backgroundColor: t.surface,
-        borderRadius: radius.md,
-        borderWidth: StyleSheet.hairlineWidth,
+        borderBottomWidth: StyleSheet.hairlineWidth,
         borderColor: t.border,
         overflow: 'hidden',
       }}
@@ -291,7 +337,13 @@ export function Details({
         accessibilityLabel={title}
         accessibilityState={{ expanded: open }}
         onPress={() => setOpen(!open)}
-        style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 60, padding: 18 }}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 12,
+          minHeight: 64,
+          paddingVertical: 16,
+        }}
       >
         <Icon name={icon} size={22} />
         <T v="label" style={{ flex: 1 }}>
@@ -301,7 +353,7 @@ export function Details({
           <Icon name="chevron" size={18} color={t.textMuted} />
         </View>
       </Pressable>
-      {open && <View style={{ padding: 18, paddingTop: 0, gap: 14 }}>{children}</View>}
+      {open && <View style={{ paddingBottom: 20, gap: 14 }}>{children}</View>}
     </View>
   );
 }
@@ -381,20 +433,22 @@ export function MetricPanel({
   return (
     <View
       style={{
-        padding: space.xl,
-        borderRadius: radius.md,
-        backgroundColor: t.accent,
+        paddingVertical: space.lg,
         gap: space.xs,
       }}
     >
-      <T v="display" accessibilityRole="text" style={{ color: t.onAccent }}>
+      <T
+        v="display"
+        accessibilityRole="text"
+        style={{ color: t.accent, fontSize: 48, lineHeight: 58, fontVariant: ['tabular-nums'] }}
+      >
         {value}
       </T>
-      <T v="label" style={{ color: t.onAccent }}>
+      <T v="label" muted>
         {label}
       </T>
       {detail && (
-        <T v="caption" style={{ color: t.onAccent }}>
+        <T v="caption" muted>
           {detail}
         </T>
       )}
@@ -404,17 +458,21 @@ export function MetricPanel({
 
 const styles = StyleSheet.create({
   screen: {
-    padding: 20,
+    padding: 24,
     paddingBottom: space.xxl,
     gap: space.lg,
     flexGrow: 1,
     width: '100%',
-    maxWidth: 640,
+    maxWidth: 680,
     alignSelf: 'center',
   },
   tabs: {
     flexDirection: 'row',
-    padding: space.sm,
+    paddingHorizontal: space.sm,
+    paddingVertical: 6,
+    width: '100%',
+    maxWidth: 680,
+    alignSelf: 'center',
     borderTopWidth: StyleSheet.hairlineWidth,
     gap: space.xs,
   },
@@ -422,7 +480,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 60,
+    minHeight: 56,
     borderRadius: radius.md,
     gap: 2,
   },
@@ -441,7 +499,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   notice: {
-    borderWidth: StyleSheet.hairlineWidth,
+    borderLeftWidth: 2,
     borderRadius: radius.sm,
     padding: space.lg,
     gap: space.xs,

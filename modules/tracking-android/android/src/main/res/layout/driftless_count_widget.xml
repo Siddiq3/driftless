@@ -1,0 +1,8 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/count_widget_root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/count_widget_bg" android:padding="20dp">
+  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+    <TextView android:id="@+id/count_widget_value" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="—" android:textColor="#FFFFFF" android:textSize="54sp" android:textStyle="bold"/>
+    <TextView android:id="@+id/count_widget_label" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Short videos today" android:textColor="#FFFFFF" android:textSize="15sp"/>
+    <TextView android:id="@+id/count_widget_status" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Open Driftless" android:textColor="#E0F4EE" android:textSize="12sp" android:layout_marginTop="12dp"/>
+  </LinearLayout>
+  <ImageView android:layout_width="74dp" android:layout_height="74dp" android:layout_gravity="bottom|end" android:src="@drawable/brain_wave" android:contentDescription="Driftless companion"/>
+</FrameLayout>

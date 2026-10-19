@@ -1,120 +1,255 @@
+import { useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
-import { View } from 'react-native';
-import { achievements } from '@/goals/achievements';
-import { useProgress } from '@/goals/useProgress';
-import { Button, Card, Notice, Screen, T, useTheme, Details } from '@/ui/kit';
-import { Wick, wickLabel } from '@/ui/Wick';
-import { Icon } from '@/ui/Icon';
-
-const OUTCOME_COPY = {
-  kept: 'On track',
-  breached: 'Over your goal',
-  unknown: 'Not enough data yet',
-} as const;
-
+import { useFonts } from 'expo-font';
+import { addDays } from '@siddiq3/driftless-contracts/domain';
+import { Screen, T, Notice, Button } from '@/ui/kit';
+import { AppIcon, Icon } from '@/ui/Icon';
+import { WrapEntry } from '@/wrapped/Entry';
+import { useActivity } from '@/activity/useActivity';
+import { ActivityChart } from '@/activity/ActivityChart';
+import type { ActivityPeriod } from '@/activity/model';
+import { SetupButton } from '@/onboarding/Visuals';
+const dateLabel = (date: string) =>
+  new Date(`${date}T12:00:00Z`).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
 export default function ProgressScreen() {
-  const t = useTheme();
-  const [s] = useProgress();
-  if (s.state === 'loading') return <Screen>{null}</Screen>;
-  if (s.state === 'error') {
-    return (
-      <Screen>
-        <Notice tone="warn" title="Progress could not be read" body={s.message} />
-      </Screen>
-    );
-  }
-  const { p, goals } = s;
-  const badges = achievements(p);
+  const [period, setPeriod] = useState<ActivityPeriod>('daily');
+  const [offset, setOffset] = useState(0);
+  const [state, refresh] = useActivity(period, offset);
+  const [fonts] = useFonts({ LilitaOne: require('../assets/fonts/LilitaOne-Regular.ttf') });
+  const data = state.state === 'ok' ? state.data : null;
+  const title =
+    state.state === 'ok'
+      ? period === 'daily'
+        ? offset === 0
+          ? 'Today'
+          : data!.from === addDays(state.today, -1)
+            ? 'Yesterday'
+            : dateLabel(data!.from)
+        : offset === 0
+          ? 'This week'
+          : `${dateLabel(data!.from)} – ${dateLabel(data!.to)}`
+      : '…';
+  const limit = period === 'daily' ? 59 : 8;
   return (
-    <Screen>
-      <View
-        style={{ alignItems: 'center', backgroundColor: t.hero, borderRadius: 30, padding: 24 }}
+    <Screen contentStyle={{ padding: 18, gap: 20 }}>
+      <T
+        v="title"
+        style={{
+          fontFamily: fonts ? 'LilitaOne' : undefined,
+          color: '#FFE1A4',
+          fontSize: 25,
+          letterSpacing: 0.3,
+        }}
       >
-        <Wick stage={p.wick.stage} glow={p.wick.glow} />
-        <T v="title">{wickLabel(p.wick.stage)}</T>
-        <T muted>{p.wick.points} days kept so far</T>
-      </View>
-      <View style={{ flexDirection: 'row', gap: 12 }}>
-        <Card style={{ flex: 1, padding: 16, backgroundColor: t.warm }}>
-          <Icon name="flame" />
-          <T v="title">{p.streak.current}</T>
-          <T v="caption" muted>
-            Day streak
-          </T>
-        </Card>
-        <Card style={{ flex: 1, padding: 16 }}>
-          <Icon name="trophy" />
-          <T v="title">{p.streak.best}</T>
-          <T v="caption" muted>
-            Best streak
-          </T>
-        </Card>
-      </View>
-
-      {goals.filter((g) => g.enabled).length === 0 ? (
-        <Card>
-          <T v="heading">Set a daily goal</T>
-          <T muted>Wick grows with every day you stay within your goal.</T>
-          <Button label="Set a goal" onPress={() => router.push('/goals')} />
-        </Card>
-      ) : (
-        <Card>
-          <T v="heading">Today: {OUTCOME_COPY[p.today.outcome]}</T>
-          <T muted>
-            {p.today.minutes === null ? 'Minutes not tracked' : `${p.today.minutes} min`}
-            {p.today.views === null ? '' : ` · ${p.today.views} videos`}
-          </T>
-          <Button kind="secondary" label="Edit goals" onPress={() => router.push('/goals')} />
-        </Card>
-      )}
-
-      <Card>
-        <T v="heading">Milestones</T>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-          {badges.map((b) => (
-            <View
-              key={b.id}
-              accessible
-              accessibilityLabel={`${b.title}, ${b.earned ? 'earned' : 'locked'}. ${b.detail}`}
+        PROGRESS
+      </T>
+      <View accessibilityRole="tablist" style={styles.switcher}>
+        {(['daily', 'weekly'] as const).map((value) => (
+          <Pressable
+            key={value}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: period === value }}
+            onPress={() => {
+              setPeriod(value);
+              setOffset(0);
+            }}
+            style={[styles.pill, { backgroundColor: period === value ? '#783F00' : '#29271F' }]}
+          >
+            <T
               style={{
-                flexBasis: '28%',
-                flexGrow: 1,
-                alignItems: 'center',
-                gap: 8,
-                paddingVertical: 12,
+                color: period === value ? '#FFF9ED' : '#B0ACA0',
+                fontSize: 17,
+                fontWeight: '600',
               }}
             >
-              <View
-                style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: 28,
-                  backgroundColor: b.earned ? t.warm : t.surfaceRaised,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Icon
-                  name={b.earned ? 'trophy' : 'lock'}
-                  size={28}
-                  color={b.earned ? t.accent : t.textMuted}
-                />
-              </View>
-              <T v="caption" muted={!b.earned} style={{ textAlign: 'center' }}>
-                {b.title}
-              </T>
-            </View>
-          ))}
-        </View>
-      </Card>
-      <Details title="About milestones" icon="trophy">
-        {badges.map((b) => (
-          <T key={b.id} v="caption" muted>
-            {b.title}: {b.detail}
-          </T>
+              {value === 'daily' ? 'Daily' : 'Weekly'}
+            </T>
+          </Pressable>
         ))}
-      </Details>
-      <Button kind="secondary" label="Stats" onPress={() => router.push('/stats')} />
+      </View>
+      <View style={styles.dateRow}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Previous ${period === 'daily' ? 'day' : 'week'}`}
+          disabled={offset >= limit}
+          onPress={() => setOffset((n) => Math.min(limit, n + 1))}
+          style={[styles.arrow, { opacity: offset >= limit ? 0.3 : 1 }]}
+        >
+          <Icon name="back" color="#F7F4E8" />
+        </Pressable>
+        <T v="label" style={{ textAlign: 'center', flex: 1, fontSize: 16, fontWeight: '700' }}>
+          {title}
+        </T>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Next ${period === 'daily' ? 'day' : 'week'}`}
+          disabled={offset === 0}
+          onPress={() => setOffset((n) => Math.max(0, n - 1))}
+          style={[styles.arrow, { opacity: offset === 0 ? 0.3 : 1 }]}
+        >
+          <Icon name="chevron" color="#F7F4E8" />
+        </Pressable>
+      </View>
+      {state.state === 'loading' ? (
+        <View style={styles.loading}>
+          <ActivityIndicator color="#FFE1A4" accessibilityLabel="Reading activity" />
+        </View>
+      ) : state.state === 'error' ? (
+        <>
+          <Notice
+            tone="warn"
+            title="Activity unavailable"
+            body="Your phone’s activity could not be read."
+          />
+          <Button label="Try again" onPress={refresh} />
+        </>
+      ) : (
+        data && (
+          <>
+            <ActivityChart data={data} period={period} />
+            <View style={styles.totals}>
+              <View style={styles.metric}>
+                <T v="display" style={styles.number}>
+                  {data.views.value === null ? '—' : data.views.value.toLocaleString()}
+                </T>
+                <T style={styles.muted}>Total Reels</T>
+                {data.views.days > 0 && data.views.days < data.expectedDays && (
+                  <T v="caption" style={styles.muted}>
+                    {data.views.days}/{data.expectedDays} days tracked
+                  </T>
+                )}
+              </View>
+              <View style={styles.metric}>
+                <T v="display" style={styles.number}>
+                  {data.minutes.value === null ? '—' : `${data.minutes.value}m`}
+                </T>
+                <T style={styles.muted}>Time spent</T>
+                {data.minutes.days > 0 && data.minutes.days < data.expectedDays && (
+                  <T v="caption" style={styles.muted}>
+                    {data.minutes.days}/{data.expectedDays} days tracked
+                  </T>
+                )}
+              </View>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Focus and app pauses with Pro"
+              onPress={() => router.push('/blocking')}
+              style={styles.pro}
+            >
+              <View style={styles.proBadge}>
+                <T v="label" style={{ fontWeight: '900', color: '#2C1A08' }}>
+                  PRO
+                </T>
+              </View>
+              <T style={{ flex: 1, fontWeight: '700' }}>Block apps with Pro</T>
+              <Icon name="chevron" color="#FFF4DA" />
+            </Pressable>
+            <T style={{ fontSize: 17, fontWeight: '600', marginTop: 4 }}>Top apps</T>
+            {data.apps.length ? (
+              <View style={styles.apps}>
+                {data.apps.map((app, i) => (
+                  <View
+                    key={app.package}
+                    style={[
+                      styles.appRow,
+                      i > 0 && {
+                        borderTopWidth: StyleSheet.hairlineWidth,
+                        borderTopColor: '#29271F',
+                      },
+                    ]}
+                  >
+                    <AppIcon name={app.label} size={40} />
+                    <T style={{ flex: 1, fontWeight: '600' }}>{app.label}</T>
+                    <T>{app.views === null ? '—' : app.views.toLocaleString()}</T>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View style={[styles.apps, { padding: 22 }]}>
+                <T style={styles.muted}>No tracked apps yet</T>
+                <SetupButton label="Enable counting" onPress={() => router.push('/tracking')} />
+              </View>
+            )}
+            <WrapEntry />
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push('/goals')}
+              style={styles.goal}
+            >
+              <Icon name="target" size={18} />
+              <T v="label">Daily goals</T>
+              <Icon name="chevron" size={16} />
+            </Pressable>
+          </>
+        )
+      )}
     </Screen>
   );
 }
+const styles = StyleSheet.create({
+  switcher: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    paddingTop: 16,
+    paddingBottom: 6,
+  },
+  pill: {
+    borderRadius: 30,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    width: '85%',
+    minHeight: 62,
+    marginBottom: 8,
+  },
+  arrow: { minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
+  loading: { minHeight: 300, alignItems: 'center', justifyContent: 'center' },
+  totals: {
+    backgroundColor: '#15140F',
+    borderRadius: 22,
+    padding: 24,
+    flexDirection: 'row',
+    gap: 12,
+    minHeight: 110,
+  },
+  metric: { flex: 1, alignItems: 'center', gap: 6 },
+  number: { fontSize: 28, lineHeight: 36, fontWeight: '800' },
+  muted: { color: '#AAA69A', fontSize: 14 },
+  pro: {
+    backgroundColor: '#783F00',
+    borderRadius: 16,
+    minHeight: 68,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  proBadge: {
+    backgroundColor: '#FFE1A4',
+    borderRadius: 30,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  apps: { backgroundColor: '#15140F', borderRadius: 22, overflow: 'hidden', gap: 0 },
+  appRow: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 20, minHeight: 80 },
+  goal: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
+    alignItems: 'center',
+    minHeight: 48,
+  },
+});

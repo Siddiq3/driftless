@@ -10,6 +10,10 @@
   </queries>
 
   <application>
+    <receiver android:name="app.driftless.tracking.android.CountWidget" android:exported="false" android:label="Driftless daily count">
+      <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/><action android:name="android.intent.action.DATE_CHANGED"/><action android:name="android.intent.action.TIMEZONE_CHANGED"/><action android:name="android.intent.action.TIME_SET"/></intent-filter>
+      <meta-data android:name="android.appwidget.provider" android:resource="@xml/driftless_count_widget_info"/>
+    </receiver>
     <!-- Driftless's own dismissible pause screen (no SYSTEM_ALERT_WINDOW, no overlay). -->
     <activity
       android:name="app.driftless.tracking.android.PauseActivity"
@@ -18,6 +22,15 @@
       android:launchMode="singleTask"
       android:taskAffinity="app.driftless.pause"
       android:noHistory="true" />
+    <activity
+      android:name="app.driftless.tracking.android.AccessibilityGuideActivity"
+      android:exported="false"
+      android:excludeFromRecents="true"
+      android:taskAffinity="app.driftless.accessibilityguide"
+      android:supportsPictureInPicture="true"
+      android:resizeableActivity="true"
+      android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
+      android:theme="@android:style/Theme.Material.NoActionBar" />
     <service
       android:name="app.driftless.tracking.android.DriftlessAccessibilityService"
       android:exported="false"

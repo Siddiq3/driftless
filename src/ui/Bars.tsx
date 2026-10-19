@@ -1,6 +1,7 @@
-import { View } from 'react-native';
+import { Animated, View } from 'react-native';
 import { radius, space } from '../design-tokens';
 import { T, useTheme } from './kit';
+import { useDataMotion } from './motion';
 
 export type Bar = { key: string; label: string; value: number | null; over?: boolean };
 
@@ -13,11 +14,22 @@ export function Bars({ bars, unit, limit }: { bars: Bar[]; unit: string; limit?:
   const validLimit =
     limit !== undefined && Number.isFinite(limit) && limit >= 0 ? limit : undefined;
   const max = Math.max(1, validLimit ?? 0, ...bars.map((b) => b.value ?? 0));
-  const H = 120;
+  const H = 140;
+  const transition = useDataMotion(bars.map((b) => `${b.key}:${b.value}`).join('|'));
   return (
     <View style={{ gap: space.sm }}>
-      <View style={{ height: H }}>
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: H, gap: 6 }}>
+      <T v="caption" muted style={{ textAlign: 'right' }}>
+        {max} {unit}
+      </T>
+      <Animated.View style={[{ height: H }, transition]}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'flex-end',
+            height: H,
+            gap: bars.length > 10 ? 3 : 8,
+          }}
+        >
           {bars.map((b) => {
             const h = b.value === null ? H * 0.3 : Math.max(2, (b.value / max) * H);
             return (
@@ -28,8 +40,8 @@ export function Bars({ bars, unit, limit }: { bars: Bar[]; unit: string; limit?:
                 style={{
                   flex: 1,
                   height: h,
-                  borderTopLeftRadius: radius.sm,
-                  borderTopRightRadius: radius.sm,
+                  borderTopLeftRadius: Math.min(radius.sm, 5),
+                  borderTopRightRadius: Math.min(radius.sm, 5),
                   borderBottomLeftRadius: 3,
                   borderBottomRightRadius: 3,
                   backgroundColor: b.value === null ? 'transparent' : b.over ? t.warning : t.accent,
@@ -55,7 +67,7 @@ export function Bars({ bars, unit, limit }: { bars: Bar[]; unit: string; limit?:
             }}
           />
         )}
-      </View>
+      </Animated.View>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: space.xs }}>
         <T v="caption" muted>
           {bars[0]?.label ?? ''}

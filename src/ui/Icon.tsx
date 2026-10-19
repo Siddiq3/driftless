@@ -1,5 +1,5 @@
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
-import { View } from 'react-native';
+import { Image, View } from 'react-native';
 
 export type IconName =
   | 'home'
@@ -99,6 +99,14 @@ export function iconForMark(mark: string): IconName {
 export function AppIcon({ name, size = 40 }: { name: string; size?: number }) {
   const youtube = /youtube|shorts/i.test(name);
   const instagram = /instagram/i.test(name);
+  if (instagram)
+    return (
+      <Image
+        source={require('../../assets/brands/instagram.png')}
+        accessibilityLabel="Instagram"
+        style={{ width: size, height: size }}
+      />
+    );
   return (
     <View
       style={{

@@ -4,8 +4,19 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Share, View } from 'react-native';
 import { useApi } from '@/api/useApi';
+import { useSession } from '@/auth/session';
 import { currentTimeZone } from '@/sync/run';
-import { Button, Card, Notice, Screen, T, Field, EmptyState, LoadingState } from '@/ui/kit';
+import {
+  Button,
+  Card,
+  Section,
+  Notice,
+  Screen,
+  T,
+  Field,
+  EmptyState,
+  LoadingState,
+} from '@/ui/kit';
 import { VisualBanner } from '@/ui/Focus';
 import { Icon } from '@/ui/Icon';
 
@@ -60,6 +71,7 @@ function Leaderboard({ id }: { id: string }) {
 
 export default function Challenges() {
   const api = useApi();
+  const session = useSession();
   const [list, setList] = useState<v1.ChallengeSummary[] | null>(null);
   const [code, setCode] = useState('');
   const [note, setNote] = useState<{ title: string; warn?: boolean } | null>(null);
@@ -74,14 +86,30 @@ export default function Challenges() {
   }, [api]);
   useFocusEffect(load);
 
+  if (session.status === 'loading')
+    return (
+      <Screen>
+        <LoadingState label="Loading your challenges…" />
+      </Screen>
+    );
   if (!api) {
+    const unavailable = session.status === 'unconfigured';
     return (
       <Screen>
         <Notice
-          title="Sign in for challenges"
-          body="Challenges are with friends and need an account."
+          title={
+            unavailable ? 'Challenges aren’t available in this build' : 'Sign in for challenges'
+          }
+          body={
+            unavailable
+              ? 'Counting and goals still work on this phone.'
+              : 'Challenges are with friends and need an account.'
+          }
         />
-        <Button label="Go to sign in" onPress={() => router.push('/welcome')} />
+        <Button
+          label={unavailable ? 'Back to today' : 'Go to sign in'}
+          onPress={() => router.push(unavailable ? '/' : '/welcome')}
+        />
       </Screen>
     );
   }
@@ -114,7 +142,7 @@ export default function Challenges() {
       {note && <Notice tone={note.warn ? 'warn' : 'info'} title={note.title} body="" />}
 
       <VisualBanner art="friends" title="A little friendly competition" />
-      <Card>
+      <Section>
         <T v="heading">Start a 7-day challenge</T>
         <Button label={METRIC.fewest_minutes.label} onPress={() => createWeek('fewest_minutes')} />
         <Button
@@ -125,9 +153,9 @@ export default function Challenges() {
         <T v="caption" muted>
           Video-count challenges open once counting accuracy is confirmed.
         </T>
-      </Card>
+      </Section>
 
-      <Card>
+      <Section>
         <T v="heading">Join with a code</T>
         <Field
           label="Challenge code"
@@ -140,17 +168,17 @@ export default function Challenges() {
           label="Join"
           onPress={() => act(() => api.joinChallenge(code.trim().toLowerCase()))}
         />
-      </Card>
+      </Section>
 
       {list === null && !note && <LoadingState label="Loading your challenges…" />}
       {list?.length === 0 && (
-        <Card>
+        <Section>
           <EmptyState
             mark="⚑"
             title="Your next week starts here"
             body="Create a challenge above or join one with a friend’s code."
           />
-        </Card>
+        </Section>
       )}
       {list?.map((c) => (
         <Card key={c.challengeId}>

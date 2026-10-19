@@ -39,6 +39,7 @@ class ViewCounter(initialRing: List<String> = emptyList()) {
     private var lastT: Long? = null
     private var lastSurface = Surface.OTHER
     private var lastFpNull = false
+    private var transitionUntil: Long? = null
 
     private class Current(val fp: String, val since: Long, val isAd: Boolean, var pending: Boolean) {
         var dwellMs = 0L
@@ -56,6 +57,9 @@ class ViewCounter(initialRing: List<String> = emptyList()) {
         val entering = o.surface == Surface.SHORT_VIDEO && lastSurface != Surface.SHORT_VIDEO
         lastSurface = o.surface
         lastFpNull = o.surface == Surface.SHORT_VIDEO && o.fingerprint == null
+        if (o.surface != Surface.SHORT_VIDEO) transitionUntil = null
+        else if (entering || o.pagerScrolled) transitionUntil = o.tMs + IDENTITY_SETTLE_MS
+        if (transitionUntil?.let { o.tMs > it } == true) transitionUntil = null
 
         if (o.surface != Surface.SHORT_VIDEO || o.fingerprint == null) {
             cur = null // left the feed, or identity unknown; ring buffer is kept
@@ -64,7 +68,8 @@ class ViewCounter(initialRing: List<String> = emptyList()) {
         if (cur?.fp == o.fingerprint) return out // repeated callback for the same item
 
         val novel = !ring.contains(o.fingerprint)
-        val structural = o.pagerScrolled || entering
+        val structural = transitionUntil != null
+        if (structural) transitionUntil = null
         remember(o.fingerprint)
         cur = Current(o.fingerprint, o.tMs, o.isAd, pending = novel && structural)
         return out
@@ -104,6 +109,8 @@ class ViewCounter(initialRing: List<String> = emptyList()) {
 
     companion object {
         const val DWELL_MS = 1_500L
+        /** Match a delayed identity to one recent transition, never to arbitrary later text edits. */
+        const val IDENTITY_SETTLE_MS = 1_200L
         const val RING_SIZE = 8
     }
 }

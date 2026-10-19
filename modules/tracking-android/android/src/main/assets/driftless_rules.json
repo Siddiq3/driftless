@@ -1,12 +1,17 @@
 {
-  "version": 1,
-  "status": "UNVALIDATED CANDIDATES — selectors below are starting points for the Phase 2 accuracy study and have not been confirmed on current app versions. validatedVersions stays empty until a version passes gate G-2 (TEST_PLAN §3).",
+  "version": 3,
+  "status": "UNVALIDATED CANDIDATES \u2014 selectors below are starting points for the Phase 2 accuracy study and have not been confirmed on current app versions. validatedVersions stays empty until a version passes gate G-2 (TEST_PLAN \u00a73).",
   "apps": [
     {
       "package": "com.instagram.android",
       "label": "Instagram Reels",
       "surfaceViewIds": ["clips_viewer_view_pager", "clips_viewer_pager"],
-      "itemParts": [{ "viewId": "clips_video_container", "field": "contentDesc" }],
+      "itemParts": [
+        {
+          "viewId": "clips_video_container",
+          "field": "contentDesc"
+        }
+      ],
       "adViewIds": ["clips_ad_cta", "sponsored_label"],
       "adLabels": ["sponsored", "ad"],
       "validatedVersions": []
@@ -15,7 +20,12 @@
       "package": "com.google.android.youtube",
       "label": "YouTube Shorts",
       "surfaceViewIds": ["reel_recycler", "reel_watch_player", "reel_player_page_container"],
-      "itemParts": [{ "viewId": "reel_player_page_container", "field": "contentDesc" }],
+      "itemParts": [
+        {
+          "viewId": "reel_player_page_container",
+          "field": "captionText"
+        }
+      ],
       "adViewIds": ["ad_badge", "reel_ad_badge"],
       "adLabels": ["sponsored", "ad"],
       "validatedVersions": []
