@@ -96,4 +96,39 @@ describe('api client', () => {
     const f = jest.fn().mockResolvedValue(resp(200, { ...me, entitlement: { tier: 'platinum' } }));
     await expect(client(f).getMe()).rejects.toMatchObject({ code: 'contract_mismatch' });
   });
+  it('preserves the goal snapshot ETag and sends it on conditional writes', async () => {
+    const f = jest.fn().mockResolvedValue(resp(200, { goals: [] }, { etag: '"goals-4"' }));
+    const api = client(f);
+    expect(await api.getGoals()).toEqual({ goals: [], etag: '"goals-4"' });
+    await api.putGoals([], '"goals-4"');
+    expect(f.mock.calls[1][1].headers['if-match']).toBe('"goals-4"');
+  });
+  it('rejects the legacy onboarding seed ID before uploading', async () => {
+    const f = jest.fn();
+    await expect(
+      client(f).putGoals(
+        [{ goalId: 'setup-views', metric: 'views', dailyLimit: 50, enabled: true, rev: 1 }],
+        '"goals-0"',
+      ),
+    ).rejects.toThrow();
+    expect(f).not.toHaveBeenCalled();
+  });
+  it('checks session/consent cancellation again after awaiting credentials', async () => {
+    const f = jest.fn();
+    let allowed = true;
+    const api = createApiClient({
+      baseUrl: 'https://api.example.test',
+      platform: 'android',
+      appVersion: '1',
+      fetchImpl: f,
+      getAccessToken: async () => {
+        allowed = false;
+        return 'new-account-token';
+      },
+    });
+    await expect(api.putGoals([], '"goals-0"', () => allowed)).rejects.toMatchObject({
+      code: 'sync_cancelled',
+    });
+    expect(f).not.toHaveBeenCalled();
+  });
 });

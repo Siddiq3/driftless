@@ -48,14 +48,17 @@ object BlockPolicy {
         nowMs: Long,
     ): BlockDecision {
         if (!config.enabled || pkg !in config.apps) return ALLOW
-        if (!entitlement.pro) return ALLOW
-        if (entitlement.validUntilMs != null && entitlement.validUntilMs <= nowMs) return ALLOW
+        if (!entitled(entitlement, nowMs)) return ALLOW
         if (snoozedUntilMs > nowMs) return ALLOW
         if (config.schedules.any { it.contains(dayOfWeek, minuteOfDay) }) return BlockDecision(true, BlockReason.SCHEDULE)
         val limit = config.dailyMinutes
         if (limit != null && minutesToday != null && minutesToday >= limit) return BlockDecision(true, BlockReason.LIMIT)
         return ALLOW
     }
+
+    /** Same live gate for enforcement and capability reporting. */
+    fun entitled(entitlement: CachedEntitlement, nowMs: Long): Boolean =
+        entitlement.pro && (entitlement.validUntilMs == null || entitlement.validUntilMs > nowMs)
 
     /** Cached entitlements are trusted for at most this long past the last server check, offline. */
     const val OFFLINE_GRACE_MS = 3L * 24 * 3600 * 1000

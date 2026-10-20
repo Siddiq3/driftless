@@ -1,4 +1,4 @@
-import { requireNativeModule } from 'expo';
+import { requireOptionalNativeModule } from 'expo';
 
 export type TrackedApp = {
   package: string;
@@ -24,6 +24,8 @@ export type TrackingHealth = {
   /** Usage Access granted: minutes come from Android UsageStats (works without the service). */
   usageAccessGranted: boolean;
   debugBuild: boolean;
+  /** Current native entitlement gate, absent on older binaries. */
+  blockingEntitled?: boolean;
   apps: TrackedApp[];
 };
 
@@ -105,9 +107,16 @@ type NativeTracking = {
   wipeLocalData(): void;
 };
 
-const native = requireNativeModule<NativeTracking>('DriftlessTracking');
+const native =
+  requireOptionalNativeModule<NativeTracking>('DriftlessTracking') ?? ({} as NativeTracking);
 
 export const Tracking = {
+  runtimeSupport: () => ({
+    counting: typeof native.getHealth === 'function' && typeof native.getDaily === 'function',
+    minutes: typeof native.refreshUsage === 'function' && typeof native.getDaily === 'function',
+    blocking:
+      typeof native.setBlocking === 'function' && typeof native.setEntitlement === 'function',
+  }),
   memeCardsSupported: () => typeof native.setMemePreferences === 'function',
   memePreferences: (): MemePreferences => native.memePreferences?.() ?? { enabled: true },
   setMemePreferences: (enabled: boolean) => native.setMemePreferences?.(enabled, 'auto'),

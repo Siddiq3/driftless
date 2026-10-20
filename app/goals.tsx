@@ -1,7 +1,7 @@
 import type { v1 } from '@siddiq3/driftless-contracts';
 import { randomUUID } from 'expo-crypto';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { getDb } from '@/db';
 import { canUseViewGoals } from '@/goals/progress';
@@ -30,9 +30,13 @@ function GoalEditor({
   existing?: v1.Goal;
   enabledAllowed: boolean;
 }) {
+  const goalId = useRef(existing?.goalId ?? randomUUID());
+  const saveInFlight = useRef(false);
+  const [saving, setSaving] = useState(false);
   const [limit, setLimit] = useState(existing?.dailyLimit ?? (metric === 'minutes' ? 30 : 50));
   const [enabled, setEnabled] = useState(existing?.enabled ?? false);
   const [saved, setSaved] = useState<string | null>(null);
+  const lastSaved = useRef({ limit, enabled });
   const steps = STEPS[metric];
   const idx = Math.max(
     0,
@@ -40,19 +44,40 @@ function GoalEditor({
   );
 
   const save = async (next: { limit?: number; enabled?: boolean }) => {
-    const db = await getDb();
-    const g = await saveGoal(db, {
-      goalId: existing?.goalId ?? randomUUID(),
-      metric,
-      dailyLimit: next.limit ?? limit,
-      enabled: next.enabled ?? enabled,
-    });
-    const all = await loadGoals(db);
-    Tracking.setLimits(
-      all.filter((x) => x.enabled).map((x) => ({ metric: x.metric, dailyLimit: x.dailyLimit })),
-    );
-    if (g.enabled) void ensureNotificationPermission();
-    setSaved(`Saved (${g.dailyLimit} ${metric === 'minutes' ? 'min' : 'videos'} a day)`);
+    if (saveInFlight.current) return;
+    saveInFlight.current = true;
+    setSaving(true);
+    try {
+      const db = await getDb();
+      const g = await saveGoal(db, {
+        goalId: goalId.current,
+        metric,
+        dailyLimit: next.limit ?? limit,
+        enabled: next.enabled ?? enabled,
+      });
+      lastSaved.current = { limit: g.dailyLimit, enabled: g.enabled };
+      const savedMessage = `Saved (${g.dailyLimit} ${metric === 'minutes' ? 'min' : 'videos'} a day)`;
+      setSaved(savedMessage);
+      try {
+        const all = await loadGoals(db);
+        Tracking.setLimits(
+          all.filter((x) => x.enabled).map((x) => ({ metric: x.metric, dailyLimit: x.dailyLimit })),
+        );
+        if (g.enabled)
+          void ensureNotificationPermission().catch(() =>
+            setSaved(`${savedMessage}; notifications unavailable`),
+          );
+      } catch {
+        setSaved(`${savedMessage}; device alerts unavailable`);
+      }
+    } catch (e) {
+      setLimit(lastSaved.current.limit);
+      setEnabled(lastSaved.current.enabled);
+      setSaved(`Goal save failed: ${e instanceof Error ? e.message : 'Try again'}`);
+    } finally {
+      saveInFlight.current = false;
+      setSaving(false);
+    }
   };
 
   return (
@@ -64,8 +89,9 @@ function GoalEditor({
         <Toggle
           accessibilityLabel={`${metric} goal`}
           value={enabled}
-          disabled={!enabledAllowed}
+          disabled={!enabledAllowed || saving}
           onValueChange={(v) => {
+            if (saveInFlight.current) return;
             setEnabled(v);
             void save({ enabled: v });
           }}
@@ -84,8 +110,10 @@ function GoalEditor({
         <View style={{ flex: 1 }}>
           <Button
             kind="secondary"
+            busy={saving}
             label="Less"
             onPress={() => {
+              if (saveInFlight.current) return;
               const v = steps[Math.max(0, idx - 1)]!;
               setLimit(v);
               void save({ limit: v });
@@ -95,8 +123,10 @@ function GoalEditor({
         <View style={{ flex: 1 }}>
           <Button
             kind="secondary"
+            busy={saving}
             label="More"
             onPress={() => {
+              if (saveInFlight.current) return;
               const v = steps[Math.min(steps.length - 1, idx + 1)]!;
               setLimit(v);
               void save({ limit: v });

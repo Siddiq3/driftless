@@ -83,6 +83,9 @@ class TrackingModule : Module() {
                 "lastEventMs" to DriftlessAccessibilityService.lastEventMs.toDouble(),
                 "heartbeatMinutesToday" to store.heartbeatMinutes(today),
                 "usageAccessGranted" to UsageReader.granted(ctx),
+                "blockingEntitled" to app.driftless.tracking.core.BlockPolicy.entitled(
+                    TrackingPrefs(ctx).entitlement, System.currentTimeMillis(),
+                ),
                 "debugBuild" to isDebuggable(ctx),
                 "apps" to rules.apps.values.map { r ->
                     val v = Health.appVersion(ctx, r.pkg)

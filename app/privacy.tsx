@@ -15,10 +15,21 @@ import { VisualBanner } from '@/ui/Focus';
 async function wipePhone(): Promise<void> {
   Tracking.wipeLocalData();
   const db = await getDb();
-  await clearSetup(db);
-  await db.runAsync("DELETE FROM settings WHERE key LIKE 'wrapped_seen_%'");
-  for (const t of ['sync_days', 'sync_batch', 'goals', 'daily_cache', 'outbox'])
-    await db.runAsync(`DELETE FROM ${t}`);
+  await db.withExclusiveTransactionAsync(async (tx) => {
+    await clearSetup(tx);
+    await tx.runAsync("DELETE FROM settings WHERE key LIKE 'wrapped_seen_%'");
+    await tx.runAsync("DELETE FROM settings WHERE key = 'goal_backup_owner'");
+    for (const table of [
+      'sync_days',
+      'sync_batch',
+      'goals',
+      'goal_id_aliases',
+      'goal_sync_state',
+      'daily_cache',
+      'outbox',
+    ])
+      await tx.runAsync(`DELETE FROM ${table}`);
+  });
 }
 
 export default function Privacy() {

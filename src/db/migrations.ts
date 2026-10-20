@@ -77,6 +77,20 @@ export const MIGRATIONS: readonly Migration[] = [
       );
     `,
   },
+  {
+    version: 4,
+    name: 'goal_compatibility',
+    sql: `
+      CREATE TABLE IF NOT EXISTS goal_id_aliases (
+        legacy_id TEXT PRIMARY KEY NOT NULL,
+        goal_id TEXT NOT NULL UNIQUE
+      );
+      CREATE TABLE IF NOT EXISTS goal_sync_state (
+        goal_id TEXT PRIMARY KEY NOT NULL,
+        synced_rev INTEGER NOT NULL DEFAULT 0
+      );
+    `,
+  },
 ];
 
 /** Subset of expo-sqlite's SQLiteDatabase used here (keeps the runner unit-testable). */

@@ -1,3 +1,8 @@
+jest.mock('expo-crypto', () => ({ randomUUID: () => require('node:crypto').randomUUID() }));
+import { v1 } from '@siddiq3/driftless-contracts';
+import { sqlite } from './helpers/sqlite';
+import { migrate } from '../src/db/migrations';
+import { loadGoals } from '../src/goals/store';
 import {
   EMPTY_ANSWERS,
   REEL_LIMITS,
@@ -8,7 +13,6 @@ import {
   type SetupRecord,
 } from '../src/onboarding/model';
 import { finishSetup, readSetup, saveSetup, SETUP_KEY } from '../src/onboarding/store';
-import type { SQLiteDatabase } from 'expo-sqlite';
 import { appInviteMessage } from '../src/social/invite';
 
 const initial = (): SetupRecord => ({
@@ -18,36 +22,28 @@ const initial = (): SetupRecord => ({
   answers: { ...EMPTY_ANSWERS },
   plan: { metric: 'minutes', dailyLimit: 30 },
 });
-function fakeDb(fail = false) {
-  let stored: string | null = null;
-  let goal: unknown[] | null = null;
-  const db = {
-    getFirstAsync: jest.fn(async (sql: string) =>
-      sql.includes('FROM settings') ? (stored === null ? null : { value: stored }) : null,
-    ),
-    getAllAsync: jest.fn(async () => []),
-    runAsync: jest.fn(async (sql: string, ...args: unknown[]) => {
-      if (fail) throw new Error('disk full');
-      if (sql.includes('INTO goals')) goal = args;
-      if (sql.includes('INTO settings')) stored = args[1] as string;
-    }),
-    withExclusiveTransactionAsync: jest.fn(async (fn: (db: unknown) => Promise<void>) => {
-      const previous = { stored, goal };
-      try {
-        await fn(db);
-      } catch (e) {
-        stored = previous.stored;
-        goal = previous.goal;
-        throw e;
-      }
-    }),
+async function fakeDb(fail = false) {
+  const f = sqlite();
+  await migrate(f.db);
+  if (fail)
+    await f.db.execAsync(
+      "CREATE TRIGGER fail_save BEFORE INSERT ON goals BEGIN SELECT RAISE(ABORT, 'disk full'); END;",
+    );
+  const run = f.db.runAsync.bind(f.db);
+  f.db.runAsync = jest.fn(run) as unknown as typeof f.db.runAsync;
+  const tx = f.db.withExclusiveTransactionAsync.bind(f.db);
+  f.db.withExclusiveTransactionAsync = jest.fn(tx);
+  return {
+    ...f,
+    stored: async () =>
+      (await f.db.getFirstAsync<{ value: string }>('SELECT value FROM settings'))?.value ?? null,
+    goal: async () => (await loadGoals(f.db))[0] ?? null,
   };
-  return { db: db as unknown as SQLiteDatabase, stored: () => stored, goal: () => goal };
 }
 
 describe('first-launch local setup', () => {
   it('starts incomplete and persists a resumable draft', async () => {
-    const f = fakeDb();
+    const f = await fakeDb();
     expect(await readSetup(f.db)).toBeNull();
     const value = { ...initial(), step: 4 };
     await saveSetup(f.db, value);
@@ -59,24 +55,34 @@ describe('first-launch local setup', () => {
     );
   });
   it('saves the real goal and completion together without login', async () => {
-    const f = fakeDb();
+    const f = await fakeDb();
     await finishSetup(f.db, initial());
     expect((await readSetup(f.db))?.completed).toBe(true);
-    expect(f.goal()).toEqual(['setup-minutes', 'minutes', 30, 1, 1]);
+    expect(v1.Goal.parse(await f.goal())).toMatchObject({
+      metric: 'minutes',
+      dailyLimit: 30,
+      enabled: true,
+      rev: 1,
+    });
     expect(f.db.withExclusiveTransactionAsync).toHaveBeenCalledTimes(1);
   });
   it('does not complete or save a goal after storage failure', async () => {
-    const f = fakeDb(true);
+    const f = await fakeDb(true);
     await expect(finishSetup(f.db, initial())).rejects.toThrow('disk full');
-    expect(f.stored()).toBeNull();
-    expect(f.goal()).toBeNull();
+    expect(await f.stored()).toBeNull();
+    expect(await f.goal()).toBeNull();
   });
   it.each(REEL_LIMITS)(
     'saves a %i-reel target without login or tracking permissions',
     async (limit) => {
-      const f = fakeDb();
+      const f = await fakeDb();
       await finishSetup(f.db, { ...initial(), plan: { metric: 'views', dailyLimit: limit } });
-      expect(f.goal()).toEqual(['setup-views', 'views', limit, 1, 1]);
+      expect(v1.Goal.parse(await f.goal())).toMatchObject({
+        metric: 'views',
+        dailyLimit: limit,
+        enabled: true,
+        rev: 1,
+      });
       expect((await readSetup(f.db))?.plan).toEqual({ metric: 'views', dailyLimit: limit });
     },
   );

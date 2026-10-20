@@ -1,3 +1,4 @@
+import { randomUUID } from 'expo-crypto';
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { loadGoals, saveGoal } from '../goals/store';
 import { SetupRecordSchema, type SetupRecord } from './model';
@@ -33,7 +34,7 @@ export async function finishSetup(db: SQLiteDatabase, value: SetupRecord) {
     const goals = await loadGoals(txn);
     const existing = goals.find((g) => g.metric === record.plan.metric);
     await saveGoal(txn, {
-      goalId: existing?.goalId ?? `setup-${record.plan.metric}`,
+      goalId: existing?.goalId ?? randomUUID(),
       metric: record.plan.metric,
       dailyLimit: record.plan.dailyLimit,
       enabled: true,

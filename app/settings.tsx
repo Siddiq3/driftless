@@ -1,12 +1,14 @@
 import type { v1 } from '@siddiq3/driftless-contracts';
-import { Redirect, router } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { Tracking, type TrackingHealth } from 'tracking-android';
+import { capabilityReport } from '@/capabilities/model';
+import { Redirect, router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, AppState, Platform, View } from 'react-native';
 import { ApiError, createApiClient } from '@/api/client';
 import { useSession } from '@/auth/session';
 import { APP_VERSION, readEnv } from '@/config/env';
 import { cacheEntitlement } from '@/billing/pro';
-import { syncGoals } from '@/goals/sync';
+import { cancelGoalSync, syncGoals } from '@/goals/sync';
 import { registerPush } from '@/sync/push';
 import { syncNow } from '@/sync/run';
 import { Details, Toggle, Button, Section, Notice, Screen, T } from '@/ui/kit';
@@ -42,51 +44,136 @@ export default function Settings() {
     [s.status, env?.apiUrl],
   );
   const [load, setLoad] = useState<Load>({ state: 'loading' });
+  const [health, setHealth] = useState<TrackingHealth | null>(null);
+  const requestGeneration = useRef(0);
 
   // State is only set from the request's callbacks, never synchronously inside the effect.
   const fetchMe = useCallback(() => {
     if (!api) return;
+    const generation = ++requestGeneration.current;
     api
       .getMe()
       .then(({ data }) => {
-        cacheEntitlement(data.entitlement);
+        if (generation !== requestGeneration.current) return;
+        try {
+          cacheEntitlement(data.entitlement);
+        } catch {
+          // A missing native entitlement bridge does not make the backend unavailable.
+          // Runtime support and native health below still fail closed for Pro features.
+        }
+        try {
+          setHealth(Tracking.health());
+        } catch {
+          setHealth(null);
+        }
         setLoad({ state: 'ok', me: data });
       })
-      .catch((e: unknown) =>
+      .catch((e: unknown) => {
+        if (generation !== requestGeneration.current) return;
         setLoad({
           state: 'error',
           offline: e instanceof ApiError && e.offline,
           message: e instanceof Error ? e.message : 'unknown error',
-        }),
-      );
+        });
+      });
   }, [api]);
 
-  useEffect(fetchMe, [fetchMe]);
+  const [refresh, setRefresh] = useState(0);
+  useFocusEffect(
+    useCallback(() => {
+      const update = () => {
+        try {
+          setHealth(Tracking.health());
+        } catch {
+          setHealth(null);
+        }
+        setLoad({ state: 'loading' });
+        fetchMe();
+        setRefresh((n) => n + 1);
+      };
+      update();
+      const subscription = AppState.addEventListener('change', (state) => {
+        if (state === 'active') update();
+        else {
+          requestGeneration.current++;
+          setHealth(null);
+          setLoad({ state: 'loading' });
+        }
+      });
+      const timer = setInterval(() => {
+        try {
+          setHealth(Tracking.health());
+        } catch {
+          setHealth(null);
+        }
+      }, 5000);
+      const backendTimer = setInterval(() => {
+        if (AppState.currentState === 'active') {
+          setLoad({ state: 'loading' });
+          fetchMe();
+        }
+      }, 30000);
+      return () => {
+        requestGeneration.current++;
+        subscription.remove();
+        clearInterval(backendTimer);
+        clearInterval(timer);
+      };
+    }, [fetchMe]),
+  );
+  const report = capabilityReport({
+    platform: Platform.OS,
+    health,
+    support: Tracking.runtimeSupport(),
+    backend: load.state === 'ok' ? load.me : null,
+  });
 
   const [syncNote, setSyncNote] = useState<string | null>(null);
+  const [goalSyncNote, setGoalSyncNote] = useState<string | null>(null);
+  const userId = load.state === 'ok' ? load.me.userId : null;
   const cloudSync = load.state === 'ok' && load.me.profile.consent.cloudSync;
 
   // Sync runs only after the user turned cloud sync on. Results are reported, never blocking.
   useEffect(() => {
     if (!api || !cloudSync) return;
-    syncGoals(api).catch(() => undefined); // best effort; goals work locally regardless
+    if (!userId) return;
+    let current = true;
+    syncGoals(api, userId).then(
+      () => {
+        if (current) setGoalSyncNote('Goals backed up');
+      },
+      (e: unknown) => {
+        if (current)
+          setGoalSyncNote(
+            `Goal backup failed: ${e instanceof Error ? e.message : 'Try again'}. Local goals remain saved.`,
+          );
+      },
+    );
     registerPush(api).catch(() => undefined); // needs Firebase config; harmless without it
     syncNow(api)
-      .then((o) =>
-        setSyncNote(
-          o.kind === 'sent'
-            ? 'Synced'
-            : o.kind === 'idle'
-              ? 'Up to date'
-              : o.kind === 'deferred'
-                ? o.stuck
-                  ? 'Sync keeps failing — your data is safe on this phone'
-                  : 'Will retry sync shortly'
-                : `Sync refused (${o.code})`,
-        ),
+      .then(
+        (o) =>
+          current &&
+          setSyncNote(
+            o.kind === 'sent'
+              ? 'Synced'
+              : o.kind === 'idle'
+                ? 'Up to date'
+                : o.kind === 'deferred'
+                  ? o.stuck
+                    ? 'Sync keeps failing — your data is safe on this phone'
+                    : 'Will retry sync shortly'
+                  : `Sync refused (${o.code})`,
+          ),
       )
-      .catch((e: unknown) => setSyncNote(e instanceof Error ? e.message : 'Sync failed'));
-  }, [api, cloudSync]);
+      .catch((e: unknown) => {
+        if (current) setSyncNote(e instanceof Error ? e.message : 'Sync failed');
+      });
+    return () => {
+      current = false;
+      cancelGoalSync(api);
+    };
+  }, [api, cloudSync, userId, refresh]);
 
   const setCloudSync = (on: boolean) => {
     if (!api || load.state !== 'ok') return;
@@ -113,7 +200,9 @@ export default function Settings() {
             tone="warn"
             title={load.offline ? "You're offline" : 'Could not load your profile'}
             body={
-              load.offline ? 'Anything tracked on this phone keeps working offline.' : load.message
+              load.offline
+                ? 'Cloud features are unavailable. Local tracking depends on the permissions shown below.'
+                : load.message
             }
           />
           <Button kind="secondary" label="Try again" onPress={retry} />
@@ -137,7 +226,7 @@ export default function Settings() {
               <View style={{ flex: 1 }}>
                 <T v="heading">Cloud backup</T>
                 <T v="caption" muted>
-                  Back up daily totals only
+                  Back up goals and daily totals
                 </T>
               </View>
               <Toggle
@@ -146,23 +235,32 @@ export default function Settings() {
                 onValueChange={setCloudSync}
               />
             </View>
+            {goalSyncNote && (
+              <T v="caption" muted>
+                {goalSyncNote}
+              </T>
+            )}
+            <Button
+              kind="secondary"
+              label="Retry backup"
+              onPress={() => setRefresh((n) => n + 1)}
+            />
             {syncNote && (
               <T v="caption" muted>
                 {syncNote}
               </T>
             )}
           </Section>
-          <Details title="Device support" icon="help">
-            <T v="heading">What works on this phone</T>
-            {(Object.keys(CAPABILITY_LABELS) as (keyof v1.Capabilities)[]).map((k) => (
-              <T key={k} muted>
-                {load.me.capabilities[k] ? '✓' : '—'} {CAPABILITY_LABELS[k]}
-                {load.me.capabilities[k] ? '' : ' · not available yet'}
-              </T>
-            ))}
-          </Details>
         </>
       )}
+      <Details title="Device support" icon="help">
+        <T v="heading">Current availability</T>
+        {(Object.keys(CAPABILITY_LABELS) as (keyof v1.Capabilities)[]).map((k) => (
+          <T key={k} muted>
+            {report[k].available ? '✓' : '—'} {CAPABILITY_LABELS[k]} · {report[k].detail}
+          </T>
+        ))}
+      </Details>
       <Button kind="secondary" label="Privacy & data" onPress={() => router.push('/privacy')} />
       <Button kind="secondary" label="Driftless Pro" onPress={() => router.push('/pro')} />
       <Button kind="secondary" label="Sign out" onPress={() => void s.signOut()} />

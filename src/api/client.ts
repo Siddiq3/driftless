@@ -35,9 +35,15 @@ export function createApiClient(o: ApiClientOptions) {
     method: string,
     path: string,
     schema: S,
-    init: { body?: unknown; headers?: Record<string, string> } = {},
+    init: { body?: unknown; headers?: Record<string, string>; allowed?: () => boolean } = {},
   ): Promise<{ data: z.infer<S>; etag: string | null }> {
+    const check = () => {
+      if (init.allowed && !init.allowed())
+        throw new ApiError(409, 'sync_cancelled', 'Goal backup cancelled');
+    };
+    check();
     const token = await o.getAccessToken();
+    check();
     if (!token) throw new ApiError(401, 'unauthorized', 'not signed in');
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), o.timeoutMs ?? 15_000);
@@ -143,9 +149,20 @@ export function createApiClient(o: ApiClientOptions) {
       (await request('POST', '/v1/account/delete', v1.DeletionStatus)).data,
     exportData: async () =>
       (await request('GET', '/v1/account/export', z.record(z.string(), z.unknown()))).data,
-    getGoals: async () => (await request('GET', '/v1/goals', v1.GoalsResponse)).data,
-    putGoals: async (goals: v1.Goal[]) =>
-      (await request('PUT', '/v1/goals', v1.GoalsResponse, { body: { goals } })).data,
+    getGoals: async (allowed?: () => boolean) => {
+      const r = await request('GET', '/v1/goals', v1.GoalsResponse, { allowed });
+      return { ...r.data, etag: r.etag };
+    },
+    putGoals: async (goals: v1.Goal[], etag: string, allowed?: () => boolean) => {
+      v1.PutGoalsRequest.parse({ goals });
+      return (
+        await request('PUT', '/v1/goals', v1.GoalsResponse, {
+          body: { goals },
+          headers: { 'if-match': etag },
+          allowed,
+        })
+      ).data;
+    },
     usageHistory: async (from: string, to: string) =>
       (await request('GET', `/v1/usage/history?from=${from}&to=${to}`, v1.HistoryResponse)).data,
     patchMe: (patch: v1.PatchMeRequest, rev: number) =>

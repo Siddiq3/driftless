@@ -71,4 +71,12 @@ class BlockPolicyTest {
         assertEquals(500L + BlockPolicy.OFFLINE_GRACE_MS, BlockPolicy.validUntil(null, 500))
         assertEquals(700L, BlockPolicy.validUntil(700, 500))
     }
+
+    @Test fun capabilityEntitlementUsesEnforcementExpiryBoundary() {
+        assertTrue(BlockPolicy.entitled(CachedEntitlement(true, 101L), 100L))
+        assertFalse(BlockPolicy.entitled(CachedEntitlement(true, 100L), 100L))
+        assertFalse(BlockPolicy.entitled(CachedEntitlement(true, 99L), 100L))
+        assertFalse(BlockPolicy.entitled(CachedEntitlement(false, 101L), 100L))
+        assertTrue(BlockPolicy.entitled(CachedEntitlement(true, null), 100L))
+    }
 }
