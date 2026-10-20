@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const ANSWERS = {
   occupation: ['school', 'college', 'work', 'other'],
-  apps: ['instagram', 'youtube', 'other'],
+  apps: ['instagram', 'youtube', 'facebook', 'snapchat', 'moj', 'sharechat', 'other'],
   priorities: ['study', 'work', 'sleep', 'movement', 'relationships', 'creativity'],
   when: ['morning', 'breaks', 'evening', 'night'],
   feelings: ['tired', 'distracted', 'regretful', 'fine'],
@@ -11,7 +11,7 @@ export const ANSWERS = {
 
 export const AnswersSchema = z.object({
   occupation: z.enum(ANSWERS.occupation).optional(),
-  apps: z.array(z.enum(ANSWERS.apps)).max(3).default([]),
+  apps: z.array(z.enum(ANSWERS.apps)).max(7).default([]),
   priorities: z.array(z.enum(ANSWERS.priorities)).max(6).default([]),
   when: z.enum(ANSWERS.when).optional(),
   feelings: z.array(z.enum(ANSWERS.feelings)).max(4).default([]),

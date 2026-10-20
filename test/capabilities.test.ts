@@ -72,6 +72,24 @@ it.each(['serviceEnabled', 'serviceRunning', 'disclosureAccepted', 'implemented'
 it('revoked Usage Access does not claim minutes are available', () => {
   expect(report({ ...health, usageAccessGranted: false }).minutesTracking.available).toBe(false);
 });
+it('offers app minutes but no video counting for apps without player rules', () => {
+  const newPlatforms = ['Facebook Reels', 'Snapchat Spotlight', 'Moj', 'ShareChat'].map(
+    (label, i) => ({
+      package: `new-platform-${i}`,
+      label,
+      installed: true,
+      version: '1.0',
+      validated: false,
+      videoDetectionImplemented: false,
+    }),
+  );
+  const r = report({ ...health, apps: newPlatforms });
+  expect(r.minutesTracking.available).toBe(true);
+  expect(r.videoCounting).toMatchObject({
+    available: false,
+    detail: 'Short-video detection rules are not configured for the installed apps yet',
+  });
+});
 it('running unapproved versions remain unverified and cannot imply cloud reel scores', () => {
   const r = report({ ...health, apps: [{ ...health.apps[0]!, validated: false }] });
   expect(r.videoCounting).toMatchObject({ available: false });

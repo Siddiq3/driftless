@@ -7,6 +7,8 @@ export type TrackedApp = {
   version: string | null;
   /** True only when this exact app version passed the labelled accuracy gate (G-2). */
   validated: boolean;
+  /** False when no app-specific short-video player selectors have been captured yet. */
+  videoDetectionImplemented?: boolean;
 };
 
 export type TrackingHealth = {

@@ -11,9 +11,11 @@ policy page on the day of submission.
 - **Description to paste:**
 
   > Driftless helps people reduce how much time they spend scrolling short videos. Its accessibility
-  > service runs only in Instagram and YouTube (declared with `packageNames`). It reads the layout and
-  > the labels of the current short video in order to tell one video from the next and count how many
-  > were watched, and it detects which app is in front so it knows when the user leaves. Labels are
+  > service receives events only from Instagram, YouTube, Facebook, Snapchat, Moj and ShareChat
+  > (declared with `packageNames`). It reads video player layouts only in Instagram and YouTube;
+  > those candidate rules are not accuracy-validated. Facebook, Snapchat, Moj and ShareChat currently
+  > provide app-minute tracking only, with no video counts. It detects which app is in front so it
+  > knows when the user leaves. Labels are
   > turned into an irreversible code in memory and are never stored or transmitted. With the user's
   > Pro subscription it can also show Driftless's own pause screen when a limit the user set is
   > reached. It performs no gestures or actions in other apps and never collects messages,

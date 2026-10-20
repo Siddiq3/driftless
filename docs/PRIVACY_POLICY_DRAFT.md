@@ -6,11 +6,13 @@ Driftless helps you understand and reduce time spent scrolling short videos. We 
 your data on your phone.
 
 ## What stays on your phone
-- **Video counts and minutes** for Instagram and YouTube, per day.
+- **App minutes** for Instagram, YouTube, Facebook, Snapchat, Moj and ShareChat, per day. Candidate
+  **video counts** are only configured for Instagram and YouTube and remain accuracy-unvalidated.
 - **How counting works:** if you turn on the Driftless accessibility service, it runs only inside
-  Instagram and YouTube. It reads the video player screen to tell one video from the next. Those labels
-  are turned into an unreadable code immediately and are never saved or sent anywhere.
-- **Usage Access** (if you allow it) gives Driftless the minutes you spend in those two apps.
+  Instagram, YouTube, Facebook, Snapchat, Moj and ShareChat. Video player structures are inspected
+  only in Instagram and YouTube, where candidate rules exist. Labels are turned into an unreadable
+  code immediately and are never saved or sent anywhere.
+- **Usage Access** (if you allow it) gives Driftless the minutes you spend in those six apps.
 - **Goals, streaks and Wick's progress.**
 - Raw counting events are deleted after 30 days. Daily totals stay until you delete them.
 

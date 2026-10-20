@@ -95,6 +95,7 @@ class TrackingModule : Module() {
                         "installed" to (v != null),
                         "version" to v,
                         "validated" to isValidatedVersion(r, v),
+                        "videoDetectionImplemented" to (r.surfaceViewIds.isNotEmpty() && r.itemParts.isNotEmpty()),
                     )
                 },
             )

@@ -252,8 +252,8 @@ export default function TrackingScreen() {
       <Details title="Minutes (Usage Access)" icon="clock">
         <T muted>
           {health.usageAccessGranted
-            ? 'On. Minutes in Instagram and YouTube come from Android and work even when the counter is off.'
-            : 'Off. Allow Usage Access to record minutes in Instagram and YouTube — this works on every phone, including ones where the counter is blocked.'}
+            ? `On. Minutes in ${health.apps.map((app) => app.label).join(', ')} come from Android and work even when video counting is unavailable.`
+            : `Off. Allow Usage Access to record minutes in ${health.apps.map((app) => app.label).join(', ')} — this works even when video counting is unavailable.`}
         </T>
         {!health.usageAccessGranted && (
           <Button

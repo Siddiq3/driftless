@@ -44,9 +44,12 @@ export default function Disclosure() {
           <AccessibilityWalkthrough />
           {!alreadyAgreed && (
             <T style={{ color: '#E3DFD1', fontSize: 12, lineHeight: 17, paddingHorizontal: 16 }}>
-              Driftless reads Instagram and YouTube player layouts and video labels to count reels.
-              Labels become one-way codes; only counts and times are saved on this phone. No
-              messages, passwords or screenshots. Optional cloud sync shares daily totals only.
+              Driftless can track app minutes in Instagram, YouTube, Facebook, Snapchat, Moj and
+              ShareChat. Short-video detection rules are unvalidated candidates for Instagram and
+              YouTube only; video counts are not set up for Facebook, Snapchat, Moj or ShareChat.
+              Where a video rule is active, limited player labels become one-way codes and only
+              counts and times are saved on this phone. No messages, passwords or screenshots.
+              Optional cloud sync shares daily totals only.
             </T>
           )}
           {error && <Notice tone="warn" title="Please try again" body={error} />}

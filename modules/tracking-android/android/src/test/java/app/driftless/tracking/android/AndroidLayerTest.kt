@@ -116,15 +116,16 @@ class AndroidLayerTest {
 
     @Test fun bundledRulesParseAndAreMarkedUnvalidated() {
         val rules = RulesLoader.load(ctx)
-        assertEquals(setOf("com.instagram.android", "com.google.android.youtube"), rules.apps.keys)
+        assertEquals(setOf("com.instagram.android", "com.google.android.youtube", "com.facebook.katana", "com.snapchat.android", "in.mohalla.video", "in.mohalla.sharechat"), rules.apps.keys)
         assertTrue(rules.apps.values.all { it.validatedVersions.isEmpty() })
-        assertTrue(rules.apps.values.all { it.surfaceViewIds.isNotEmpty() && it.itemParts.isNotEmpty() })
+        assertTrue(rules.apps.filterKeys { it in setOf("com.instagram.android", "com.google.android.youtube") }.values.all { it.surfaceViewIds.isNotEmpty() && it.itemParts.isNotEmpty() })
+        assertTrue(rules.apps.filterKeys { it !in setOf("com.instagram.android", "com.google.android.youtube") }.values.all { it.surfaceViewIds.isEmpty() && it.itemParts.isEmpty() })
     }
 
     @Test fun accessibilityConfigIsNotAnAccessibilityToolAndIsScopedToSupportedApps() {
         val xml = File("src/main/res/xml/driftless_accessibility.xml").readText()
         assertFalse("must not claim isAccessibilityTool (Play policy)", Regex("""android:isAccessibilityTool\s*=""").containsMatchIn(xml))
-        assertTrue(xml.contains("""android:packageNames="com.instagram.android,com.google.android.youtube""""))
+        assertTrue(xml.contains("""android:packageNames="com.instagram.android,com.google.android.youtube,com.facebook.katana,com.snapchat.android,in.mohalla.video,in.mohalla.sharechat""""))
         assertTrue(xml.contains("""android:canPerformGestures="false""""))
     }
 
@@ -135,5 +136,16 @@ class AndroidLayerTest {
         val secret = p.installSecret
         assertEquals(32, secret.size)
         assertTrue(secret.contentEquals(TrackingPrefs(ctx).installSecret))
+    }
+
+    @Test fun oldNarrowDisclosureConsentMustBeRenewedForExpandedAppScope() {
+        ctx.getSharedPreferences("driftless_tracking", 0).edit()
+            .putBoolean("a11y_disclosure_accepted", true)
+            .putInt("a11y_disclosure_version", 1)
+            .commit()
+        val p = TrackingPrefs(ctx)
+        assertFalse(p.disclosureAccepted)
+        p.disclosureAccepted = true
+        assertTrue(p.disclosureAccepted)
     }
 }

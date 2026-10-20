@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Not an accessibility tool (Google Play policy): isAccessibilityTool is deliberately absent.
-  Events only from the supported short-video apps. No gestures, no key filtering, no actions.
+  Events only from the disclosed supported apps. No gestures, no key filtering, no actions.
 -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
   android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeViewScrolled"
@@ -11,4 +11,4 @@
   android:canPerformGestures="false"
   android:description="@string/driftless_a11y_description"
   android:notificationTimeout="100"
-  android:packageNames="com.instagram.android,com.google.android.youtube" />
+  android:packageNames="com.instagram.android,com.google.android.youtube,com.facebook.katana,com.snapchat.android,in.mohalla.video,in.mohalla.sharechat" />

@@ -66,10 +66,14 @@ const QUESTIONS: Question[] = [
     key: 'apps',
     title: 'Where do you scroll?',
     multi: true,
-    help: 'Tracking currently supports Instagram and YouTube.',
+    help: 'App minutes are supported for these apps. Short-video counts are still experimental for Instagram and YouTube, and are not set up for the other apps yet.',
     options: [
       { value: 'instagram', label: 'Instagram Reels' },
       { value: 'youtube', label: 'YouTube Shorts' },
+      { value: 'facebook', label: 'Facebook Reels' },
+      { value: 'snapchat', label: 'Snapchat Spotlight' },
+      { value: 'moj', label: 'Moj' },
+      { value: 'sharechat', label: 'ShareChat' },
       { value: 'other', label: 'Other apps' },
     ],
   },
@@ -426,7 +430,7 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
               </View>
               {question.key === 'apps' && (
                 <T v="caption" style={styles.small}>
-                  Tracking: Instagram & YouTube.
+                  App minutes: Instagram, YouTube, Facebook, Snapchat, Moj &amp; ShareChat.
                 </T>
               )}
               {question.key === 'usage' && (

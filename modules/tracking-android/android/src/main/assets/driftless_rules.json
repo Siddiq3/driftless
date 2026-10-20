@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "status": "UNVALIDATED CANDIDATES \u2014 selectors below are starting points for the Phase 2 accuracy study and have not been confirmed on current app versions. validatedVersions stays empty until a version passes gate G-2 (TEST_PLAN \u00a73).",
   "apps": [
     {
@@ -28,6 +28,42 @@
       ],
       "adViewIds": ["ad_badge", "reel_ad_badge"],
       "adLabels": ["sponsored", "ad"],
+      "validatedVersions": []
+    },
+    {
+      "package": "com.facebook.katana",
+      "label": "Facebook Reels",
+      "surfaceViewIds": [],
+      "itemParts": [],
+      "adViewIds": [],
+      "adLabels": [],
+      "validatedVersions": []
+    },
+    {
+      "package": "com.snapchat.android",
+      "label": "Snapchat Spotlight",
+      "surfaceViewIds": [],
+      "itemParts": [],
+      "adViewIds": [],
+      "adLabels": [],
+      "validatedVersions": []
+    },
+    {
+      "package": "in.mohalla.video",
+      "label": "Moj",
+      "surfaceViewIds": [],
+      "itemParts": [],
+      "adViewIds": [],
+      "adLabels": [],
+      "validatedVersions": []
+    },
+    {
+      "package": "in.mohalla.sharechat",
+      "label": "ShareChat",
+      "surfaceViewIds": [],
+      "itemParts": [],
+      "adViewIds": [],
+      "adLabels": [],
       "validatedVersions": []
     }
   ]

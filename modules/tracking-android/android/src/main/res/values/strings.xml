@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-  <string name="driftless_a11y_label">Driftless Reels &amp; Shorts counter</string>
-  <string name="driftless_a11y_description">Driftless uses this to count the Reels and Shorts you watch in Instagram and YouTube. It only works in those two apps. It reads the video player screen to tell one video from the next, turns that into an unreadable code straight away, and keeps only the count on this phone. It never reads your messages, never takes screenshots, never taps or types for you, and sends nothing anywhere unless you turn on sync, which only shares daily totals.</string>
+  <string name="driftless_a11y_label">Driftless short-video counter</string>
+  <string name="driftless_a11y_description">Driftless can track app minutes in Instagram, YouTube, Facebook, Snapchat, Moj and ShareChat. Video-feed detection rules are candidates for Instagram and YouTube only and are not accuracy-validated; video counts are not available for Facebook, Snapchat, Moj or ShareChat yet. When an available video rule is active, Driftless reads limited player layout labels to distinguish items, converts labels to one-way codes and keeps counts on this phone. It never reads messages, takes screenshots, taps or types for you. Optional sync shares daily totals only.</string>
   <string name="driftless_widget_description">Today’s confirmed short-video count on your home screen.</string>
 </resources>

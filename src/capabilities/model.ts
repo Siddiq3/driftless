@@ -33,13 +33,16 @@ export function capabilityReport({
           : !h.serviceRunning
             ? 'Accessibility service is not running'
             : !installed
-              ? 'Install Instagram or YouTube'
+              ? 'Install a supported app'
               : null;
+  const videoTargets = h?.apps.filter((a) => a.installed && a.videoDetectionImplemented !== false) ?? [];
   const videoCounting = !support.counting
     ? unavailable('Counting module unavailable')
     : accessibility
       ? unavailable(accessibility)
-      : h!.apps.some((a) => a.installed && !a.validated)
+      : videoTargets.length === 0
+        ? unavailable('Short-video detection rules are not configured for the installed apps yet')
+        : videoTargets.some((a) => !a.validated)
         ? unavailable('Local counting available; accuracy unverified for installed app versions')
         : available('Service running; installed versions approved');
   const minutesTracking = !android
@@ -47,7 +50,7 @@ export function capabilityReport({
     : !h?.implemented || !support.minutes
       ? unavailable('Usage tracking module unavailable')
       : !installed
-        ? unavailable('Install Instagram or YouTube')
+        ? unavailable('Install a supported app')
         : !h.usageAccessGranted
           ? unavailable('Usage Access permission required')
           : available('Usage Access granted; local app minutes available');

@@ -75,8 +75,13 @@ class TrackingPrefs(context: Context) {
         context.applicationContext.getSharedPreferences("driftless_tracking", Context.MODE_PRIVATE)
 
     var disclosureAccepted: Boolean
-        get() = p.getBoolean(KEY_CONSENT, false)
-        set(v) = p.edit().putBoolean(KEY_CONSENT, v).putLong(KEY_CONSENT_AT, System.currentTimeMillis()).apply()
+        get() = p.getBoolean(KEY_CONSENT, false) &&
+            p.getInt(KEY_CONSENT_VERSION, 0) == CURRENT_DISCLOSURE_VERSION
+        set(v) = p.edit()
+            .putBoolean(KEY_CONSENT, v)
+            .putInt(KEY_CONSENT_VERSION, if (v) CURRENT_DISCLOSURE_VERSION else 0)
+            .putLong(KEY_CONSENT_AT, System.currentTimeMillis())
+            .apply()
 
     var floatingCountEnabled: Boolean
         get() = p.getBoolean("floating_count_enabled", true)
@@ -212,8 +217,10 @@ class TrackingPrefs(context: Context) {
     private fun String.hexToBytes(): ByteArray = ByteArray(length / 2) { substring(it * 2, it * 2 + 2).toInt(16).toByte() }
 
     companion object {
+        private const val CURRENT_DISCLOSURE_VERSION = 2
         private const val KEY_CONSENT = "a11y_disclosure_accepted"
         private const val KEY_CONSENT_AT = "a11y_disclosure_accepted_at"
+        private const val KEY_CONSENT_VERSION = "a11y_disclosure_version"
         private const val KEY_SECRET = "fp_install_secret"
         private const val KEY_LIMITS = "goal_limits"
         private const val KEY_SENT = "alerts_sent"
