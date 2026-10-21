@@ -10,17 +10,11 @@ import { Tracking } from 'tracking-android';
 import { useApi } from '@/api/useApi';
 import { ApiError, type ApiClient } from '@/api/client';
 import { useSession } from '@/auth/session';
+import { InviteSignInSheet } from '@/auth/InviteSignInSheet';
 import { currentTimeZone, syncNow } from '@/sync/run';
 import { Button, Notice, Screen, T } from '@/ui/kit';
 import { Icon } from '@/ui/Icon';
-
-const invitations = [
-  { label: 'Invite a Doomscroller', emoji: '🧟', action: 'Invite' },
-  { label: 'Invite your Bestie', emoji: '🤝', action: 'Invite' },
-  { label: 'Invite your Crush', emoji: '❤️', action: 'Invite' },
-  { label: 'Invite your Roommate', emoji: '🛋️', action: 'Invite' },
-  { label: 'Invite your coolie friend', emoji: '🧑‍💻', action: 'Invite' },
-];
+import { shuffledInvitePrompts, type InvitePrompt } from './invitePrompts';
 const colors = {
   bg: '#0B0B08',
   header: '#301A06',
@@ -33,6 +27,12 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
   const [fonts] = useFonts({ LilitaOne: require('../../assets/fonts/LilitaOne-Regular.ttf') });
   const api = useApi();
   const session = useSession();
+  const [invitations, setInvitations] = useState<InvitePrompt[]>([]);
+  useFocusEffect(
+    useCallback(() => {
+      setInvitations((previous) => shuffledInvitePrompts(previous));
+    }, []),
+  );
   const liveApi = useRef(api);
   const focused = useRef(false);
   const [today, setToday] = useState(() => localDateOf(Date.now(), currentTimeZone()));
@@ -40,6 +40,7 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
   const [total, setTotal] = useState<number | null>(null);
   const [friends, setFriends] = useState<v1.Friend[]>([]);
   const [managerOpen, setManagerOpen] = useState(false);
+  const [inviteSignInOpen, setInviteSignInOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [comparison, setComparison] = useState<{
@@ -127,7 +128,11 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
     return false;
   };
   const invite = async () => {
-    if (!requireLogin() || !api || busy) return;
+    if (session.status !== 'signedIn') {
+      setInviteSignInOpen(true);
+      return;
+    }
+    if (!api || busy) return;
     setBusy(true);
     setError(null);
     try {
@@ -320,7 +325,7 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
         </View>
       ))}
       <View style={styles.invites}>
-        {invitations.map(({ label, emoji, action }, index) => (
+        {invitations.map(({ label, emoji }, index) => (
           <View key={label} style={styles.inviteRow}>
             <T style={styles.position}>{accepted.length + index + 2}</T>
             <T style={styles.inviteText}>
@@ -334,7 +339,7 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
               onPress={() => void invite()}
               style={[styles.invite, { opacity: busy ? 0.5 : 1 }]}
             >
-              <T style={styles.inviteLabel}>{action}</T>
+              <T style={styles.inviteLabel}>Invite</T>
             </Pressable>
           </View>
         ))}
@@ -381,6 +386,7 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
           </SafeAreaView>
         </Modal>
       )}
+      {inviteSignInOpen && <InviteSignInSheet visible onClose={() => setInviteSignInOpen(false)} />}
     </Screen>
   );
 }

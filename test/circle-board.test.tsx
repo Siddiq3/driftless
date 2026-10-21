@@ -4,7 +4,9 @@ import { Share } from 'react-native';
 import { router } from 'expo-router';
 import { CircleBoard } from '../src/social/CircleBoard';
 import { ApiError } from '../src/api/client';
+import { shuffledInvitePrompts } from '../src/social/invitePrompts';
 let mockStatus = 'signedOut';
+const mockSignIn = jest.fn();
 const mockApi = {
   friends: jest.fn(async () => []),
   friendsDaily: jest.fn(),
@@ -13,7 +15,14 @@ const mockApi = {
   createChallenge: jest.fn(),
 };
 jest.mock('@/api/useApi', () => ({ useApi: () => (mockStatus === 'signedIn' ? mockApi : null) }));
-jest.mock('@/auth/session', () => ({ useSession: () => ({ status: mockStatus }) }));
+jest.mock('@/auth/session', () => ({
+  useSession: () => ({
+    status: mockStatus,
+    googleSupported: true,
+    signIn: mockSignIn,
+    error: null,
+  }),
+}));
 jest.mock('expo-font', () => ({ useFonts: () => [true] }));
 jest.mock('expo-router', () => ({
   router: { push: jest.fn() },
@@ -30,7 +39,10 @@ jest.mock('tracking-android', () => ({
     health: () => ({ serviceRunning: true }),
   },
 }));
-jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: require('react-native').View }));
+jest.mock('react-native-safe-area-context', () => ({
+  SafeAreaView: require('react-native').View,
+  useSafeAreaInsets: () => ({ top: 0, bottom: 24, left: 0, right: 0 }),
+}));
 jest.mock('@/ui/Icon', () => ({ Icon: () => null }));
 jest.mock('@/ui/kit', () => {
   const { View, Text, Pressable } = require('react-native');
@@ -58,8 +70,20 @@ const tap = async (label: string) => {
       .props.onPress();
   });
 };
+const inviteLabels = () => [
+  ...new Set(
+    tree.root
+      .findAll(
+        (node) =>
+          typeof node.props.onPress === 'function' &&
+          node.props.accessibilityLabel?.startsWith('Invite your '),
+      )
+      .map((node) => node.props.accessibilityLabel as string),
+  ),
+];
 beforeEach(() => {
   mockStatus = 'signedOut';
+  mockSignIn.mockResolvedValue(undefined);
   jest.clearAllMocks();
   jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
   mockApi.createInvite.mockResolvedValue({ code: 'FRIENDCODE' });
@@ -81,18 +105,31 @@ afterEach(async () => {
 });
 it('requires login before sharing invites or creating a battle', async () => {
   await mount();
-  await tap('Invite a Doomscroller');
-  await tap('Invite your coolie friend');
+  await tap(inviteLabels()[0]!);
   await tap('Start a 2-person battle');
   expect(router.push).toHaveBeenCalledWith('/welcome');
   expect(mockApi.createInvite).not.toHaveBeenCalled();
   expect(mockApi.createChallenge).not.toHaveBeenCalled();
   expect(Share.share).not.toHaveBeenCalled();
 });
+it('opens the reference sign-in sheet for a guest invite and calls the Google sign-in flow', async () => {
+  await mount();
+  await tap(inviteLabels()[0]!);
+  expect(router.push).not.toHaveBeenCalled();
+  expect(JSON.stringify(tree.toJSON())).toContain('to invite a friend');
+  await tap('Continue with Google');
+  expect(mockSignIn).toHaveBeenCalledTimes(1);
+  expect(mockApi.createInvite).not.toHaveBeenCalled();
+  expect(Share.share).not.toHaveBeenCalled();
+  await tap('Close sign-in');
+  expect(
+    tree.root.findAll((node) => node.props.accessibilityLabel === 'Continue with Google'),
+  ).toHaveLength(0);
+});
 it('shares a personal invite only after login', async () => {
   mockStatus = 'signedIn';
   await mount();
-  await tap('Invite your Bestie');
+  await tap(inviteLabels()[0]!);
   expect(mockApi.createInvite).toHaveBeenCalledTimes(1);
   expect(Share.share).toHaveBeenCalledWith({ message: expect.stringContaining('FRIENDCODE') });
 });
@@ -105,6 +142,23 @@ it('creates a two-person battle with a shareable joining code', async () => {
   );
   expect(Share.share).toHaveBeenCalledWith({ message: expect.stringContaining('battle-123') });
   expect(router.push).toHaveBeenCalledWith('/challenges');
+});
+it('shows exactly five unique invite prompts and keeps them stable while opening sign-in', async () => {
+  await mount();
+  const labels = inviteLabels();
+  expect(labels).toHaveLength(5);
+  await tap(labels[0]!);
+  expect(inviteLabels()).toEqual(labels);
+  await tap('Close sign-in');
+  expect(inviteLabels()).toEqual(labels);
+});
+it('changes the ordering on the next visit even if randomness repeats', () => {
+  jest.spyOn(Math, 'random').mockReturnValue(0.5);
+  const first = shuffledInvitePrompts();
+  const second = shuffledInvitePrompts(first);
+  expect(second).toHaveLength(5);
+  expect(new Set(second.map((row) => row.label)).size).toBe(5);
+  expect(second).not.toEqual(first);
 });
 it('allows browsing dates without login and disables future dates', async () => {
   await mount();

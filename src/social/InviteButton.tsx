@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { router } from 'expo-router';
+import { InviteSignInSheet } from '@/auth/InviteSignInSheet';
 import { useSession } from '@/auth/session';
 import { Share, View } from 'react-native';
 import { Button, T } from '@/ui/kit';
@@ -9,6 +9,7 @@ export function InviteButton() {
   const session = useSession();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [signInOpen, setSignInOpen] = useState(false);
   return (
     <View style={{ gap: 8 }}>
       <Button
@@ -17,7 +18,7 @@ export function InviteButton() {
         busy={busy}
         onPress={() => {
           if (session.status !== 'signedIn') {
-            router.push('/welcome');
+            setSignInOpen(true);
             return;
           }
           setError(null);
@@ -32,6 +33,7 @@ export function InviteButton() {
           {error}
         </T>
       )}
+      {signInOpen && <InviteSignInSheet visible onClose={() => setSignInOpen(false)} />}
     </View>
   );
 }
