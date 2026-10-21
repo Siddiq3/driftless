@@ -49,7 +49,9 @@ export default function Disclosure() {
               YouTube only; video counts are not set up for Facebook, Snapchat, Moj or ShareChat.
               Where a video rule is active, limited player labels become one-way codes and only
               counts and times are saved on this phone. No messages, passwords or screenshots.
-              Optional cloud sync shares daily totals only.
+              Optional cloud sync shares daily totals only. Optional feed pauses cover a detected
+              Reels or Shorts player. The Leave feed button performs Android Back only when you
+              press it. You can always leave using system navigation.
             </T>
           )}
           {error && <Notice tone="warn" title="Please try again" body={error} />}

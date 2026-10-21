@@ -39,7 +39,7 @@ export function createApiClient(o: ApiClientOptions) {
   ): Promise<{ data: z.infer<S>; etag: string | null }> {
     const check = () => {
       if (init.allowed && !init.allowed())
-        throw new ApiError(409, 'sync_cancelled', 'Goal backup cancelled');
+        throw new ApiError(409, 'sync_cancelled', 'Backup cancelled');
     };
     check();
     const token = await o.getAccessToken();
@@ -101,11 +101,12 @@ export function createApiClient(o: ApiClientOptions) {
         `/v1/me?platform=${o.platform}&appVersion=${encodeURIComponent(o.appVersion)}`,
         v1.MeResponse,
       ),
-    usageSync: async (days: v1.DailyAggregate[], idempotencyKey: string) =>
+    usageSync: async (days: v1.DailyAggregate[], idempotencyKey: string, allowed?: () => boolean) =>
       (
         await request('POST', '/v1/usage/sync', v1.UsageSyncResponse, {
           body: { days },
           headers: { 'idempotency-key': idempotencyKey },
+          allowed,
         })
       ).data,
     playVerify: async (productId: string, purchaseToken: string) =>
@@ -115,6 +116,16 @@ export function createApiClient(o: ApiClientOptions) {
         })
       ).data,
     friends: async () => (await request('GET', '/v1/friends', v1.FriendsResponse)).data.friends,
+    friendsDaily: async (date: string) => {
+      v1.FriendsDailyQuery.parse({ date });
+      return (
+        await request(
+          'GET',
+          `/v1/friends/daily?date=${encodeURIComponent(date)}`,
+          v1.FriendsDailyResponse,
+        )
+      ).data;
+    },
     createInvite: async () =>
       (await request('POST', '/v1/friends/invites', v1.InviteResponse)).data,
     addFriend: async (by: { handle: string } | { inviteCode: string }) =>

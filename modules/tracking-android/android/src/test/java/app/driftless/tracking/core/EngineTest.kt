@@ -83,6 +83,27 @@ class EngineTest {
         assertEquals(30_000L, store.daily("2026-10-19").single().surfaceMs)
     }
 
+    @Test fun delayedTickAttributesViewToDwellThresholdBeforeMidnight() {
+        val store = MemoryStore()
+        val e = Engine(store, rules, zone = { kolkata })
+        e.onObservation(ig, null, video("a"), false, at(23, 59, 58))
+        e.onTick(at(0, 0, 2, day = 19))
+        val event = store.eventsById.values.single()
+        assertEquals("2026-10-18", event.localDate)
+        assertEquals(at(23, 59, 58) + ViewCounter.DWELL_MS, event.countedAtMs)
+        assertEquals(1, store.daily("2026-10-18").single().views)
+        assertEquals(0, store.daily("2026-10-19").single().views)
+    }
+
+    @Test fun thresholdAfterMidnightBelongsToNewDailyAllowance() {
+        val store = MemoryStore()
+        val e = Engine(store, rules, zone = { kolkata })
+        e.onObservation(ig, null, video("a"), false, at(23, 59, 59))
+        e.onTick(at(0, 0, 2, day = 19))
+        assertEquals("2026-10-19", store.eventsById.values.single().localDate)
+        assertEquals(1, store.daily("2026-10-19").single().views)
+    }
+
     @Test fun timeZoneChangeUsesTheNewZoneForNewEvents() {
         val store = MemoryStore()
         var zone = kolkata

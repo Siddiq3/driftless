@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "status": "UNVALIDATED CANDIDATES \u2014 selectors below are starting points for the Phase 2 accuracy study and have not been confirmed on current app versions. validatedVersions stays empty until a version passes gate G-2 (TEST_PLAN \u00a73).",
   "apps": [
     {

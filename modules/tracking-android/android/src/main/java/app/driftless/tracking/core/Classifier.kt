@@ -38,7 +38,7 @@ data class AppRules(
 
 data class RuleSet(val version: Int, val apps: Map<String, AppRules>)
 
-data class Classification(val surface: Surface, val fingerprint: String?, val isAd: Boolean, val nodesVisited: Int)
+data class Classification(val surface: Surface, val fingerprint: String?, val isAd: Boolean, val nodesVisited: Int, val itemContainerPresent: Boolean = true)
 
 class Classifier(private val maxNodes: Int = MAX_NODES, private val maxDepth: Int = MAX_DEPTH) {
 
@@ -48,6 +48,8 @@ class Classifier(private val maxNodes: Int = MAX_NODES, private val maxDepth: In
         var ad = false
         val parts = HashMap<ItemPart, String>()
         var visited = 0
+        val containers = HashSet<String>()
+        var playerControlsPresent = false
 
         // Breadth-first, bounded: never walk an unbounded tree on the UI-event hot path.
         data class Work(val node: UiNode, val depth: Int, val scopes: Set<ItemPart>, val controls: Boolean)
@@ -62,6 +64,8 @@ class Classifier(private val maxNodes: Int = MAX_NODES, private val maxDepth: In
             val controls = insideControl || cls in setOf("Button", "ImageButton", "RadioButton", "CheckBox", "Switch", "SeekBar")
             val id = n.viewId
             val scopes = inheritedScopes + rules.itemParts.filter { it.viewId == id && it.field == Field.CAPTION_TEXT }
+            if (scopes.isNotEmpty() && cls in setOf("Button", "ImageButton", "RadioButton", "CheckBox", "Switch"))
+                playerControlsPresent = true
             // YouTube's anonymous caption groups carry text, while buttons contain changing
             // likes/playback labels. Never use those controls or content outside the player.
             if (!controls && scopes.isNotEmpty()) {
@@ -69,6 +73,7 @@ class Classifier(private val maxNodes: Int = MAX_NODES, private val maxDepth: In
                 if (!text.isNullOrEmpty()) scopes.forEach { captions.getOrPut(it) { linkedSetOf() }.add(text) }
             }
             if (id != null) {
+                if (rules.itemParts.any { it.viewId == id }) containers.add(id)
                 if (id in rules.surfaceViewIds) surface = true
                 if (id in rules.adViewIds) ad = true
                 for (p in rules.itemParts) {
@@ -100,7 +105,9 @@ class Classifier(private val maxNodes: Int = MAX_NODES, private val maxDepth: In
             } else {
                 null
             }
-        return Classification(Surface.SHORT_VIDEO, fp, ad, visited)
+        return Classification(Surface.SHORT_VIDEO, fp, ad, visited,
+            if (rules.itemParts.any { it.field == Field.CAPTION_TEXT }) playerControlsPresent
+            else rules.itemParts.isNotEmpty() && rules.itemParts.all { it.viewId in containers })
     }
 
     companion object {

@@ -21,6 +21,8 @@ data class BlockConfig(
     /** Block once today's minutes in the app reach this; null = no limit-based block. */
     val dailyMinutes: Int?,
     val schedules: List<Schedule>,
+    val feedOnly: Boolean = false,
+    val feed: FeedSettings = FeedSettings(),
 )
 
 /** Server-verified entitlement cached on the device (D-008: works offline until it expires). */

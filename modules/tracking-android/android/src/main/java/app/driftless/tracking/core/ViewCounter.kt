@@ -93,7 +93,10 @@ class ViewCounter(initialRing: List<String> = emptyList()) {
                 c.dwellMs += tMs - last
                 if (c.pending && c.dwellMs >= DWELL_MS) {
                     c.pending = false
-                    out += CounterOutput.Counted(if (c.isAd) ViewKind.AD_VIEW else ViewKind.VIEW, c.since, tMs)
+                    // Attribute the event to when dwell crossed the threshold, not a late tick
+                    // after midnight. Daily limits must use the correct local date.
+                    val countedAt = tMs - (c.dwellMs - DWELL_MS)
+                    out += CounterOutput.Counted(if (c.isAd) ViewKind.AD_VIEW else ViewKind.VIEW, c.since, countedAt)
                 }
             }
         }

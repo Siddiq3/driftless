@@ -205,11 +205,13 @@ export default function Goals() {
     <Screen>
       <VisualBanner art="wick" />
       <GoalEditor metric="minutes" existing={find('minutes')} enabledAllowed />
-      <GoalEditor
-        metric="views"
-        existing={find('views')}
-        enabledAllowed={canUseViewGoals(s.health)}
-      />
+      <GoalEditor metric="views" existing={find('views')} enabledAllowed />
+      {!canUseViewGoals(s.health) && (
+        <Notice
+          title="Video accuracy is unverified"
+          body="Your video target can be saved. Goal results and cloud scores still require approved app versions. Feed enforcement requires approved versions or the explicit local experiment in App pauses."
+        />
+      )}
       <Details title="Reminders" icon="clock">
         <EveningReminder />
       </Details>

@@ -103,4 +103,16 @@ class ClassifierTest {
         assertNull(c.classify(player("Hidden video",hidden=true),modern,salt).fingerprint)
     }
 
+    @Test fun youtubePlayerStructureDistinguishesReplacementFromCaptionOnlyEdits() {
+        val modern = rules.copy(surfaceViewIds=setOf("pager"), itemParts=listOf(ItemPart("player",Field.CAPTION_TEXT)))
+        fun screen(caption: String?, controls: Boolean) = FakeNode(viewId="pager",children=listOf(
+            FakeNode(viewId="player",children=listOfNotNull(
+                caption?.let { FakeNode(text=it) },
+                if(controls) FakeNode(className="android.widget.Button",contentDesc="Like") else null,
+            ))))
+        assertTrue(c.classify(screen("Caption",true),modern,salt).itemContainerPresent)
+        assertTrue(c.classify(screen(null,true),modern,salt).itemContainerPresent)
+        assertFalse(c.classify(screen(null,false),modern,salt).itemContainerPresent)
+    }
+
 }

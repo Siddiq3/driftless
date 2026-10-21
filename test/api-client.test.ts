@@ -39,6 +39,18 @@ const client = (fetchImpl: jest.Mock, token: string | null = 't0k') =>
   });
 
 describe('api client', () => {
+  it('requests a daily comparison with a validated date and response', async () => {
+    const data = {
+      localDate: '2026-10-21',
+      self: { status: 'unavailable', views: null, updatedAt: null },
+      friends: [],
+    };
+    const f = jest.fn().mockResolvedValue(resp(200, data));
+    expect(await client(f).friendsDaily('2026-10-21')).toEqual(data);
+    expect(f.mock.calls[0][0]).toBe('https://api.example.test/v1/friends/daily?date=2026-10-21');
+    await expect(client(f).friendsDaily('2026-02-30')).rejects.toThrow();
+    expect(f).toHaveBeenCalledTimes(1);
+  });
   it('sends the bearer token and capability query, validates the response', async () => {
     const f = jest.fn().mockResolvedValue(resp(200, me, { etag: '"1"' }));
     const r = await client(f).getMe();
@@ -127,6 +139,24 @@ describe('api client', () => {
       },
     });
     await expect(api.putGoals([], '"goals-0"', () => allowed)).rejects.toMatchObject({
+      code: 'sync_cancelled',
+    });
+    expect(f).not.toHaveBeenCalled();
+  });
+  it('cancels a usage upload if the account changes while retrieving credentials', async () => {
+    const f = jest.fn();
+    let allowed = true;
+    const api = createApiClient({
+      baseUrl: 'https://api.example.test',
+      platform: 'android',
+      appVersion: '1',
+      fetchImpl: f,
+      getAccessToken: async () => {
+        allowed = false;
+        return 'new-account-token';
+      },
+    });
+    await expect(api.usageSync([], 'key', () => allowed)).rejects.toMatchObject({
       code: 'sync_cancelled',
     });
     expect(f).not.toHaveBeenCalled();

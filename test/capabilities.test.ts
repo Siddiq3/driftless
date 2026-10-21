@@ -120,8 +120,11 @@ it.each([false, undefined])(
     expect(report({ ...health, blockingEntitled }).blocking.available).toBe(false);
   },
 );
-it('configured eligibility never claims active enforcement or reel blocking', () => {
-  expect(report().blocking.detail).toContain('reel-count blocking is not implemented');
+it('configured eligibility distinguishes old binaries from configurable feed limits', () => {
+  expect(report().blocking.detail).toContain('feed limits require an updated Android build');
+  expect(report({ ...health, feedLimitsImplemented: true }).blocking.detail).toContain(
+    'available to configure',
+  );
   expect(report().schedules.detail).toContain('requires an enabled rule');
 });
 it('backend eligibility does not override free entitlement or sharing consent', () => {

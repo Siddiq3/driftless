@@ -28,6 +28,8 @@ export type TrackingHealth = {
   debugBuild: boolean;
   /** Current native entitlement gate, absent on older binaries. */
   blockingEntitled?: boolean;
+  /** Present only in binaries with daily feed limits and timed breaks. */
+  feedLimitsImplemented?: boolean;
   apps: TrackedApp[];
 };
 
@@ -56,6 +58,16 @@ export type BlockingConfig = {
   apps: string[];
   dailyMinutes: number | null;
   schedules: FocusSchedule[];
+  /** Old saved configurations retain whole-app pauses. */
+  feedOnly?: boolean;
+  enforceVideoGoal?: boolean;
+  breaksEnabled?: boolean;
+  breakEveryViews?: number;
+  breakMinutes?: number;
+  maxBypassesPerDay?: number;
+  bypassMinutes?: number;
+  /** Explicit local experiment; never changes cloud/goal-score eligibility. */
+  allowUnvalidatedCounts?: boolean;
 };
 
 export type WrapSession = {

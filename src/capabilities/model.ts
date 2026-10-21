@@ -35,7 +35,8 @@ export function capabilityReport({
             : !installed
               ? 'Install a supported app'
               : null;
-  const videoTargets = h?.apps.filter((a) => a.installed && a.videoDetectionImplemented !== false) ?? [];
+  const videoTargets =
+    h?.apps.filter((a) => a.installed && a.videoDetectionImplemented !== false) ?? [];
   const videoCounting = !support.counting
     ? unavailable('Counting module unavailable')
     : accessibility
@@ -43,8 +44,8 @@ export function capabilityReport({
       : videoTargets.length === 0
         ? unavailable('Short-video detection rules are not configured for the installed apps yet')
         : videoTargets.some((a) => !a.validated)
-        ? unavailable('Local counting available; accuracy unverified for installed app versions')
-        : available('Service running; installed versions approved');
+          ? unavailable('Local counting available; accuracy unverified for installed app versions')
+          : available('Service running; installed versions approved');
   const minutesTracking = !android
     ? unavailable('Not implemented on this platform')
     : !h?.implemented || !support.minutes
@@ -72,7 +73,9 @@ export function capabilityReport({
     // This report describes configurability, never an assertion that enforcement is active.
     return available(
       key === 'blocking'
-        ? 'Available to configure for app minutes; reel-count blocking is not implemented'
+        ? h?.feedLimitsImplemented
+          ? 'Minute pauses and feed video limits available to configure; feed detection requires approved versions or explicit local experiment'
+          : 'Available to configure for app minutes; feed limits require an updated Android build'
         : 'Preset schedules available to configure; protection requires an enabled rule',
     );
   };

@@ -168,6 +168,13 @@ class TrackingPrefs(context: Context) {
                 apps,
                 if (o.isNull("dailyMinutes")) null else o.getInt("dailyMinutes"),
                 sch,
+                o.optBoolean("feedOnly", false),
+                app.driftless.tracking.core.FeedSettings(
+                    o.optBoolean("enforceVideoGoal", false), o.optBoolean("breaksEnabled", false),
+                    o.optInt("breakEveryViews", 50).coerceIn(1, 2000), o.optInt("breakMinutes", 5).coerceIn(1, 60),
+                    o.optInt("maxBypassesPerDay", 3).coerceIn(0, 10), o.optInt("bypassMinutes", 5).coerceIn(1, 30),
+                    o.optBoolean("allowUnvalidatedCounts", false),
+                ),
             )
         }
         set(c) {
@@ -175,6 +182,10 @@ class TrackingPrefs(context: Context) {
                 .put("enabled", c.enabled)
                 .put("apps", org.json.JSONArray(c.apps.toList()))
                 .put("dailyMinutes", c.dailyMinutes ?: org.json.JSONObject.NULL)
+                .put("feedOnly", c.feedOnly).put("enforceVideoGoal", c.feed.enforceGoal)
+                .put("breaksEnabled", c.feed.breaksEnabled).put("breakEveryViews", c.feed.everyViews)
+                .put("breakMinutes", c.feed.breakMinutes).put("maxBypassesPerDay", c.feed.maxBypasses)
+                .put("bypassMinutes", c.feed.bypassMinutes).put("allowUnvalidatedCounts", c.feed.allowUnvalidated)
                 .put(
                     "schedules",
                     org.json.JSONArray().apply {
@@ -202,6 +213,21 @@ class TrackingPrefs(context: Context) {
         }
 
     fun snoozedUntil(pkg: String): Long = p.getLong("$KEY_SNOOZE$pkg", 0)
+
+    var feedState: app.driftless.tracking.core.FeedState
+        get() {
+            val o = runCatching { org.json.JSONObject(p.getString("feed_pause_state", "{}")!!) }.getOrDefault(org.json.JSONObject())
+            return app.driftless.tracking.core.FeedState(o.optString("date", ""), o.optInt("milestone", 0),
+                o.optLong("breakUntil", 0), o.optLong("bypassUntil", 0), o.optInt("bypasses", 0))
+        }
+
+        set(s) {
+            p.edit().putString("feed_pause_state", org.json.JSONObject().put("date", s.date)
+                .put("milestone", s.milestone).put("breakUntil", s.breakUntilMs)
+                .put("bypassUntil", s.bypassUntilMs).put("bypasses", s.bypasses).toString()).apply()
+        }
+
+    fun clearFeedState() { p.edit().remove("feed_pause_state").apply() }
 
     fun snoozesToday(): Int {
         val today = java.time.LocalDate.now().toString()

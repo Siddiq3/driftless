@@ -47,17 +47,20 @@ export function T({
   style,
   children,
   accessibilityRole,
+  accessibilityLabel,
 }: {
   v?: Variant;
   muted?: boolean;
   style?: TextStyle;
   children: ReactNode;
   accessibilityRole?: 'header' | 'text';
+  accessibilityLabel?: string;
 }) {
   const t = useTheme();
   const s = typeScale[v];
   return (
     <Text
+      accessibilityLabel={accessibilityLabel}
       accessibilityRole={
         accessibilityRole ?? (v === 'display' || v === 'title' ? 'header' : 'text')
       }

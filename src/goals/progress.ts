@@ -68,7 +68,7 @@ export function progress(
   };
 }
 
-/** Whether a video-count goal can be offered: only once some installed app version is validated. */
+/** Whether video-goal results have an installed accuracy-validated counting source. */
 export function canUseViewGoals(health: TrackingHealth): boolean {
   return health.apps.some((a) => a.installed && a.validated);
 }

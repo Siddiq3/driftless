@@ -29,17 +29,19 @@ import java.time.ZoneId
  * res/xml/driftless_accessibility.xml. For each settled screen it reads a bounded snapshot of the
  * window, keeps a salted one-way code for the current item, and discards everything else.
  *
- * Never: performs actions on other apps, stores node text, takes screenshots, or sends anything
+ * Never: performs automatic actions on other apps, stores node text, takes screenshots, or sends anything
  * off the device. Counting only runs after the in-app prominent disclosure was accepted.
  */
 class DriftlessAccessibilityService : AccessibilityService() {
     private val main = Handler(Looper.getMainLooper())
     private val classifier = Classifier()
+    private val playerTransition = app.driftless.tracking.core.PlayerTransition()
     private lateinit var rules: RuleSet
     private lateinit var engine: Engine
     private lateinit var prefs: TrackingPrefs
 
     private lateinit var memeCard: MemeMilestoneCard
+    private lateinit var feedPause: FeedPauseOverlay
     private var memeDate: String? = null
     private var memeCount: Int? = null
     private lateinit var floatingBadge: FloatingCountBadge
@@ -76,6 +78,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
         prefs = TrackingPrefs(this)
         floatingBadge = FloatingCountBadge(this)
         memeCard = MemeMilestoneCard(this)
+        feedPause = FeedPauseOverlay(this)
         rules = RulesLoader.load(this)
         val store = SqliteStore.get(this)
         val now = System.currentTimeMillis()
@@ -99,8 +102,11 @@ class DriftlessAccessibilityService : AccessibilityService() {
         val pkg = event.packageName?.toString() ?: return
         if (!engine.isSupported(pkg)) return
         if (event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED) pendingScroll = true
-        // Sample once the screen settles. Deduplication is by item fingerprint (D-007), not by this delay.
+        // Sample the transition immediately and again after settling. Waiting for only the final
+        // frame can miss YouTube's short-lived empty player subtree (no scroll event is emitted).
+        // Deduplication remains by item identity and dwell, never by callback frequency.
         if (!classifyScheduled) {
+            classifyNow()
             classifyScheduled = true
             main.postDelayed(classifyTask, SETTLE_MS)
         }
@@ -109,6 +115,13 @@ class DriftlessAccessibilityService : AccessibilityService() {
     private fun classifyNow() {
         classifyScheduled = false
         val now = System.currentTimeMillis()
+        if (!::engine.isInitialized || !prefs.disclosureAccepted ||
+            !getSystemService(PowerManager::class.java).isInteractive ||
+            getSystemService(KeyguardManager::class.java).isKeyguardLocked) {
+            if (::engine.isInitialized) engine.onLeave(now)
+            hideFloatingCount()
+            return
+        }
         val root: AccessibilityNodeInfo? = rootInActiveWindow
         val pkg = root?.packageName?.toString()
         val appRules = pkg?.let { rules.apps[it] }
@@ -119,6 +132,15 @@ class DriftlessAccessibilityService : AccessibilityService() {
             return
         }
         val c = classifier.classify(A11yNode(root), appRules, saltFor(now))
+        val replaced = playerTransition.observe(pkg, c, now)
+        if (::feedPause.isInitialized && feedPause.isShowing) {
+            engine.onLeave(now)
+            badgeSurface = c.surface; badgeIdentity = c.fingerprint != null; badgePackage = pkg
+            maybePause(pkg, now)
+            if (!feedPause.isShowing) main.post(classifyTask)
+            pendingScroll = false
+            return
+        }
         if (::memeCard.isInitialized && memeCard.isShowing) {
             engine.onLeave(now)
             if (c.surface != Surface.SHORT_VIDEO) hideFloatingCount()
@@ -128,11 +150,11 @@ class DriftlessAccessibilityService : AccessibilityService() {
         if (now < debugTraceUntil && debugTrace.length() < 120) {
             debugTrace.put(JSONObject().put("atMs",now).put("surface",c.surface.name)
                 .put("identityPresent",c.fingerprint != null).put("identityChanged",c.fingerprint != debugLastIdentity)
-                .put("scrolled",pendingScroll).put("ad",c.isAd).put("nodesVisited",c.nodesVisited))
+                .put("scrolled",pendingScroll).put("playerReplaced",replaced).put("itemContainerPresent",c.itemContainerPresent).put("ad",c.isAd).put("nodesVisited",c.nodesVisited))
             debugLastIdentity = c.fingerprint
             runCatching { java.io.File(cacheDir,"exports/driftless-counter-trace.json").writeText(debugTrace.toString()) }
         }
-        engine.onObservation(pkg, versionOf(pkg), c, pendingScroll, now)
+        engine.onObservation(pkg, versionOf(pkg), c, pendingScroll || replaced, now)
         pendingScroll = false
         badgeSurface = c.surface; badgeIdentity = c.fingerprint != null; badgePackage = pkg
         updateFloatingCount(now)
@@ -143,19 +165,55 @@ class DriftlessAccessibilityService : AccessibilityService() {
 
     /** Pro blocking: shows Driftless's own pause screen. Fails open on any error. */
     private fun maybePause(pkg: String, now: Long) {
-        if (now - lastPauseMs < PAUSE_COOLDOWN_MS) return
         runCatching {
             val cfg = prefs.blockConfig
-            if (!cfg.enabled || pkg !in cfg.apps) return
+            if (!cfg.enabled || pkg !in cfg.apps || !app.driftless.tracking.core.BlockPolicy.entitled(prefs.entitlement, now)) {
+                feedPause.hide(); return
+            }
             val zone = ZoneId.systemDefault()
             val at = java.time.Instant.ofEpochMilli(now).atZone(zone)
-            val row = SqliteStore.get(this).daily(at.toLocalDate().toString()).firstOrNull { it.pkg == pkg }
+            val date = at.toLocalDate().toString()
+            val rows = SqliteStore.get(this).daily(date)
+            val row = rows.firstOrNull { it.pkg == pkg }
+            val count = rows.filter { it.pkg in rules.apps }.sumOf { it.views }
+            val validated = rules.apps[pkg]?.let { isValidatedVersion(it, versionOf(pkg)) } == true &&
+                rows.filter { it.views > 0 }.all { r -> rules.apps[r.pkg]?.let { isValidatedVersion(it, versionOf(r.pkg)) } == true }
+            val goal = prefs.limits.filter { it.metric == "views" && it.dailyLimit > 0 }.minOfOrNull { it.dailyLimit }
+            val feedDecision = app.driftless.tracking.core.FeedLimitPolicy.evaluate(cfg.feed, prefs.feedState,
+                date, now, count, goal, badgeSurface, validated, true)
+            if (feedDecision.state != prefs.feedState) prefs.feedState = feedDecision.state
             val minutes = row?.let { (maxOf(it.usageMs, it.surfaceMs + it.unknownMs) / 60_000L).toInt() }
             val d = app.driftless.tracking.core.BlockPolicy.decide(
                 pkg, cfg, prefs.entitlement, minutes, at.dayOfWeek.value, at.hour * 60 + at.minute,
                 prefs.snoozedUntil(pkg), now,
             )
-            if (d.block) {
+            val bypassed = feedDecision.state.date == date && feedDecision.state.bypassUntilMs > now
+            val scopedReason = if (cfg.feedOnly && badgeSurface == Surface.SHORT_VIDEO &&
+                (validated || cfg.feed.allowUnvalidated) && d.block && !bypassed) {
+                if (d.reason == app.driftless.tracking.core.BlockReason.SCHEDULE) app.driftless.tracking.core.FeedReason.SCHEDULE
+                else app.driftless.tracking.core.FeedReason.APP_LIMIT
+            } else null
+            val reason = feedDecision.reason ?: scopedReason
+            if (reason != null) {
+                memeCard.hide(); floatingBadge.hide()
+                feedPause.show(reason, feedDecision.state.breakUntilMs - now,
+                    (cfg.feed.maxBypasses - feedDecision.state.bypasses).coerceAtLeast(0), cfg.feed.bypassMinutes,
+                    !validated) {
+                    val currentNow = System.currentTimeMillis()
+                    val currentDate = Recorder.localDate(currentNow, ZoneId.systemDefault())
+                    val currentCfg = prefs.blockConfig
+                    if (currentCfg.enabled && app.driftless.tracking.core.BlockPolicy.entitled(prefs.entitlement, currentNow)) {
+                        app.driftless.tracking.core.FeedLimitPolicy.bypass(currentCfg.feed, prefs.feedState, currentDate, currentNow)?.let {
+                            prefs.feedState = it; feedPause.hide()
+                            main.post(classifyTask)
+                        }
+                    }
+                }
+                engine.onLeave(now)
+                return
+            }
+            feedPause.hide()
+            if (d.block && !cfg.feedOnly && now - lastPauseMs >= PAUSE_COOLDOWN_MS) {
                 lastPauseMs = now
                 startActivity(
                     Intent(this, PauseActivity::class.java)
@@ -164,7 +222,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
                         .putExtra(PauseActivity.EXTRA_REASON, d.reason?.name),
                 )
             }
-        }
+        }.onFailure { if (::feedPause.isInitialized) feedPause.hide() }
     }
 
     private fun onTick() {
@@ -176,12 +234,17 @@ class DriftlessAccessibilityService : AccessibilityService() {
             hideFloatingCount()
             return
         }
+        // Re-entry and overlay dismissal may produce no supported-package event. Always refresh
+        // foreground classification on the tick instead of trusting the previous feed state.
+        classifyNow()
+        if (::feedPause.isInitialized && feedPause.isShowing) { engine.onTick(now); return }
         engine.activePackage?.let { active ->
             // Leave detection: only the foreground package name is read here, never content.
             val fg = rootInActiveWindow?.packageName?.toString()
             if (fg != active) { engine.onLeave(now); hideFloatingCount() } else maybePause(active, now)
         }
         engine.onTick(now)
+        engine.activePackage?.let { maybePause(it, now) }
         updateFloatingCount(now)
         if (now - lastGoalCheckMs >= GOAL_CHECK_MS) {
             lastGoalCheckMs = now
@@ -197,10 +260,12 @@ class DriftlessAccessibilityService : AccessibilityService() {
         badgeSurface = Surface.UNKNOWN; badgeIdentity = false; badgePackage = null
         if (::floatingBadge.isInitialized) floatingBadge.hide()
         if (::memeCard.isInitialized) memeCard.hide()
+        if (::feedPause.isInitialized) feedPause.hide()
     }
 
     private fun updateFloatingCount(now: Long) {
         if (!::floatingBadge.isInitialized) return
+        if (::feedPause.isInitialized && feedPause.isShowing) { floatingBadge.hide(); return }
         val pkg = badgePackage
         val foreground = rootInActiveWindow?.packageName?.toString()
         val power = getSystemService(PowerManager::class.java)
@@ -344,7 +409,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
         const val TICK_MS = 2_000L
         const val GOAL_CHECK_MS = 60_000L
         const val PAUSE_COOLDOWN_MS = 3_000L
-        const val SETTLE_MS = 300L
+        const val SETTLE_MS = 100L
         const val RETENTION_MS = 30L * 24 * 3600 * 1000
 
         /** The bound instance, if Android is currently running the service. */

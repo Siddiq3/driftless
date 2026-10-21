@@ -75,6 +75,7 @@ class TrackingModule : Module() {
             mapOf(
                 "engineVersion" to ENGINE_VERSION,
                 "implemented" to true,
+                "feedLimitsImplemented" to true,
                 "rulesVersion" to rules.version,
                 "disclosureAccepted" to TrackingPrefs(ctx).disclosureAccepted,
                 "serviceEnabled" to Health.serviceEnabled(ctx),
@@ -227,6 +228,16 @@ class TrackingModule : Module() {
                 apps = (c["apps"] as? List<*>).orEmpty().mapNotNull { it as? String }.filter { it in known }.toSet(),
                 dailyMinutes = (c["dailyMinutes"] as? Number)?.toInt()?.coerceIn(1, 1440),
                 schedules = schedules,
+                feedOnly = c["feedOnly"] as? Boolean ?: false,
+                feed = app.driftless.tracking.core.FeedSettings(
+                    enforceGoal = c["enforceVideoGoal"] as? Boolean ?: false,
+                    breaksEnabled = c["breaksEnabled"] as? Boolean ?: false,
+                    everyViews = ((c["breakEveryViews"] as? Number)?.toInt() ?: 50).coerceIn(1, 2000),
+                    breakMinutes = ((c["breakMinutes"] as? Number)?.toInt() ?: 5).coerceIn(1, 60),
+                    maxBypasses = ((c["maxBypassesPerDay"] as? Number)?.toInt() ?: 3).coerceIn(0, 10),
+                    bypassMinutes = ((c["bypassMinutes"] as? Number)?.toInt() ?: 5).coerceIn(1, 30),
+                    allowUnvalidated = c["allowUnvalidatedCounts"] as? Boolean ?: false,
+                ),
             )
         }
 
@@ -246,6 +257,7 @@ class TrackingModule : Module() {
             TrackingPrefs(context).floatingCountEnabled = false
             DriftlessAccessibilityService.current?.refreshFloatingCount()
             TrackingPrefs(context).clearMemeHistory()
+            TrackingPrefs(context).clearFeedState()
             SqliteStore.get(context).wipeAll()
             CountWidget.update(context)
         }
@@ -254,6 +266,6 @@ class TrackingModule : Module() {
     private fun isDebuggable(ctx: Context) = (ctx.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
 
     companion object {
-        const val ENGINE_VERSION = 1
+        const val ENGINE_VERSION = 2
     }
 }

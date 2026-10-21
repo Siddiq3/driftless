@@ -3,9 +3,12 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { Share } from 'react-native';
 import { router } from 'expo-router';
 import { CircleBoard } from '../src/social/CircleBoard';
+import { ApiError } from '../src/api/client';
 let mockStatus = 'signedOut';
 const mockApi = {
   friends: jest.fn(async () => []),
+  friendsDaily: jest.fn(),
+  getMe: jest.fn(),
   createInvite: jest.fn(),
   createChallenge: jest.fn(),
 };
@@ -16,7 +19,11 @@ jest.mock('expo-router', () => ({
   router: { push: jest.fn() },
   useFocusEffect: (callback: () => () => void) => require('react').useEffect(callback, [callback]),
 }));
-jest.mock('@/sync/run', () => ({ currentTimeZone: () => 'Asia/Kolkata' }));
+const mockSync = jest.fn();
+jest.mock('@/sync/run', () => ({
+  currentTimeZone: () => 'Asia/Kolkata',
+  syncNow: (...args: unknown[]) => mockSync(...args),
+}));
 jest.mock('tracking-android', () => ({
   Tracking: {
     daily: () => ({ heartbeatMinutes: 1, apps: [{ views: 12 }] }),
@@ -30,7 +37,7 @@ jest.mock('@/ui/kit', () => {
   return {
     Screen: View,
     T: Text,
-    Notice: Text,
+    Notice: ({ body }: { body: string }) => require('react').createElement(Text, null, body),
     Button: ({ label, onPress }: { label: string; onPress: () => void }) =>
       require('react').createElement(Pressable, { accessibilityLabel: label, onPress }),
   };
@@ -57,6 +64,16 @@ beforeEach(() => {
   jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
   mockApi.createInvite.mockResolvedValue({ code: 'FRIENDCODE' });
   mockApi.createChallenge.mockResolvedValue({ challengeId: 'battle-123' });
+  mockApi.friends.mockResolvedValue([]);
+  mockApi.friendsDaily.mockImplementation(async (date: string) => ({
+    localDate: date,
+    self: { status: 'eligible', views: 7, updatedAt: '2026-10-21T00:00:00Z' },
+    friends: [],
+  }));
+  mockApi.getMe.mockResolvedValue({
+    data: { profile: { consent: { cloudSync: true, shareWithFriends: true } } },
+  });
+  mockSync.mockResolvedValue({ kind: 'sent' });
 });
 afterEach(async () => {
   if (tree) await act(async () => tree.unmount());
@@ -102,4 +119,99 @@ it('allows browsing dates without login and disables future dates', async () => 
   await tap('Next day');
   expect(next().props.disabled).toBe(true);
   expect(router.push).not.toHaveBeenCalled();
+});
+
+const labelText = (label: string) =>
+  tree.root.findAll((node) => node.props.accessibilityLabel?.startsWith(`${label}:`))[0]!.props
+    .children;
+it('shows cloud-eligible totals rather than the local candidate count, including real zero', async () => {
+  mockStatus = 'signedIn';
+  const friend = {
+    userId: 'friend',
+    handle: 'bestie',
+    displayName: null,
+    status: 'accepted',
+    since: '2026-10-21T00:00:00Z',
+  };
+  mockApi.friendsDaily.mockImplementation(async (date: string) => ({
+    localDate: date,
+    self: { status: 'eligible', views: 7 },
+    friends: [{ ...friend, daily: { status: 'eligible', views: 0 } }],
+  }));
+  await mount();
+  expect(labelText('Your daily count')).toBe('7');
+  expect(labelText('Daily count for bestie')).toBe('0');
+});
+it('clears old counts when a date request fails and when sharing is withdrawn', async () => {
+  mockStatus = 'signedIn';
+  await mount();
+  expect(labelText('Your daily count')).toBe('7');
+  mockApi.friendsDaily.mockRejectedValueOnce(new Error('offline'));
+  await tap('Previous day');
+  expect(labelText('Your daily count')).toBe('—');
+  mockApi.friendsDaily.mockRejectedValueOnce(
+    new ApiError(403, 'consent_required', 'Sharing is off'),
+  );
+  await tap('Next day');
+  expect(labelText('Your daily count')).toBe('—');
+  expect(JSON.stringify(tree.toJSON())).toContain('Sharing is off');
+});
+it('checks consent before uploading and refreshes only after successful sync', async () => {
+  mockStatus = 'signedIn';
+  await mount();
+  mockApi.getMe.mockResolvedValueOnce({
+    data: { profile: { consent: { cloudSync: false, shareWithFriends: false } } },
+  });
+  await tap('Sync and refresh counts');
+  expect(mockSync).not.toHaveBeenCalled();
+  const reads = mockApi.friendsDaily.mock.calls.length;
+  await tap('Sync and refresh counts');
+  expect(mockSync).toHaveBeenCalledWith({ usageSync: expect.any(Function) });
+  expect(mockApi.friendsDaily.mock.calls.length).toBeGreaterThan(reads);
+});
+it('ignores a delayed response from the previously selected date', async () => {
+  mockStatus = 'signedIn';
+  let resolveOld!: (value: unknown) => void;
+  let oldDate = '';
+  mockApi.friendsDaily.mockImplementationOnce((date: string) => {
+    oldDate = date;
+    return new Promise((resolve) => {
+      resolveOld = resolve;
+    });
+  });
+  await mount();
+  await tap('Previous day');
+  expect(labelText('Your daily count')).toBe('7');
+  await act(async () =>
+    resolveOld({ localDate: oldDate, self: { status: 'eligible', views: 999 }, friends: [] }),
+  );
+  expect(labelText('Your daily count')).toBe('7');
+});
+it('does not start an upload when sign-out happens during the consent check', async () => {
+  mockStatus = 'signedIn';
+  let resolveMe!: (value: unknown) => void;
+  mockApi.getMe.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        resolveMe = resolve;
+      }),
+  );
+  await mount();
+  let pending!: Promise<void>;
+  await act(async () => {
+    pending = tree.root
+      .findAll(
+        (node) =>
+          node.props.accessibilityLabel === 'Sync and refresh counts' &&
+          typeof node.props.onPress === 'function',
+      )[0]!
+      .props.onPress();
+  });
+  mockStatus = 'signedOut';
+  await act(async () => tree.update(<CircleBoard friendsPanel={null} />));
+  await act(async () => {
+    resolveMe({ data: { profile: { consent: { cloudSync: true, shareWithFriends: true } } } });
+    await pending;
+  });
+  expect(mockSync).not.toHaveBeenCalled();
 });

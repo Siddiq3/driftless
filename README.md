@@ -33,3 +33,9 @@ CI publishes step logs for each push to `main` to the `ci-results` branch.
 Google is the only login provider; local tracking remains available to guests. See [Google sign-in setup](docs/GOOGLE_SIGN_IN.md) for OAuth client IDs, Android signing certificates and the matching backend audience.
 
 Daily/weekly story recaps and build requirements: [Wrapped](docs/WRAPPED.md).
+
+Daily friend counts, consent, eligibility and release requirements:
+[Daily friend comparisons](docs/SOCIAL_COMPARISONS.md).
+
+Counting and feed-limit implementation, emulator findings and outstanding release gates:
+[Feed limit milestones](docs/tracking/FEED_LIMIT_MILESTONES.md).

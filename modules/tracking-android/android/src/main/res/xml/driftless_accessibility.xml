@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Not an accessibility tool (Google Play policy): isAccessibilityTool is deliberately absent.
-  Events only from the disclosed supported apps. No gestures, no key filtering, no actions.
+  Events only from the disclosed supported apps. No gestures or key filtering.
+  The optional feed pause offers Android Back only on an explicit Leave feed button press.
 -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
   android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeViewScrolled"

@@ -7,6 +7,14 @@ export const DEFAULT_BLOCKING: BlockingConfig = {
   apps: [],
   dailyMinutes: 30,
   schedules: [],
+  feedOnly: true,
+  enforceVideoGoal: false,
+  breaksEnabled: false,
+  breakEveryViews: 50,
+  breakMinutes: 5,
+  maxBypassesPerDay: 3,
+  bypassMinutes: 5,
+  allowUnvalidatedCounts: false,
 };
 
 export async function loadBlocking(db: SQLiteDatabase): Promise<BlockingConfig> {
@@ -15,7 +23,7 @@ export async function loadBlocking(db: SQLiteDatabase): Promise<BlockingConfig> 
     KEY,
   );
   return r
-    ? { ...DEFAULT_BLOCKING, ...(JSON.parse(r.value) as Partial<BlockingConfig>) }
+    ? { ...DEFAULT_BLOCKING, feedOnly: false, ...(JSON.parse(r.value) as Partial<BlockingConfig>) }
     : DEFAULT_BLOCKING;
 }
 

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useFonts } from 'expo-font';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import { addDays, localDateOf } from '@siddiq3/driftless-contracts/domain';
 import type { v1 } from '@siddiq3/driftless-contracts';
@@ -8,8 +8,9 @@ import { AppState, Image, Modal, Pressable, Share, StyleSheet, View } from 'reac
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Tracking } from 'tracking-android';
 import { useApi } from '@/api/useApi';
+import { ApiError, type ApiClient } from '@/api/client';
 import { useSession } from '@/auth/session';
-import { currentTimeZone } from '@/sync/run';
+import { currentTimeZone, syncNow } from '@/sync/run';
 import { Button, Notice, Screen, T } from '@/ui/kit';
 import { Icon } from '@/ui/Icon';
 
@@ -32,6 +33,8 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
   const [fonts] = useFonts({ LilitaOne: require('../../assets/fonts/LilitaOne-Regular.ttf') });
   const api = useApi();
   const session = useSession();
+  const liveApi = useRef(api);
+  const focused = useRef(false);
   const [today, setToday] = useState(() => localDateOf(Date.now(), currentTimeZone()));
   const [date, setDate] = useState(() => today);
   const [total, setTotal] = useState<number | null>(null);
@@ -39,10 +42,23 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
   const [managerOpen, setManagerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [comparison, setComparison] = useState<{
+    api: ApiClient;
+    data: v1.FriendsDailyResponse;
+  } | null>(null);
+  const [refresh, setRefresh] = useState(0);
+  const currentComparison =
+    comparison?.api === api && comparison.data.localDate === date ? comparison.data : null;
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
+      liveApi.current = api;
+      focused.current = true;
+      setBusy(false);
+      setError(null);
+      setComparison(null);
+      setFriends([]);
       const read = () => {
         if (active) setToday(localDateOf(Date.now(), currentTimeZone()));
         try {
@@ -65,21 +81,44 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
       const timer = setInterval(() => {
         if (AppState.currentState === 'active') read();
       }, 10_000);
-      if (api && !managerOpen) {
-        api
-          .friends()
-          .then((rows) => {
-            if (active) setFriends(rows);
-          })
-          .catch(() => {
-            if (active) setError('Could not load your friends. Open Friends to retry.');
-          });
-      } else if (!api) setFriends([]);
+      let loading = false;
+      const readComparison = async () => {
+        if (!api || managerOpen || loading) return;
+        loading = true;
+        try {
+          const rows = await api.friends();
+          if (active) setFriends(rows);
+          const data = await api.friendsDaily(date);
+          if (active) {
+            setComparison({ api, data });
+            setError(null);
+          }
+        } catch (e) {
+          if (active) {
+            setComparison(null);
+            setError(
+              e instanceof ApiError && e.code === 'consent_required'
+                ? e.message
+                : 'Daily comparisons are unavailable. Check your connection and try refreshing.',
+            );
+          }
+        } finally {
+          loading = false;
+        }
+      };
+      void readComparison();
+      const comparisonTimer = setInterval(() => {
+        if (AppState.currentState === 'active') void readComparison();
+      }, 60_000);
       return () => {
         active = false;
+        focused.current = false;
         clearInterval(timer);
+        clearInterval(comparisonTimer);
       };
-    }, [api, date, managerOpen]),
+      // The refresh token reruns this effect after a successful upload.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [api, date, managerOpen, refresh]),
   );
 
   const requireLogin = () => {
@@ -100,6 +139,31 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
       setError(e instanceof Error ? e.message : 'Could not share your invite.');
     } finally {
       setBusy(false);
+    }
+  };
+  const syncAndRefresh = async () => {
+    if (!requireLogin() || !api || busy) return;
+    setBusy(true);
+    setError(null);
+    const allowed = () => focused.current && liveApi.current === api;
+    try {
+      const me = await api.getMe();
+      if (!allowed()) return;
+      if (!me.data.profile.consent.cloudSync || !me.data.profile.consent.shareWithFriends)
+        throw new Error(
+          'Turn on cloud backup and share progress with friends in Settings to compare counts.',
+        );
+      const outcome = await syncNow({
+        usageSync: (days, key) => api.usageSync(days, key, allowed),
+      });
+      if (!allowed()) return;
+      if (outcome.kind === 'deferred' || outcome.kind === 'rejected')
+        throw new Error('Backup could not finish. Try again from Settings.');
+      setRefresh((value) => value + 1);
+    } catch (e) {
+      if (allowed()) setError(e instanceof Error ? e.message : 'Could not sync your counts.');
+    } finally {
+      if (allowed()) setBusy(false);
     }
   };
   const battle = async () => {
@@ -126,7 +190,12 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
       setBusy(false);
     }
   };
-  const accepted = friends.filter((friend) => friend.status === 'accepted');
+  const accepted =
+    currentComparison?.friends ??
+    friends
+      .filter((friend) => friend.status === 'accepted')
+      .map((friend) => ({ ...friend, daily: null }));
+  const ownViews = api ? (currentComparison?.self.views ?? null) : total;
   const requests = friends.filter((friend) => friend.status === 'pending_in').length;
   const dateLabel =
     date === today
@@ -211,8 +280,13 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
             style={{ width: 33, height: 33, opacity: 0.8 }}
           />
         </View>
-        <T style={styles.you}>You</T>
-        <T style={styles.count}>{total === null ? '—' : total.toLocaleString()}</T>
+        <T style={styles.you}>You{api ? '' : ' · local estimate'}</T>
+        <T
+          accessibilityLabel={`Your daily count: ${ownViews ?? 'unavailable'}`}
+          style={styles.count}
+        >
+          {ownViews === null ? '—' : ownViews.toLocaleString()}
+        </T>
       </View>
 
       {accepted.map((friend) => (
@@ -220,7 +294,20 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
           <Icon name="friends" color={colors.muted} size={23} />
           <View style={{ flex: 1 }}>
             <T style={styles.friendName}>{friend.displayName || `@${friend.handle}`}</T>
+            <T muted>
+              {friend.daily?.status === 'private'
+                ? 'Sharing off'
+                : friend.daily?.status !== 'eligible'
+                  ? 'No eligible count'
+                  : 'Eligible videos'}
+            </T>
           </View>
+          <T
+            accessibilityLabel={`Daily count for ${friend.handle}: ${friend.daily?.views ?? 'unavailable'}`}
+            style={styles.count}
+          >
+            {friend.daily?.views?.toLocaleString() ?? '—'}
+          </T>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={`Start a battle with ${friend.handle}`}
@@ -253,6 +340,18 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
         ))}
       </View>
       <View style={styles.actions}>
+        <T muted>
+          Synced eligible video counts · lower is better. Dates use each phone’s local day. A dash
+          means no shared eligible count.
+        </T>
+        {api && (
+          <Button
+            label="Sync and refresh counts"
+            kind="secondary"
+            busy={busy}
+            onPress={() => void syncAndRefresh()}
+          />
+        )}
         {error && <Notice title="Try again" body={error} tone="warn" />}
         <Button
           label={busy ? 'Getting ready…' : 'Start a 2-person battle'}
