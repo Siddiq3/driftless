@@ -9,6 +9,23 @@ export type BrainMood =
   | 'limit-reached'
   | 'unavailable';
 
+/** Mirrors native countBadgeMood: local video totals, using the smallest enabled video limit.
+ * This is character feedback only; it never changes validated goal results or sync eligibility.
+ */
+export function countBrainMood(s: ProgressState): 'happy' | 'drained' | 'unknown' {
+  if (s.state !== 'ok' || !s.health.implemented) return 'unknown';
+  const packages = new Set(s.health.apps.map((app) => app.package));
+  const count = s.daily.apps
+    .filter((app) => packages.has(app.package))
+    .reduce((total, app) => total + app.views, 0);
+  const limits = s.goals.filter(
+    (goal) => goal.enabled && goal.metric === 'views' && goal.dailyLimit > 0,
+  );
+  return limits.length && count >= Math.min(...limits.map((goal) => goal.dailyLimit))
+    ? 'drained'
+    : 'happy';
+}
+
 /** A goal is an allowance: reaching the cap never earns a celebration. */
 export function brainPresentation(s: ProgressState) {
   if (s.state !== 'ok')

@@ -3,7 +3,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { addDays } from '@siddiq3/driftless-contracts/domain';
-import { Screen, T, Notice, Button, Details } from '@/ui/kit';
+import { Screen, T, Notice, Button } from '@/ui/kit';
 import { AppIcon, Icon } from '@/ui/Icon';
 import { WrapEntry } from '@/wrapped/Entry';
 import { useActivity } from '@/activity/useActivity';
@@ -139,16 +139,14 @@ export default function ProgressScreen() {
             </View>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Focus and app pauses with Pro"
+              accessibilityLabel="Focus and app pauses"
               onPress={() => router.push('/blocking')}
               style={styles.pro}
             >
               <View style={styles.proBadge}>
-                <T v="label" style={{ fontWeight: '900', color: '#2C1A08' }}>
-                  PRO
-                </T>
+                <Icon name="shield" size={22} color="#2C1A08" />
               </View>
-              <T style={{ flex: 1, fontWeight: '700' }}>Block apps with Pro</T>
+              <T style={{ flex: 1, fontWeight: '700' }}>Focus &amp; app pauses</T>
               <Icon name="chevron" color="#FFF4DA" />
             </Pressable>
             <T style={{ fontSize: 17, fontWeight: '600', marginTop: 4 }}>Top apps</T>
@@ -177,14 +175,6 @@ export default function ProgressScreen() {
                 <SetupButton label="Enable counting" onPress={() => router.push('/tracking')} />
               </View>
             )}
-            <Details title="About these counts">
-              <T v="caption" muted>
-                Daily views are recorded on this phone. Weekly views, goal results, recaps and
-                friend scores require eligible app versions and may be unavailable even when a daily
-                count exists. A dash means unavailable, not zero. Hourly bars appear only when
-                retained events match the daily total.
-              </T>
-            </Details>
             <WrapEntry />
             <Pressable
               accessibilityRole="button"

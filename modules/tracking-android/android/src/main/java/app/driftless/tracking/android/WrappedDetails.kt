@@ -27,7 +27,7 @@ object WrappedDetails {
         val since = first.minusDays(1).atStartOfDay(ZoneId.of("UTC")).toInstant().toEpochMilli()
         val events = SqliteStore.get(context).events(since).filter { e ->
             e.localDate >= from && e.localDate <= to && e.kind == ViewKind.VIEW &&
-                e.ruleVersion == rules.version && rules.apps[e.pkg]?.let {
+                (localActivity || e.ruleVersion == rules.version) && rules.apps[e.pkg]?.let {
                     localActivity || isValidatedVersion(it, e.appVersion)
                 } == true
         }

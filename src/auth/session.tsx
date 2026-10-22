@@ -109,6 +109,7 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
       else await SecureStore.deleteItemAsync(OWNER_KEY);
       await SecureStore.setItemAsync(ENABLED_KEY, 'true');
       generation.current.value++;
+      tokenRequest.current = null;
       accountOwner.current = owner ?? null;
       enabled.current = true;
       setSignedIn(true);
@@ -142,8 +143,10 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
     }
   }, [signOut, GoogleSignin]);
 
+  const credentialGeneration = generation.current.value;
   const getAccessToken = useCallback(async (): Promise<string | null> => {
-    if (!signedIn || !enabled.current) return null;
+    if (!signedIn || !enabled.current || generation.current.value !== credentialGeneration)
+      return null;
     const current = generation.current.value;
     // Silent sign-in obtains the current Google ID token without opening a browser/account picker.
     // Share a concurrent refresh; an explicit sign-out invalidates its result.
@@ -177,7 +180,7 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
     }
     const token = await tokenRequest.current;
     return enabled.current && generation.current.value === current ? token : null;
-  }, [signedIn, GoogleSignin]);
+  }, [signedIn, GoogleSignin, credentialGeneration]);
 
   const value: SessionState =
     signedIn === undefined

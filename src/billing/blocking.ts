@@ -27,7 +27,7 @@ export async function loadBlocking(db: SQLiteDatabase): Promise<BlockingConfig> 
     : DEFAULT_BLOCKING;
 }
 
-/** Saves locally and mirrors to the native service (which enforces it only with verified Pro). */
+/** Saves locally and mirrors to the native service under the current feature-access policy. */
 export async function saveBlocking(db: SQLiteDatabase, c: BlockingConfig): Promise<void> {
   await db.runAsync(
     'INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)',

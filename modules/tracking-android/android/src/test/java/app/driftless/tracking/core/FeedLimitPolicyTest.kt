@@ -26,10 +26,10 @@ class FeedLimitPolicyTest {
         assertNull(decide(10, now=301000, state=first.state).reason)
         assertEquals(FeedReason.BREAK, decide(20, now=302000, state=first.state).reason)
     }
-    @Test fun neverInterceptsOtherScreensUnknownSurfacesOrFreeUsers() {
+    @Test fun includedFeaturesStillRespectSurfaceAndDetectionGates() {
         for (surface in listOf(Surface.OTHER, Surface.UNKNOWN))
             assertNull(decide(100, surface=surface).reason)
-        assertNull(decide(100, pro=false).reason)
+        assertEquals(FeedReason.DAILY_VIDEOS, decide(100, pro=false).reason)
         assertNull(decide(100, validated=false).reason)
         assertEquals(FeedReason.DAILY_VIDEOS, decide(100, validated=false,
             settings=cfg.copy(allowUnvalidated=true)).reason)

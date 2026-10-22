@@ -1,4 +1,4 @@
-import { brainPresentation } from '../src/ui/brainState';
+import { brainPresentation, countBrainMood } from '../src/ui/brainState';
 import type { ProgressState } from '../src/goals/useProgress';
 
 function sample(): Extract<ProgressState, { state: 'ok' }> {
@@ -91,5 +91,54 @@ describe('brain presentation follows trustworthy activity', () => {
     expect(brainPresentation({ state: 'error', message: 'storage unavailable' }).mood).toBe(
       'unavailable',
     );
+  });
+});
+
+describe('home character matches the popup count mood', () => {
+  function counted(views: number) {
+    const s = sample();
+    s.goals = [{ goalId: 'views', metric: 'views', dailyLimit: 50, enabled: true, rev: 1 }];
+    s.daily.apps = [
+      {
+        package: 'youtube',
+        views,
+        adViews: 0,
+        surfaceMs: 1000,
+        unknownMs: 0,
+        usageMs: 1000,
+      },
+    ];
+    return s;
+  }
+  it('becomes drained exactly at the saved video limit', () => {
+    expect(countBrainMood(counted(49))).toBe('happy');
+    expect(countBrainMood(counted(50))).toBe('drained');
+    expect(countBrainMood(counted(51))).toBe('drained');
+    expect(countBrainMood(counted(0))).toBe('happy');
+  });
+  it('uses saved local counts even with unvalidated results or a stopped service', () => {
+    const s = counted(50);
+    s.health.apps[0]!.validated = false;
+    s.health.serviceRunning = false;
+    s.p.today.views = null;
+    s.daily.heartbeatMinutes = 0;
+    expect(countBrainMood(s)).toBe('drained');
+    expect(s.p.today.views).toBeNull();
+  });
+  it('ignores disabled and minutes limits and chooses the smallest enabled video limit', () => {
+    const s = counted(50);
+    s.goals[0]!.enabled = false;
+    s.goals.push({ goalId: 'minutes', metric: 'minutes', dailyLimit: 1, enabled: true, rev: 1 });
+    expect(countBrainMood(s)).toBe('happy');
+    s.goals.push({ goalId: 'views-2', metric: 'views', dailyLimit: 100, enabled: true, rev: 1 });
+    expect(countBrainMood(s)).toBe('happy');
+    s.goals[0]!.enabled = true;
+    expect(countBrainMood(s)).toBe('drained');
+  });
+  it('keeps loading and missing engine state unknown', () => {
+    expect(countBrainMood({ state: 'loading' })).toBe('unknown');
+    const s = counted(50);
+    s.health.implemented = false;
+    expect(countBrainMood(s)).toBe('unknown');
   });
 });

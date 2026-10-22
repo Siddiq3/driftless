@@ -1,3 +1,12 @@
+let mockSubscriptionsRequired = true;
+jest.mock('../src/config/access', () => ({
+  get SUBSCRIPTIONS_REQUIRED() {
+    return mockSubscriptionsRequired;
+  },
+}));
+beforeEach(() => {
+  mockSubscriptionsRequired = true;
+});
 import { createHash } from 'node:crypto';
 
 jest.mock('expo-crypto', () => ({
@@ -152,4 +161,13 @@ test('foreground restore is serialized behind purchase verification', async () =
   await purchase;
   await restore;
   expect(Billing.active).toHaveBeenCalledTimes(1);
+});
+
+test('included release cannot start a purchase', async () => {
+  mockSubscriptionsRequired = false;
+  jest.mocked(Billing.purchase).mockClear();
+  await expect(buyPro({ playVerify: jest.fn() }, 'guest', offer)).rejects.toThrow(
+    'All features are included',
+  );
+  expect(Billing.purchase).not.toHaveBeenCalled();
 });

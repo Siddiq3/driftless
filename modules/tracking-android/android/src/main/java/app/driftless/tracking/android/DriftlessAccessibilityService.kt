@@ -163,11 +163,11 @@ class DriftlessAccessibilityService : AccessibilityService() {
 
     private var lastPauseMs = 0L
 
-    /** Pro blocking: shows Driftless's own pause screen. Fails open on any error. */
+    /** Shows Driftless's own pause screen under the current feature-access policy. */
     private fun maybePause(pkg: String, now: Long) {
         runCatching {
             val cfg = prefs.blockConfig
-            if (!cfg.enabled || pkg !in cfg.apps || !app.driftless.tracking.core.BlockPolicy.entitled(prefs.entitlement, now)) {
+            if (!cfg.enabled || pkg !in cfg.apps || !app.driftless.tracking.core.FeatureAccess.focusAllowed(prefs.entitlement, now)) {
                 feedPause.hide(); return
             }
             val zone = ZoneId.systemDefault()
@@ -202,7 +202,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
                     val currentNow = System.currentTimeMillis()
                     val currentDate = Recorder.localDate(currentNow, ZoneId.systemDefault())
                     val currentCfg = prefs.blockConfig
-                    if (currentCfg.enabled && app.driftless.tracking.core.BlockPolicy.entitled(prefs.entitlement, currentNow)) {
+                    if (currentCfg.enabled && app.driftless.tracking.core.FeatureAccess.focusAllowed(prefs.entitlement, currentNow)) {
                         app.driftless.tracking.core.FeedLimitPolicy.bypass(currentCfg.feed, prefs.feedState, currentDate, currentNow)?.let {
                             prefs.feedState = it; feedPause.hide()
                             main.post(classifyTask)

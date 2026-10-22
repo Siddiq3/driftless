@@ -14,6 +14,7 @@ const health: TrackingHealth = {
   usageAccessGranted: true,
   debugBuild: false,
   blockingEntitled: true,
+  subscriptionRequired: false,
   apps: [
     {
       package: 'com.instagram.android',
@@ -50,16 +51,13 @@ const report = (
   backend: v1.MeResponse | null = me,
   platform = 'android',
 ) => capabilityReport({ health: h, backend, platform, support });
-it('local minutes do not depend on backend release flags or connectivity', () => {
+it('local features do not require a subscription, backend connection or login', () => {
   expect(report(health, null).minutesTracking.available).toBe(true);
-  expect(report(health, null).blocking).toMatchObject({
-    available: false,
-    detail: 'Backend status unavailable',
-  });
+  expect(report(health, null).blocking.available).toBe(true);
   expect(
     report(health, { ...me, capabilities: { ...me.capabilities, blocking: false } }).blocking
       .available,
-  ).toBe(false);
+  ).toBe(true);
 });
 it.each(['serviceEnabled', 'serviceRunning', 'disclosureAccepted', 'implemented'] as const)(
   'fails closed when %s is false',
@@ -115,9 +113,9 @@ it('unimplemented analytics stays unavailable even if a backend advertises it', 
   expect(report().advancedAnalytics.available).toBe(false);
 });
 it.each([false, undefined])(
-  'expired or old-binary native entitlement %s fails closed',
+  'native purchase entitlement %s does not restrict included features',
   (blockingEntitled) => {
-    expect(report({ ...health, blockingEntitled }).blocking.available).toBe(false);
+    expect(report({ ...health, blockingEntitled }).blocking.available).toBe(true);
   },
 );
 it('configured eligibility distinguishes old binaries from configurable feed limits', () => {
@@ -127,14 +125,20 @@ it('configured eligibility distinguishes old binaries from configurable feed lim
   );
   expect(report().schedules.detail).toContain('requires an enabled rule');
 });
-it('backend eligibility does not override free entitlement or sharing consent', () => {
+it('free users get focus features while sharing still requires consent', () => {
   expect(
     report(health, { ...me, entitlement: { ...me.entitlement, tier: 'free' } }).blocking.available,
-  ).toBe(false);
+  ).toBe(true);
   expect(
     report(health, {
       ...me,
       profile: { ...me.profile, consent: { cloudSync: true, shareWithFriends: false } },
     }).socialSharingOfUsage.available,
   ).toBe(false);
+});
+
+test('older binaries must be updated before claiming subscription-free native access', () => {
+  expect(report({ ...health, subscriptionRequired: undefined }).blocking.detail).toContain(
+    'latest Android build',
+  );
 });

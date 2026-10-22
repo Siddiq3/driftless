@@ -17,6 +17,7 @@ const health: TrackingHealth = {
   serviceEnabled: true,
   serviceRunning: true,
   blockingEntitled: true,
+  subscriptionRequired: false,
   feedLimitsImplemented: true,
   usageAccessGranted: true,
   debugBuild: false,
@@ -46,7 +47,7 @@ test.each([
   [{ disclosureAccepted: false }, 'Permission required'],
   [{ serviceRunning: false }, 'Tracking service unavailable'],
   [{ implemented: false }, 'Tracking service unavailable'],
-  [{ blockingEntitled: false }, 'Pro verification required'],
+  [{ subscriptionRequired: undefined }, 'latest Android build'],
 ])('reports the native gate %j', (override, reason) => {
   expect(protectionStatus(config, { ...health, ...override }, 50).body).toContain(reason);
 });
@@ -92,4 +93,10 @@ test('whole-app minute rules do not require approved feed detection', () => {
       null,
     ).body,
   ).toContain('not complete app minutes');
+});
+
+test('included protection works without a verified purchase', () => {
+  expect(protectionStatus(config, { ...health, blockingEntitled: false }, 50).title).toBe(
+    'Protection active',
+  );
 });

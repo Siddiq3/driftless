@@ -26,7 +26,7 @@ object FeedLimitPolicy {
                  count: Int, goal: Int?, surface: Surface, validated: Boolean, entitled: Boolean): FeedDecision {
         var next = if (state.date == date) state else FeedState(date)
         fun allow() = FeedDecision(null, next)
-        if (!entitled || surface != Surface.SHORT_VIDEO || (!validated && !settings.allowUnvalidated)) return allow()
+        if ((FeatureAccess.SUBSCRIPTIONS_REQUIRED && !entitled) || surface != Surface.SHORT_VIDEO || (!validated && !settings.allowUnvalidated)) return allow()
         if (next.bypassUntilMs > now) return allow()
         // The Nth qualifying view consumes the allowance. Pause at count >= N, until local midnight.
         if (settings.enforceGoal && goal != null && goal > 0 && count >= goal)

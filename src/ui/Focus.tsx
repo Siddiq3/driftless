@@ -1,16 +1,16 @@
-import { WrapEntry } from '@/wrapped/Entry';
 import { router } from 'expo-router';
 import { Animated, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import type { ReactNode } from 'react';
-import { Button, Details, T, useTheme } from './kit';
-import { BrainCharacter } from './BrainCharacter';
+import { Button, Details, Screen, T, useTheme } from './kit';
+import { BrainCompanion } from './BrainCompanion';
 import { BrandMark } from './BrandMark';
 import { AppIcon, Icon, iconForMark, type IconName } from './Icon';
-import { useProgress } from '@/goals/useProgress';
-import { brainPresentation } from './brainState';
+import { useProgress, type ProgressState } from '@/goals/useProgress';
+import { CountingPermissionBanner } from '@/permissions/CountingPermissionBanner';
+import { brainPresentation, countBrainMood } from './brainState';
 import { useDataMotion } from './motion';
 import { trackingState } from '@/tracking/state';
-import { candidateCount } from '@/tracking/candidateCount';
+import { candidateCount, homeAppCount } from '@/tracking/candidateCount';
 
 export function AnimatedCount({
   value,
@@ -48,12 +48,12 @@ export function AnimatedCount({
   );
 }
 
-export function FocusHero() {
+export function FocusHero({ state, refresh }: { state: ProgressState; refresh: () => void }) {
   const t = useTheme();
-  const { width, height } = useWindowDimensions();
-  const [state, refresh] = useProgress(61, true);
+  const { width, height, fontScale } = useWindowDimensions();
   const data = state.state === 'ok' ? state.p : null;
   const brain = brainPresentation(state);
+  const characterMood = countBrainMood(state);
   const health = state.state === 'ok' ? state.health : null;
   const status = health ? trackingState(health) : null;
   const active = health?.implemented && status?.startsWith('tracking');
@@ -63,62 +63,33 @@ export function FocusHero() {
       ? 'Waking up…'
       : state.state === 'error'
         ? 'Let’s reconnect.'
-        : {
-            idle: 'Finding your rhythm.',
-            tracking: 'Room to breathe.',
-            'goal-reached': 'Look at you grow.',
-            'high-usage': 'Pause with me?',
-            'limit-reached': 'Let’s take a breather.',
-            unavailable: 'Ready when you are.',
-          }[brain.mood];
+        : characterMood === 'drained'
+          ? 'Brain battery low. Let’s take five.'
+          : characterMood === 'unknown'
+            ? 'Ready when you are.'
+            : 'Small break. Big brain energy.';
   const daily = state.state === 'ok' ? state.daily : null;
   const experimental = data?.today.views === null ? candidateCount(daily, health) : null;
   return (
     <>
       <View style={styles.hero}>
-        <View
-          style={{
-            backgroundColor: t.accent,
-            borderRadius: 24,
-            paddingHorizontal: 20,
-            paddingVertical: 10,
-          }}
-        >
-          <T v="label" style={{ color: t.onAccent, textAlign: 'center', fontWeight: '600' }}>
-            {phrase}
-          </T>
-        </View>
-        <BrainCharacter
-          pose={brain.mood === 'high-usage' || brain.mood === 'limit-reached' ? 'tired' : 'wave'}
-          size={Math.min(width - 72, height < 760 ? 140 : 160)}
+        <BrainCompanion
+          initialQuote={phrase}
+          quoteMood={characterMood === 'drained' ? 'drained' : 'happy'}
+          pose={characterMood === 'drained' ? 'tired' : 'wave'}
+          size={Math.min(width - 96, height < 780 || fontScale > 1.2 ? 144 : 180)}
           still={brain.mood === 'unavailable'}
         />
-        <View style={{ alignItems: 'center', gap: 4 }}>
+        <View style={{ alignItems: 'center', gap: 10 }}>
           <AnimatedCount
             value={data?.today.views ?? experimental}
             approximate={experimental !== null}
           />
-          <T v="label" muted>
+          <T v="label" muted style={{ textAlign: 'center', fontSize: 14 }}>
             Short videos today
           </T>
-          {state.state === 'ok' &&
-            data?.today.views === null &&
-            experimental === null &&
-            !active && (
-              <T v="caption" muted>
-                Counting is off
-              </T>
-            )}
         </View>
       </View>
-      {experimental !== null && (
-        <Details title="About your count">
-          <T v="caption" muted>
-            This count is recorded on your phone. App-version accuracy has not been approved for
-            goal results, weekly summaries or cloud comparisons yet.
-          </T>
-        </Details>
-      )}
       {state.state === 'error' && (
         <>
           <Button label="Try again" onPress={refresh} />
@@ -138,18 +109,15 @@ export function FocusHero() {
               alignSelf: 'center',
               justifyContent: 'center',
               backgroundColor: t.surfaceRaised,
-              borderRadius: 28,
-              paddingHorizontal: 12,
-              gap: 4,
+              borderRadius: 32,
+              paddingHorizontal: 8,
+              paddingVertical: 4,
             }}
           >
             {health?.apps
               .filter((app) => app.installed)
-              .map((app) => {
-                const count =
-                  app.validated && (daily?.heartbeatMinutes ?? 0) > 0
-                    ? (daily?.apps.find((a) => a.package === app.package)?.views ?? 0)
-                    : null;
+              .map((app, index) => {
+                const count = homeAppCount(daily, health, app.package);
                 return (
                   <Pressable
                     key={app.package}
@@ -160,8 +128,11 @@ export function FocusHero() {
                       flexDirection: 'row',
                       alignItems: 'center',
                       gap: 9,
-                      paddingHorizontal: 10,
-                      minHeight: 52,
+                      paddingHorizontal: 14,
+                      minHeight: 48,
+                      marginVertical: 4,
+                      borderLeftWidth: index > 0 ? StyleSheet.hairlineWidth : 0,
+                      borderLeftColor: t.border,
                       opacity: pressed ? 0.7 : 1,
                     })}
                   >
@@ -182,9 +153,7 @@ export function FocusHero() {
               </Pressable>
             )}
           </View>
-          {!active ? (
-            <Button label="Enable counting" onPress={() => router.push('/tracking')} />
-          ) : (
+          {active && (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={
@@ -261,11 +230,17 @@ export function VisualBanner({
 
 export function Dashboard({ guest = false, account }: { guest?: boolean; account?: ReactNode }) {
   const t = useTheme();
+  const [state, refresh] = useProgress(61, true);
+  const health = state.state === 'ok' ? state.health : null;
   return (
-    <>
+    <Screen
+      topBanner={<CountingPermissionBanner health={health} />}
+      contentStyle={styles.homeContent}
+      tabBarStyle={{ backgroundColor: t.bg, borderTopWidth: 0, paddingTop: 16, paddingBottom: 16 }}
+    >
       <View style={styles.brand}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <BrandMark size={34} />
+          <BrandMark size={30} />
           <T v="title" style={{ letterSpacing: -0.8 }}>
             driftless.
           </T>
@@ -279,28 +254,28 @@ export function Dashboard({ guest = false, account }: { guest?: boolean; account
           <Icon name={guest ? 'shield' : 'settings'} size={23} color={t.textMuted} />
         </Pressable>
       </View>
-      {account}
-      <FocusHero />
-      <WrapEntry prompt />
+      {account && <View style={{ paddingTop: 8 }}>{account}</View>}
+      <View style={styles.homeActivity}>
+        <FocusHero state={state} refresh={refresh} />
+      </View>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Focus and app pauses. Requires Pro."
+        accessibilityLabel="Focus and app pauses"
         onPress={() => router.push('/blocking')}
         style={({ pressed }) => [
           styles.focusLink,
-          { backgroundColor: t.warm, opacity: pressed ? 0.75 : 1 },
+          { backgroundColor: '#783F00', opacity: pressed ? 0.75 : 1 },
         ]}
       >
-        <Icon name="lock" size={20} />
+        <View style={styles.proBadge}>
+          <Icon name="shield" size={24} color="#2C1A08" />
+        </View>
         <T v="label" style={{ flex: 1, fontWeight: '600' }}>
           Focus & app pauses
         </T>
-        <T v="caption" style={{ color: t.accent, fontWeight: '700' }}>
-          PRO
-        </T>
         <Icon name="chevron" size={18} />
       </Pressable>
-    </>
+    </Screen>
   );
 }
 
@@ -367,9 +342,22 @@ export function FeatureTile({
   );
 }
 const styles = StyleSheet.create({
-  brand: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  homeContent: { paddingHorizontal: 18, paddingTop: 8, paddingBottom: 24, gap: 0 },
+  homeActivity: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingTop: 24,
+    paddingBottom: 32,
+    gap: 24,
+  },
+  brand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 56,
+  },
   iconButton: { minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
-  hero: { alignItems: 'center', gap: 10, paddingTop: 8, paddingBottom: 4 },
+  hero: { alignItems: 'center', gap: 18 },
   textAction: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 12 },
   goalLink: {
     flexDirection: 'row',
@@ -383,10 +371,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    minHeight: 56,
-    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    minHeight: 72,
+    borderRadius: 14,
+  },
+  proBadge: {
+    minWidth: 64,
+    minHeight: 44,
+    paddingHorizontal: 14,
+    borderRadius: 28,
+    backgroundColor: '#FFE1A4',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   action: {
     flexDirection: 'row',

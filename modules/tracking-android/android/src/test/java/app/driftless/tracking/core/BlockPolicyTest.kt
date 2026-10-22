@@ -25,12 +25,12 @@ class BlockPolicyTest {
         assertEquals(BlockDecision(true, BlockReason.LIMIT), d(minutes = 30))
     }
 
-    @Test fun neverBlocksWithoutVerifiedPro() {
-        assertFalse(d(e = CachedEntitlement(false, null), minutes = 999).block)
+    @Test fun includedFeaturesBlockWithoutAPurchase() {
+        assertTrue(d(e = CachedEntitlement(false, null), minutes = 999).block)
     }
 
-    @Test fun expiredCachedEntitlementFailsOpen() {
-        assertFalse(d(e = CachedEntitlement(true, now), minutes = 999).block)
+    @Test fun expiredPurchaseDoesNotDisableIncludedFeatures() {
+        assertTrue(d(e = CachedEntitlement(true, now), minutes = 999).block)
     }
 
     @Test fun unknownMinutesNeverBlockOnTheLimit() {

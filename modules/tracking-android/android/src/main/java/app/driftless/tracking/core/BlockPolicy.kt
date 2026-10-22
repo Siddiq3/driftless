@@ -34,7 +34,8 @@ data class BlockDecision(val block: Boolean, val reason: BlockReason?)
 
 /**
  * Pure decision: should the pause screen show for [pkg] now?
- * Fails open: anything missing or expired means "don't block". Free tracking is never affected.
+ * Requires explicit settings and a measured limit or active schedule. Subscription access is
+ * governed separately by FeatureAccess; tracking never depends on a purchase.
  */
 object BlockPolicy {
     private val ALLOW = BlockDecision(false, null)
@@ -50,7 +51,7 @@ object BlockPolicy {
         nowMs: Long,
     ): BlockDecision {
         if (!config.enabled || pkg !in config.apps) return ALLOW
-        if (!entitled(entitlement, nowMs)) return ALLOW
+        if (!FeatureAccess.focusAllowed(entitlement, nowMs)) return ALLOW
         if (snoozedUntilMs > nowMs) return ALLOW
         if (config.schedules.any { it.contains(dayOfWeek, minuteOfDay) }) return BlockDecision(true, BlockReason.SCHEDULE)
         val limit = config.dailyMinutes
@@ -58,7 +59,7 @@ object BlockPolicy {
         return ALLOW
     }
 
-    /** Same live gate for enforcement and capability reporting. */
+    /** Real purchase validity, retained independently of subscription-free release access. */
     fun entitled(entitlement: CachedEntitlement, nowMs: Long): Boolean =
         entitlement.pro && (entitlement.validUntilMs == null || entitlement.validUntilMs > nowMs)
 

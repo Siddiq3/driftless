@@ -233,3 +233,15 @@ test('silent account replacement never reuses the previous account entitlement o
   expect(invalidateEntitlement).toHaveBeenCalledTimes(1);
   expect(latest.status).toBe('signedOut');
 });
+
+test('an API client from a previous login cannot get the new login credentials', async () => {
+  await mount();
+  await login();
+  const previous = signedIn();
+  await act(async () => previous.signOut());
+  await login();
+  jest.mocked(GoogleSignin.signInSilently).mockClear();
+  await expect(previous.getAccessToken()).resolves.toBeNull();
+  expect(GoogleSignin.signInSilently).not.toHaveBeenCalled();
+  await expect(signedIn().getAccessToken()).resolves.toBe('renewed-token');
+});

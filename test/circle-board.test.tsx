@@ -104,10 +104,10 @@ afterEach(async () => {
   if (tree) await act(async () => tree.unmount());
   jest.restoreAllMocks();
 });
-it('requires login before sharing invites or creating a battle', async () => {
+it('requires login before sharing invites or viewing battles', async () => {
   await mount();
   await tap(inviteLabels()[0]!);
-  await tap('Start a 2-person battle');
+  await tap('View your battles');
   expect(router.push).toHaveBeenCalledWith('/welcome');
   expect(mockApi.createInvite).not.toHaveBeenCalled();
   expect(mockApi.createChallenge).not.toHaveBeenCalled();
@@ -134,20 +134,21 @@ it('shares a personal invite only after login', async () => {
   expect(mockApi.createInvite).toHaveBeenCalledTimes(1);
   expect(Share.share).toHaveBeenCalledWith({ message: expect.stringContaining('FRIENDCODE') });
 });
-it('creates a two-person battle with a shareable joining code', async () => {
+it('opens the battles screen without a standalone battle creation button', async () => {
   mockStatus = 'signedIn';
   await mount();
-  await tap('Start a 2-person battle');
-  expect(mockApi.createChallenge).toHaveBeenCalledWith(
-    expect.objectContaining({ maxMembers: 2, metric: 'fewest_views' }),
-  );
-  expect(Share.share).toHaveBeenCalledWith({ message: expect.stringContaining('battle-123') });
+  expect(
+    tree.root.findAll((node) => node.props.accessibilityLabel === 'Start a 2-person battle'),
+  ).toHaveLength(0);
+  await tap('View your battles');
+  expect(mockApi.createChallenge).not.toHaveBeenCalled();
+  expect(Share.share).not.toHaveBeenCalled();
   expect(router.push).toHaveBeenCalledWith('/challenges');
 });
-it('shows exactly five unique invite prompts and keeps them stable while opening sign-in', async () => {
+it('shows four invites alongside You and keeps them stable while opening sign-in', async () => {
   await mount();
   const labels = inviteLabels();
-  expect(labels).toHaveLength(5);
+  expect(labels).toHaveLength(4);
   await tap(labels[0]!);
   expect(inviteLabels()).toEqual(labels);
   await tap('Close sign-in');
@@ -157,8 +158,8 @@ it('changes the ordering on the next visit even if randomness repeats', () => {
   jest.spyOn(Math, 'random').mockReturnValue(0.5);
   const first = shuffledInvitePrompts();
   const second = shuffledInvitePrompts(first);
-  expect(second).toHaveLength(5);
-  expect(new Set(second.map((row) => row.label)).size).toBe(5);
+  expect(second).toHaveLength(4);
+  expect(new Set(second.map((row) => row.label)).size).toBe(4);
   expect(second).not.toEqual(first);
 });
 it('allows browsing dates without login and disables future dates', async () => {

@@ -1,14 +1,9 @@
 import { Redirect } from 'expo-router';
 import { useSession } from '@/auth/session';
-import { Screen } from '@/ui/kit';
 import { Dashboard } from '@/ui/Focus';
 
 export default function Home() {
   const session = useSession();
   if (session.status !== 'signedIn') return <Redirect href="/welcome" />;
-  return (
-    <Screen>
-      <Dashboard />
-    </Screen>
-  );
+  return <Dashboard />;
 }

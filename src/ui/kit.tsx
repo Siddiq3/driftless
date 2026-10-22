@@ -36,7 +36,7 @@ const PAGE_DETAILS: Record<string, { title: string; mark: string }> = {
   '/challenges': { title: 'Challenges', mark: '⚑' },
   '/privacy': { title: 'Privacy', mark: '◇' },
   '/disclosure': { title: 'Enable counting', mark: '▥' },
-  '/pro': { title: 'Driftless Pro', mark: '✦' },
+  '/pro': { title: 'Feature access', mark: '✦' },
   '/settings': { title: 'Settings', mark: '◇' },
 };
 
@@ -82,12 +82,16 @@ export function T({
 
 export function Screen({
   children,
+  topBanner,
+  tabBarStyle,
   contentStyle,
   hideHeader = false,
   hideTabs = false,
   backgroundColor,
 }: {
   children: ReactNode;
+  topBanner?: ReactNode;
+  tabBarStyle?: ViewStyle;
   contentStyle?: ViewStyle;
   hideHeader?: boolean;
   hideTabs?: boolean;
@@ -117,6 +121,7 @@ export function Screen({
   ] as const;
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: backgroundColor ?? t.bg }}>
+      {topBanner}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -159,6 +164,7 @@ export function Screen({
               backgroundColor: backgroundColor ?? (path === '/progress' ? t.bg : t.surface),
               borderColor: backgroundColor ?? (path === '/progress' ? t.bg : t.border),
             },
+            tabBarStyle,
           ]}
         >
           {tabs.map((tab) => {

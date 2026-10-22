@@ -1,4 +1,4 @@
-import { candidateCount } from '@/tracking/candidateCount';
+import { candidateCount, homeAppCount } from '@/tracking/candidateCount';
 import type { Daily, TrackingHealth } from 'tracking-android';
 const daily: Daily = {
   localDate: '2026-10-19',
@@ -22,4 +22,24 @@ test('never substitutes unknown time, no events or uninstalled-app data for a co
   ).toBeNull();
   expect(candidateCount({ ...daily, apps: [{ ...daily.apps[0]!, views: 0 }] }, health)).toBeNull();
   expect(candidateCount(daily, { ...health, apps: [] })).toBeNull();
+});
+
+test('home app counts match the unvalidated local total and refresh with new observations', () => {
+  expect(homeAppCount(daily, health, 'youtube')).toBe(candidateCount(daily, health));
+  const updated = { ...daily, apps: [{ ...daily.apps[0]!, views: 3 }] };
+  expect(homeAppCount(updated, health, 'youtube')).toBe(3);
+  expect(candidateCount(updated, health)).toBe(3);
+});
+
+test('home keeps unavailable counts unknown and does not invent video counts for minutes-only apps', () => {
+  expect(homeAppCount(null, health, 'youtube')).toBeNull();
+  expect(homeAppCount(daily, null, 'youtube')).toBeNull();
+  expect(homeAppCount(daily, health, 'missing')).toBeNull();
+  expect(homeAppCount({ ...daily, heartbeatMinutes: 0 }, health, 'youtube')).toBeNull();
+  expect(homeAppCount({ ...daily, apps: [] }, health, 'youtube')).toBeNull();
+  const minutesOnly = {
+    ...health,
+    apps: [{ ...health.apps[0]!, videoDetectionImplemented: false }],
+  };
+  expect(homeAppCount(daily, minutesOnly, 'youtube')).toBeNull();
 });

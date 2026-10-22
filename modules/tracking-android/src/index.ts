@@ -28,6 +28,8 @@ export type TrackingHealth = {
   debugBuild: boolean;
   /** Current native entitlement gate, absent on older binaries. */
   blockingEntitled?: boolean;
+  /** Release access policy; absent in older, subscription-gated binaries. */
+  subscriptionRequired?: boolean;
   /** Present only in binaries with daily feed limits and timed breaks. */
   feedLimitsImplemented?: boolean;
   apps: TrackedApp[];

@@ -84,6 +84,7 @@ class TrackingModule : Module() {
                 "lastEventMs" to DriftlessAccessibilityService.lastEventMs.toDouble(),
                 "heartbeatMinutesToday" to store.heartbeatMinutes(today),
                 "usageAccessGranted" to UsageReader.granted(ctx),
+                "subscriptionRequired" to app.driftless.tracking.core.FeatureAccess.SUBSCRIPTIONS_REQUIRED,
                 "blockingEntitled" to app.driftless.tracking.core.BlockPolicy.entitled(
                     TrackingPrefs(ctx).entitlement, System.currentTimeMillis(),
                 ),
@@ -212,7 +213,7 @@ class TrackingModule : Module() {
             GoalNotifier.check(ctx, SqliteStore.get(ctx), TrackingPrefs(ctx))
         }
 
-        /** Pro blocking settings. Enforcement also requires a server-verified entitlement (setEntitlement). */
+        /** Saved blocking settings; FeatureAccess controls the current subscription requirement. */
         Function("setBlocking") { c: Map<String, Any?> ->
             @Suppress("UNCHECKED_CAST")
             val schedules = (c["schedules"] as? List<Map<String, Any?>>).orEmpty().map { s ->

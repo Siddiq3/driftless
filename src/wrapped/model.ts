@@ -25,22 +25,37 @@ export function defaultEnd(period: WrapPeriod) {
 export function readPhoneWrap(period: WrapPeriod, end: string): Recap {
   const bounds = wrapBounds(period, end);
   const health = Tracking.health();
-  Tracking.refreshUsage(30);
+  const tz = currentTimeZone();
+  try {
+    Tracking.refreshUsage(7);
+  } catch {
+    // Saved video counts and events remain usable if Usage Access cannot be refreshed.
+  }
+  const packages = new Set(health.apps.map((app) => app.package));
   const days = [];
   const appTotals = new Map<string, number>();
   for (let date = bounds.previousFrom; date <= end; date = addDays(date, 1)) {
     const daily = Tracking.daily(date);
-    const day = aggregateDay(daily, health, 'this-phone', currentTimeZone());
+    const aggregate = aggregateDay(daily, health, 'this-phone', tz);
+    const localApps = daily.apps.filter((app) => packages.has(app.package));
+    const localViews = localApps.reduce((total, app) => total + app.views, 0);
+    // Personal recaps follow saved on-phone counts, just like Home and the popup.
+    // Cloud aggregates and competitive scores keep their separate accuracy gates.
+    const day = {
+      ...aggregate,
+      views:
+        packages.size > 0 && (daily.heartbeatMinutes > 0 || localViews > 0) ? localViews : null,
+    };
     days.push(day);
     if (date >= bounds.from && day.views !== null) {
-      for (const app of daily.apps)
-        if (health.apps.some((a) => a.package === app.package && a.installed && a.validated))
-          appTotals.set(app.package, (appTotals.get(app.package) ?? 0) + app.views);
+      for (const app of localApps)
+        appTotals.set(app.package, (appTotals.get(app.package) ?? 0) + app.views);
     }
   }
   let details: WrapDetails = { available: false, days: [] };
   try {
-    details = Tracking.wrappedDetails(bounds.from, end) ?? details;
+    details = Tracking.localActivityDetails(bounds.from, end) ?? details;
+    if (!details.available) details = Tracking.wrappedDetails(bounds.from, end) ?? details;
   } catch {
     /* Older native binaries retain aggregate recaps. */
   }
@@ -64,9 +79,6 @@ export function completePhoneWrap(
   details: WrapDetails,
 ): Recap {
   const summary = summarizeWrap(period, end, days);
-  const hourly = Array.from({ length: 24 }, (_, i) =>
-    details.days.reduce((n, day) => n + (day.hourlyViews[i] ?? 0), 0),
-  );
   const measuredDetails = details.available
     ? details.days.filter(
         (d) =>
@@ -75,6 +87,14 @@ export function completePhoneWrap(
           days.some((row) => row.localDate === d.localDate && row.views !== null),
       )
     : [];
+  const validHours = measuredDetails.every(
+    (day) =>
+      day.hourlyViews.length === 24 &&
+      day.hourlyViews.every((value) => Number.isInteger(value) && value >= 0),
+  );
+  const hourly = Array.from({ length: 24 }, (_, i) =>
+    measuredDetails.reduce((total, day) => total + (day.hourlyViews[i] ?? 0), 0),
+  );
   const sessions = measuredDetails.flatMap((d) => d.sessions).sort((a, b) => a.startMs - b.startMs);
   let returnCount = 0;
   for (let i = 1; i < sessions.length; i++) {
@@ -83,7 +103,12 @@ export function completePhoneWrap(
   }
   // A timestamped subset cannot be used to claim a percentage of all counted videos.
   const hours =
-    details.available && hourly.reduce((a, b) => a + b, 0) === summary.views.value ? hourly : null;
+    details.available &&
+    validHours &&
+    summary.views.value !== null &&
+    hourly.reduce((a, b) => a + b, 0) === summary.views.value
+      ? hourly
+      : null;
   return {
     ...summary,
     source: 'phone',

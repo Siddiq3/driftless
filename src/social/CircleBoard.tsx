@@ -12,7 +12,7 @@ import { ApiError, type ApiClient } from '@/api/client';
 import { useSession } from '@/auth/session';
 import { InviteSignInSheet } from '@/auth/InviteSignInSheet';
 import { currentTimeZone, syncNow } from '@/sync/run';
-import { Button, Details, Notice, Screen, T } from '@/ui/kit';
+import { Button, Notice, Screen, T } from '@/ui/kit';
 import { Icon } from '@/ui/Icon';
 import { shuffledInvitePrompts, type InvitePrompt } from './invitePrompts';
 const colors = {
@@ -201,6 +201,8 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
       .filter((friend) => friend.status === 'accepted')
       .map((friend) => ({ ...friend, daily: null }));
   const ownViews = api ? (currentComparison?.self.views ?? null) : total;
+  const visibleFriends = accepted.slice(0, 4);
+  const visibleInvitations = invitations.slice(0, 4 - visibleFriends.length);
   const requests = friends.filter((friend) => friend.status === 'pending_in').length;
   const dateLabel =
     date === today
@@ -294,7 +296,7 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
         </T>
       </View>
 
-      {accepted.map((friend) => (
+      {visibleFriends.map((friend) => (
         <View key={friend.userId} style={styles.friendRow}>
           <Icon name="friends" color={colors.muted} size={23} />
           <View style={{ flex: 1 }}>
@@ -325,9 +327,9 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
         </View>
       ))}
       <View style={styles.invites}>
-        {invitations.map(({ label, emoji }, index) => (
+        {visibleInvitations.map(({ label, emoji }, index) => (
           <View key={label} style={styles.inviteRow}>
-            <T style={styles.position}>{accepted.length + index + 2}</T>
+            <T style={styles.position}>{visibleFriends.length + index + 2}</T>
             <T style={styles.inviteText}>
               {label} {emoji}
             </T>
@@ -354,11 +356,6 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
           />
         )}
         {error && <Notice title="Try again" body={error} tone="warn" />}
-        <Button
-          label={busy ? 'Getting ready…' : 'Start a 2-person battle'}
-          busy={busy}
-          onPress={() => void battle()}
-        />
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="View your battles"
@@ -370,12 +367,6 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
           <T style={{ color: colors.muted, fontSize: 13 }}>View your battles</T>
           <Icon name="chevron" size={16} color={colors.muted} />
         </Pressable>
-        <Details title="How counts compare">
-          <T v="caption" muted>
-            Lower eligible video counts win. Each phone uses its local day. A dash means no shared
-            eligible count. Counts on this phone do not affect cloud scores.
-          </T>
-        </Details>
       </View>
       {managerOpen && (
         <Modal visible animationType="slide" onRequestClose={() => setManagerOpen(false)}>

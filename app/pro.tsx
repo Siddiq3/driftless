@@ -10,6 +10,7 @@ import { buyPro, loadOffers, MANAGE_URL, restorePro, offerDisclosure } from '@/b
 import { Button, Section, Notice, Screen, T, LoadingState } from '@/ui/kit';
 import { VisualBanner } from '@/ui/Focus';
 import { Icon } from '@/ui/Icon';
+import { SUBSCRIPTIONS_REQUIRED } from '@/config/access';
 
 const FEATURES = [
   'Minute-based app pauses',
@@ -18,6 +19,10 @@ const FEATURES = [
 ];
 
 export default function Pro() {
+  return SUBSCRIPTIONS_REQUIRED ? <PaidPro /> : <Redirect href="/blocking" />;
+}
+
+function PaidPro() {
   const s = useSession();
   const api = useApi();
   const [entitlement, setEntitlement] = useState<v1.Entitlement | null>(null);

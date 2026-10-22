@@ -161,4 +161,19 @@ describe('api client', () => {
     });
     expect(f).not.toHaveBeenCalled();
   });
+  it('discards a completed response when backup was cancelled while reading its body', async () => {
+    let allowed = true;
+    const f = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => {
+        allowed = false;
+        return JSON.stringify({ goals: [] });
+      },
+      headers: new Headers(),
+    });
+    await expect(client(f).getGoals(() => allowed)).rejects.toMatchObject({
+      code: 'sync_cancelled',
+    });
+  });
 });

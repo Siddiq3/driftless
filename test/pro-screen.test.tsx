@@ -1,3 +1,9 @@
+let mockSubscriptionsRequired = true;
+jest.mock('../src/config/access', () => ({
+  get SUBSCRIPTIONS_REQUIRED() {
+    return mockSubscriptionsRequired;
+  },
+}));
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import Pro from '../app/pro';
@@ -52,6 +58,7 @@ const tap = async (label: string) => {
   });
 };
 beforeEach(async () => {
+  mockSubscriptionsRequired = true;
   jest.clearAllMocks();
   mockApi.getMe.mockResolvedValue({ data: { userId: 'current-user', entitlement: paid } });
   jest.mocked(restorePro).mockResolvedValue(null);
@@ -82,4 +89,17 @@ test('uses the profile account for purchase and displays the server verification
     expect.objectContaining({ offerToken: 'offer' }),
   );
   expect(content()).toContain('Pro is on. Thank you!');
+});
+
+test('included release redirects old purchase links without loading offers or billing', async () => {
+  await act(async () => tree.unmount());
+  mockSubscriptionsRequired = false;
+  jest.clearAllMocks();
+  await act(async () => {
+    tree = create(<Pro />);
+  });
+  expect(mockApi.getMe).not.toHaveBeenCalled();
+  expect(buyPro).not.toHaveBeenCalled();
+  expect(restorePro).not.toHaveBeenCalled();
+  expect(content()).not.toContain('Subscribe');
 });

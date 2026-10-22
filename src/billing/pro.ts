@@ -4,6 +4,7 @@ import { CryptoDigestAlgorithm, digestStringAsync } from 'expo-crypto';
 import { Tracking } from 'tracking-android';
 import type { ApiClient } from '../api/client';
 import { entitlementGeneration } from './cache';
+import { SUBSCRIPTIONS_REQUIRED } from '../config/access';
 
 export const PRO_PRODUCT = 'driftless_pro';
 export const MANAGE_URL = `https://play.google.com/store/account/subscriptions?sku=${PRO_PRODUCT}&package=com.siddiqkolimi.driftless`;
@@ -29,6 +30,7 @@ export function cacheEntitlement(
 }
 
 export async function loadOffers(): Promise<Offer[]> {
+  if (!SUBSCRIPTIONS_REQUIRED) return [];
   const subs = await Billing.subscriptions([PRO_PRODUCT]);
   return subs.find((s) => s.productId === PRO_PRODUCT)?.offers ?? [];
 }
@@ -51,6 +53,8 @@ export async function buyPro(
   userId: string,
   offer: Offer,
 ): Promise<v1.Entitlement> {
+  if (!SUBSCRIPTIONS_REQUIRED)
+    throw new Error('All features are included. Subscriptions are not on sale.');
   const generation = entitlementGeneration();
   return serializedBilling(generation, async () => {
     const accountId = await accountIdFor(userId);

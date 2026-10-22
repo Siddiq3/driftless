@@ -75,12 +75,14 @@ class LocalActivityDetailsTest {
         assertTrue(days("2026-10-20").isEmpty())
     }
 
-    @Test fun adsOtherAppsAndOtherRuleVersionsStayExcludedButMissingEventVersionIsAllowedLocally() {
+    @Test fun localHistoryKeepsOlderRulesWhileAdsAndUnsupportedAppsStayExcluded() {
         store.recordView(event("local", ig).copy(appVersion = null))
         store.recordView(event("ad", ig).copy(kind = ViewKind.AD_VIEW))
         store.recordView(event("unsupported", "example.other"))
         store.recordView(event("old-rule", yt).copy(ruleVersion = rules.version - 1))
-        assertEquals(1, hours(days("2026-10-19").single()).sum())
+        assertEquals(2, hours(days("2026-10-19").single()).sum())
+        assertEquals(store.daily("2026-10-19").filter { it.pkg in rules.apps }.sumOf { it.views },
+            hours(days("2026-10-19").single()).sum())
         assertEquals(emptyList<Any>(), WrappedDetails.read(context, "2026-10-19", "2026-10-19")["days"])
     }
 

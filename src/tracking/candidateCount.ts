@@ -7,3 +7,16 @@ export function candidateCount(daily: Daily | null, health: TrackingHealth | nul
   if (!rows.some((a) => a.surfaceMs > 0 && a.views > 0)) return null;
   return rows.reduce((n, a) => n + a.views, 0);
 }
+
+/** Home's app breakdown follows the same local fallback as its headline total. */
+export function homeAppCount(
+  daily: Daily | null,
+  health: TrackingHealth | null,
+  packageName: string,
+): number | null {
+  if (!daily || !health || daily.heartbeatMinutes <= 0) return null;
+  const app = health.apps.find((app) => app.package === packageName && app.installed);
+  if (!app || app.videoDetectionImplemented === false) return null;
+  if (!app.validated && candidateCount(daily, health) === null) return null;
+  return daily.apps.find((row) => row.package === packageName)?.views ?? 0;
+}

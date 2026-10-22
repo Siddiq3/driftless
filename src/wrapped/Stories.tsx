@@ -87,11 +87,18 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
             hasViews
               ? 'short videos counted'
               : recap.minutes.value === null
-                ? 'No confirmed counts yet'
+                ? 'No activity recorded for these dates'
                 : 'minutes in supported apps',
           )}
           {!hasData && (
-            <SetupButton label="Enable counting" onPress={() => router.push('/tracking')} />
+            <>
+              <Text style={styles.caption}>
+                {recap.period === 'daily'
+                  ? 'Daily Wrapped covers yesterday. Today’s activity is in Progress.'
+                  : 'Weekly Wrapped covers the last completed Monday–Sunday week. This week’s activity is in Progress.'}
+              </Text>
+              <SetupButton label="View current activity" onPress={() => router.push('/progress')} />
+            </>
           )}
         </>
       ),
@@ -250,11 +257,7 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
         {big('MAKE SPACE\nFOR YOUR DAY', 44)}
         <View style={{ width: '100%', gap: 12 }}>
           <SetupButton label="Set a daily goal" onPress={() => router.push('/goals')} />
-          <SetupButton
-            secondary
-            label="Set app pauses · Pro"
-            onPress={() => router.push('/blocking')}
-          />
+          <SetupButton secondary label="Set app pauses" onPress={() => router.push('/blocking')} />
         </View>
       </>
     ),
@@ -267,7 +270,13 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
       colors: ['#0C1237', '#202F69'],
       label: 'YOUR PEAK',
       message:
-        recap.views.value === 0 ? 'No peak to report.' : 'Hourly detail isn’t available yet.',
+        recap.views.value === 0
+          ? 'No peak to report.'
+          : recap.source === 'synced'
+            ? 'Hourly detail stays on the phone that recorded it.'
+            : !hasViews
+              ? 'No video counts recorded for these dates.'
+              : 'Saved hourly events do not cover this whole count.',
     },
     {
       id: 'sessions',

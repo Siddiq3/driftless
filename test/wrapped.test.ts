@@ -1,6 +1,16 @@
-jest.mock('tracking-android', () => ({ Tracking: {} }));
+jest.mock('tracking-android', () => ({
+  Tracking: {
+    health: jest.fn(),
+    daily: jest.fn(),
+    refreshUsage: jest.fn(),
+    localActivityDetails: jest.fn(),
+    wrappedDetails: jest.fn(),
+  },
+}));
 jest.mock('@/sync/run', () => ({ currentTimeZone: () => 'UTC' }));
-import { completePhoneWrap, peakWindow, clock, personality } from '@/wrapped/model';
+import { completePhoneWrap, peakWindow, clock, personality, readPhoneWrap } from '@/wrapped/model';
+import { Tracking, type Daily, type TrackingHealth } from 'tracking-android';
+import { aggregateDay } from '@/sync/aggregate';
 import { latestWrapEnd, summarizeWrap, wrapBounds } from '@siddiq3/driftless-contracts/domain';
 const day = (localDate: string, views: number | null, deviceId = 'phone') => ({
   localDate,
@@ -93,4 +103,93 @@ test('peak never joins non-contiguous midnight ends; clocks handle midnight', ()
   expect(peakWindow(null)).toBeNull();
   expect(clock(1440)).toBe('12am');
   expect(clock(1268)).toBe('9:08pm');
+});
+
+test.each(['daily', 'weekly'] as const)(
+  '%s local wraps show stored counts, apps and hours without cloud approval',
+  (period) => {
+    const health = {
+      apps: [{ package: 'youtube', label: 'YouTube Shorts', installed: true, validated: false }],
+      usageAccessGranted: false,
+    } as TrackingHealth;
+    const raw: Daily = {
+      localDate: '2026-10-21',
+      heartbeatMinutes: 1,
+      coverage: 0.1,
+      apps: [
+        { package: 'youtube', views: 6, adViews: 1, surfaceMs: 9000, unknownMs: 0, usageMs: 0 },
+      ],
+    };
+    jest.mocked(Tracking.health).mockReturnValue(health);
+    jest
+      .mocked(Tracking.daily)
+      .mockImplementation((date) =>
+        date === raw.localDate
+          ? raw
+          : { localDate: date!, heartbeatMinutes: 0, coverage: 0, apps: [] },
+      );
+    jest.mocked(Tracking.localActivityDetails).mockReturnValue({
+      available: true,
+      days: [
+        {
+          localDate: raw.localDate,
+          hourlyViews: Array.from({ length: 24 }, (_, i) => (i === 8 ? 6 : 0)),
+          sessions: [{ ...session(1000, 10000), package: 'youtube', views: 6 }],
+        },
+      ],
+    });
+    const recap = readPhoneWrap(period, '2026-10-21');
+    expect(recap.views).toEqual({ value: 6, trackedDays: 1 });
+    expect(recap.apps).toEqual([{ package: 'youtube', label: 'YouTube Shorts', views: 6 }]);
+    expect(recap.hours?.[8]).toBe(6);
+    expect(recap.sessions).toHaveLength(1);
+    expect(aggregateDay(raw, health, 'phone', 'UTC').views).toBeNull();
+  },
+);
+
+test('expired heartbeats or a failed usage refresh do not hide retained video counts', () => {
+  jest.mocked(Tracking.refreshUsage).mockImplementationOnce(() => {
+    throw new Error('permission unavailable');
+  });
+  jest.mocked(Tracking.health).mockReturnValue({
+    apps: [{ package: 'youtube', label: 'YouTube Shorts', installed: false, validated: false }],
+    usageAccessGranted: false,
+  } as TrackingHealth);
+  jest
+    .mocked(Tracking.daily)
+    .mockImplementation((date) => ({
+      localDate: date!,
+      heartbeatMinutes: 0,
+      coverage: 0,
+      apps:
+        date === '2026-10-21'
+          ? [{ package: 'youtube', views: 6, adViews: 0, surfaceMs: 0, unknownMs: 0, usageMs: 0 }]
+          : [],
+    }));
+  const recap = readPhoneWrap('daily', '2026-10-21');
+  expect(recap.views.value).toBe(6);
+  expect(recap.apps[0]?.views).toBe(6);
+});
+
+test('hourly totals ignore other dates and reject malformed detail without inventing zero counts', () => {
+  const hours = Array.from({ length: 24 }, (_, i) => (i === 8 ? 6 : 0));
+  const rows = [day('2026-10-21', 6)];
+  expect(
+    completePhoneWrap('daily', '2026-10-21', rows, [], {
+      available: true,
+      days: [
+        { localDate: '2026-10-20', hourlyViews: hours, sessions: [] },
+        { localDate: '2026-10-21', hourlyViews: hours, sessions: [] },
+      ],
+    }).hours,
+  ).toEqual(hours);
+  expect(
+    completePhoneWrap('daily', '2026-10-21', rows, [], {
+      available: true,
+      days: [{ localDate: '2026-10-21', hourlyViews: [6], sessions: [] }],
+    }).hours,
+  ).toBeNull();
+  expect(
+    completePhoneWrap('weekly', '2026-10-18', [], [], { available: true, days: [] }).views.value,
+  ).toBeNull();
 });

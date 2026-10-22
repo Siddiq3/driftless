@@ -23,14 +23,14 @@ export const INVITE_PROMPTS = [
 
 export type InvitePrompt = (typeof INVITE_PROMPTS)[number];
 
-/** Five unique rows per visit; never repeat the exact previous ordering. */
+/** Four unique invites fill the five-row board alongside You. */
 export function shuffledInvitePrompts(previous: readonly InvitePrompt[] = []): InvitePrompt[] {
   const pool = [...INVITE_PROMPTS];
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [pool[i], pool[j]] = [pool[j]!, pool[i]!];
   }
-  const selected = pool.slice(0, 5);
+  const selected = pool.slice(0, 4);
   if (selected.every((row, index) => row.label === previous[index]?.label)) {
     selected.push(selected.shift()!);
   }

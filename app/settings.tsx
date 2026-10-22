@@ -17,9 +17,9 @@ import { Details, Toggle, Button, Section, Notice, Screen, T } from '@/ui/kit';
 const CAPABILITY_LABELS: Record<keyof v1.Capabilities, string> = {
   videoCounting: 'Reels & Shorts counting',
   minutesTracking: 'Time in apps',
-  blocking: 'App blocking (Pro)',
-  schedules: 'Schedules (Pro)',
-  advancedAnalytics: 'Advanced analytics (Pro)',
+  blocking: 'App blocking',
+  schedules: 'Schedules',
+  advancedAnalytics: 'Advanced analytics',
   socialSharingOfUsage: 'Share progress with friends',
 };
 
@@ -65,7 +65,7 @@ export default function Settings() {
           cacheEntitlement(data.entitlement, Date.now(), accountGeneration);
         } catch {
           // A missing native entitlement bridge does not make the backend unavailable.
-          // Runtime support and native health below still fail closed for Pro features.
+          // Runtime support and native health below still determine feature availability.
         }
         try {
           setHealth(Tracking.health());
@@ -222,7 +222,7 @@ export default function Settings() {
         <>
           <Section>
             <T v="heading">{load.me.profile.displayName ?? 'Welcome'}</T>
-            <T muted>Plan: {load.me.entitlement.tier === 'pro' ? 'Pro' : 'Free'}</T>
+            <T muted>All features included · No subscription needed</T>
           </Section>
           <Section>
             <View
@@ -272,7 +272,11 @@ export default function Settings() {
         ))}
       </Details>
       <Button kind="secondary" label="Privacy & data" onPress={() => router.push('/privacy')} />
-      <Button kind="secondary" label="Driftless Pro" onPress={() => router.push('/pro')} />
+      <Button
+        kind="secondary"
+        label="Focus & app pauses"
+        onPress={() => router.push('/blocking')}
+      />
       <Button kind="secondary" label="Sign out" onPress={() => void s.signOut()} />
     </Screen>
   );

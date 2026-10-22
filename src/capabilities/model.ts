@@ -1,5 +1,6 @@
 import type { v1 } from '@siddiq3/driftless-contracts';
 import type { TrackingHealth } from 'tracking-android';
+import { SUBSCRIPTIONS_REQUIRED } from '../config/access';
 
 export type NativeSupport = { counting: boolean; minutes: boolean; blocking: boolean };
 export type CapabilityStatus = { available: boolean; detail: string };
@@ -66,12 +67,16 @@ export function capabilityReport({
   const blocking = (key: 'blocking' | 'schedules'): CapabilityStatus => {
     if (!support.blocking) return unavailable('Blocking module unavailable');
     if (accessibility) return unavailable(accessibility);
-    const gate = cloud(key);
-    if (gate) return unavailable(gate);
-    if (me!.entitlement.tier !== 'pro' || !['active', 'grace'].includes(me!.entitlement.state))
-      return unavailable('Verified Pro entitlement required');
-    if (h?.blockingEntitled !== true)
-      return unavailable('Native Pro verification unavailable or expired; refresh your profile');
+    if (SUBSCRIPTIONS_REQUIRED) {
+      const gate = cloud(key);
+      if (gate) return unavailable(gate);
+      if (me!.entitlement.tier !== 'pro' || !['active', 'grace'].includes(me!.entitlement.state))
+        return unavailable('Verified Pro entitlement required');
+      if (h?.blockingEntitled !== true)
+        return unavailable('Native Pro verification unavailable or expired; refresh your profile');
+    } else if (h?.subscriptionRequired !== false) {
+      return unavailable('Install the latest Android build for subscription-free focus features');
+    }
     // This report describes configurability, never an assertion that enforcement is active.
     return available(
       key === 'blocking'

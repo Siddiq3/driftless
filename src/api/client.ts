@@ -66,6 +66,7 @@ export function createApiClient(o: ApiClientOptions) {
       clearTimeout(timer);
     }
     const text = await res.text();
+    check();
     let json: unknown = null;
     try {
       json = text ? JSON.parse(text) : null;

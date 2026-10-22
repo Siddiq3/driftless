@@ -1,4 +1,5 @@
 import type { BlockingConfig, TrackingHealth } from 'tracking-android';
+import { SUBSCRIPTIONS_REQUIRED } from '../config/access';
 
 export type ProtectionStatus = { title: string; body: string; tone: 'info' | 'warn' };
 
@@ -21,7 +22,9 @@ export function protectionStatus(
     return inactive('Tracking service unavailable. Review Accessibility settings.');
   const selected = health.apps.filter((app) => app.installed && config.apps.includes(app.package));
   if (!selected.length) return inactive('Select an installed app to protect.');
-  if (health.blockingEntitled !== true)
+  if (!SUBSCRIPTIONS_REQUIRED && health.subscriptionRequired !== false)
+    return inactive('Install the latest Android build for subscription-free focus features.');
+  if (SUBSCRIPTIONS_REQUIRED && health.blockingEntitled !== true)
     return inactive('Current Pro verification required. Sign in and review your subscription.');
   const appRule = config.dailyMinutes !== null || config.schedules.length > 0;
   const videoRule = Boolean(config.enforceVideoGoal || config.breaksEnabled);
