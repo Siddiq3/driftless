@@ -18,6 +18,7 @@ __pycache__/
 
 # Native module build outputs
 /modules/*/android/build/
+/modules/*/android/.gradle/
 
 # Local IDE state
 .idea/
