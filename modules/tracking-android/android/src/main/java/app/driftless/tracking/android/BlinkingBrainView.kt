@@ -74,12 +74,28 @@ class BlinkingBrainView(context: Context) : ImageView(context) {
         canvas.translate(paddingLeft.toFloat(), paddingTop.toFloat())
         canvas.concat(imageMatrix)
         canvas.scale(art.intrinsicWidth / 384f, art.intrinsicHeight / 384f)
+        // ScrollSnooze 1254px masters, with eye bounds normalized to the 384-unit canvas.
         if (mood == CountBadgeMood.DRAINED) {
-            eyelid(canvas, 134f, 180f, 192f, 216f, -14f)
-            eyelid(canvas, 242f, 173f, 294f, 205f, 0f)
+            eyelid(canvas, 131f, 198f, 181f, 221f, -10f)
+            eyelid(canvas, 220f, 187f, 273f, 209f, -4f)
+            // A restrained frown follows the heavy blink; happy never gets a drained mouth.
+            paint.style = Paint.Style.FILL
+            paint.color = Color.rgb(196, 160, 255)
+            paint.alpha = (255 * blinkProgress).toInt()
+            canvas.drawOval(190f, 210f, 216f, 227f, paint)
+            paint.style = Paint.Style.STROKE
+            paint.strokeWidth = 3f
+            paint.strokeCap = Paint.Cap.ROUND
+            paint.color = Color.rgb(36, 22, 66)
+            paint.alpha = (255 * blinkProgress).toInt()
+            lidPath.reset()
+            lidPath.moveTo(195f, 220f)
+            lidPath.quadTo(203f, 208f - 3f * blinkProgress, 211f, 220f)
+            canvas.drawPath(lidPath, paint)
+            paint.alpha = 255
         } else {
-            eyelid(canvas, 143f, 164f, 194f, 213f, -8f)
-            eyelid(canvas, 243f, 148f, 284f, 195f, -7f)
+            eyelid(canvas, 132f, 168f, 181f, 213f, -8f)
+            eyelid(canvas, 223f, 156f, 270f, 199f, -7f)
         }
         canvas.restoreToCount(save)
     }
@@ -97,7 +113,7 @@ class BlinkingBrainView(context: Context) : ImageView(context) {
         val edge = top + (height + kotlin.math.abs(tilt) + 8f) * blinkProgress
         paint.style = Paint.Style.FILL
         paint.shader = LinearGradient(left, top, right, bottom,
-            Color.rgb(255, 161, 139), Color.rgb(239, 111, 98), Shader.TileMode.CLAMP)
+            Color.rgb(196, 160, 255), Color.rgb(216, 153, 239), Shader.TileMode.CLAMP)
         lidPath.reset()
         lidPath.moveTo(left - 8, top - 12)
         lidPath.lineTo(right + 8, top - 12)
@@ -106,7 +122,7 @@ class BlinkingBrainView(context: Context) : ImageView(context) {
         lidPath.close()
         canvas.drawPath(lidPath, paint)
         paint.shader = null
-        paint.color = Color.rgb(100, 37, 28)
+        paint.color = Color.rgb(36, 22, 66)
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = 2.4f
         lidPath.reset()

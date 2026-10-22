@@ -29,7 +29,7 @@ class FeedPauseOverlay(private val service: AccessibilityService) {
             val content = LinearLayout(service).apply {
                 orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER
                 val pad = (24 * resources.displayMetrics.density).toInt()
-                setPadding(pad, pad, pad, pad); setBackgroundColor(Color.rgb(18, 14, 9))
+                setPadding(pad, pad, pad, pad); setBackgroundColor(Color.rgb(16, 16, 43))
             }
             content.addView(TextView(service).apply {
                 text = "Take a breath"; textSize = 30f; setTextColor(Color.WHITE)
@@ -44,7 +44,7 @@ class FeedPauseOverlay(private val service: AccessibilityService) {
                 service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
                 // Keep interception until classification confirms the feed was left.
             }
-            button("Open Driftless") {
+            button("Open ScrollSnooze") {
                 service.packageManager.getLaunchIntentForPackage(service.packageName)?.let {
                     it.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK); service.startActivity(it)
                 }
@@ -52,12 +52,12 @@ class FeedPauseOverlay(private val service: AccessibilityService) {
             }
             bypass = button("Bypass") { bypassAction?.invoke() }
             content.addView(TextView(service).apply {
-                text = "Home and Back remain available. You can turn pauses off in Driftless or Android Accessibility settings. Media may continue playing underneath."
+                text = "Home and Back remain available. You can turn pauses off in ScrollSnooze or Android Accessibility settings. Media may continue playing underneath."
                 textSize = 13f; setTextColor(Color.LTGRAY)
             })
             val view = ScrollView(service).apply { isFillViewport = true; addView(content) }
             val params = WindowManager.LayoutParams(-1, -1, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, PixelFormat.TRANSLUCENT).apply { title = "Driftless feed pause" }
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, PixelFormat.TRANSLUCENT).apply { title = "ScrollSnooze feed pause" }
             try { wm.addView(view, params); root = view }
             catch (_: RuntimeException) { summary = null; bypass = null; return }
         }

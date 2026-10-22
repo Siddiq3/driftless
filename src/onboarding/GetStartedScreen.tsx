@@ -41,15 +41,15 @@ export function GetStartedScreen({
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
           <BrandMark size={34} />
-          <T style={{ ...display, color: '#FFE1A0', fontSize: 23, letterSpacing: -0.5 }}>
-            DRIFTLESS
+          <T style={{ ...display, color: '#E4C5FF', fontSize: 20, letterSpacing: -0.5 }}>
+            SCROLLSNOOZE
           </T>
         </View>
         <View
           accessibilityLabel="App language: English"
           style={{
             borderRadius: 24,
-            backgroundColor: '#201F1C',
+            backgroundColor: '#211C3D',
             paddingHorizontal: 15,
             paddingVertical: 10,
           }}

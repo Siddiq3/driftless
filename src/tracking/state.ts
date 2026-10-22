@@ -25,7 +25,7 @@ export const STATE_COPY: Record<TrackingState, { title: string; body: string }> 
   },
   needs_service: {
     title: 'Turn on the counter in Settings',
-    body: 'Open Accessibility settings, find “Driftless Reels & Shorts counter” and switch it on. You can switch it off there at any time.',
+    body: 'Open Accessibility settings, find “ScrollSnooze Reels & Shorts counter” and switch it on. You can switch it off there at any time.',
   },
   enabled_not_running: {
     title: 'Android has stopped the counter',

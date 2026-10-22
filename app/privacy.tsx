@@ -11,7 +11,7 @@ import { clearSetup } from '@/onboarding/store';
 import { useOnboarding } from '@/onboarding/context';
 import { VisualBanner } from '@/ui/Focus';
 
-/** Wipes everything Driftless stored on this phone (native counts + app database). */
+/** Wipes everything ScrollSnooze stored on this phone (native counts + app database). */
 async function wipePhone(): Promise<void> {
   Tracking.wipeLocalData();
   const db = await getDb();
@@ -105,8 +105,8 @@ export default function Privacy() {
       <Section>
         <T v="heading">Turn counting off</T>
         <T muted>
-          Switch off “Driftless Reels &amp; Shorts counter” in Accessibility settings, and Usage
-          Access for Driftless.
+          Switch off “ScrollSnooze Reels &amp; Shorts counter” in Accessibility settings, and Usage
+          Access for ScrollSnooze.
         </T>
         <Button
           kind="secondary"
@@ -134,7 +134,7 @@ export default function Privacy() {
                 .then((d) =>
                   Share.share({
                     message: JSON.stringify(d, null, 2),
-                    title: 'Driftless data export',
+                    title: 'ScrollSnooze data export',
                   }),
                 )
                 .catch((e: unknown) =>

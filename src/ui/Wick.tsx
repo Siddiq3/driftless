@@ -49,7 +49,7 @@ export function Wick({
           cx={160}
           cy={155}
           r={132}
-          fill="#FFD09D"
+          fill="#C4A0FF"
           opacity={off ? 0.025 : 0.045 + Math.min(1, Math.max(0, glow)) * 0.03}
         />
         <Circle
@@ -57,13 +57,13 @@ export function Wick({
           cy={155}
           r={125}
           fill="none"
-          stroke="#4A3E32"
+          stroke="#493A63"
           strokeWidth={1}
           strokeDasharray="2 9"
         />
-        <Circle cx={160} cy={155} r={139} fill="none" stroke="#352C23" strokeWidth={4} />
+        <Circle cx={160} cy={155} r={139} fill="none" stroke="#30264E" strokeWidth={4} />
         <Ellipse cx={160} cy={279} rx={61} ry={7} fill="#000" opacity={0.22} />
-        <Path d="m55 85 3-8 3 8 8 3-8 3-3 8-3-8-8-3Z" fill="#FFD09D" opacity={0.6} />
+        <Path d="m55 85 3-8 3 8 8 3-8 3-3 8-3-8-8-3Z" fill="#C4A0FF" opacity={0.6} />
         <Circle cx={265} cy={212} r={3} fill={color} opacity={0.7} />
         <Path d="M244 64v10m-5-5h10" stroke={color} strokeWidth={2} strokeLinecap="round" />
         {celebrate && (
@@ -137,21 +137,21 @@ export function Wick({
           <Ellipse cx={107} cy={190} rx={15} ry={8} fill="#D97E77" opacity={off ? 0.18 : 0.45} />
           <Ellipse cx={213} cy={190} rx={15} ry={8} fill="#D97E77" opacity={off ? 0.18 : 0.45} />
           {tired || off ? (
-            <G fill="none" stroke="#533A30" strokeWidth={5} strokeLinecap="round">
+            <G fill="none" stroke="#493A63" strokeWidth={5} strokeLinecap="round">
               <Path d={off ? 'M116 170h17m54 0h17' : 'm116 168 17 5m54 0 17-5'} />
             </G>
           ) : (
-            <G fill="#533A30">
+            <G fill="#493A63">
               <Ellipse cx={125} cy={170} rx={6} ry={9} />
               <Ellipse cx={195} cy={170} rx={6} ry={9} />
-              <Circle cx={127} cy={167} r={2} fill="#FFF9ED" />
-              <Circle cx={197} cy={167} r={2} fill="#FFF9ED" />
+              <Circle cx={127} cy={167} r={2} fill="#F7F2FF" />
+              <Circle cx={197} cy={167} r={2} fill="#F7F2FF" />
             </G>
           )}
           <Path
             d={tired ? 'M150 206q10-6 20 0' : off ? 'M152 203h16' : 'M145 199q15 18 30 0'}
             fill="none"
-            stroke="#533A30"
+            stroke="#493A63"
             strokeWidth={4}
             strokeLinecap="round"
           />

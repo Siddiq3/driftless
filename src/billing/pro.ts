@@ -65,7 +65,7 @@ export async function buyPro(
       throw new Error('Account changed. Please try again.');
     if (purchase.state === 'pending')
       throw new Error(
-        'Payment is pending. Reopen Driftless after Google Play confirms it, or use Restore purchase.',
+        'Payment is pending. Reopen ScrollSnooze after Google Play confirms it, or use Restore purchase.',
       );
     if (purchase.state !== 'purchased')
       throw new Error('Purchase is not complete. Try Restore purchase after payment finishes.');

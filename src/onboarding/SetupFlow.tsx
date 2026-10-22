@@ -238,7 +238,7 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
     setBusy(true);
     setError(null);
     try {
-      await Share.share({ title: 'Try Driftless', message: appInviteMessage() });
+      await Share.share({ title: 'Try ScrollSnooze', message: appInviteMessage() });
       setBusy(false);
       await move(15);
     } catch {
@@ -249,11 +249,11 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
   const pin = () => {
     try {
       if (!Tracking.widgetSupported()) {
-        setError('Long-press your home screen → Widgets → Driftless.');
+        setError('Long-press your home screen → Widgets → ScrollSnooze.');
         return;
       }
       if (!Tracking.requestCountWidget()) {
-        setError('Open your launcher’s widget picker to add Driftless.');
+        setError('Open your launcher’s widget picker to add ScrollSnooze.');
         return;
       }
       setWidgetRequested(true);
@@ -369,7 +369,7 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
           <View style={{ width: 20 }} />
         )}
         <T v="caption" style={{ color: C.muted, flex: 1 }}>
-          {step > 0 && step <= 6 ? `${step} of 6` : step === 0 ? 'DRIFTLESS' : ''}
+          {step > 0 && step <= 6 ? `${step} of 6` : step === 0 ? 'SCROLLSNOOZE' : ''}
         </T>
         {step >= 10
           ? plain('Need help?', () => router.push('/privacy'))
@@ -407,7 +407,7 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
                 >
                   <T
                     v="heading"
-                    style={{ color: '#191915', fontWeight: '700', fontSize: 17, lineHeight: 23 }}
+                    style={{ color: '#211C3D', fontWeight: '700', fontSize: 17, lineHeight: 23 }}
                   >
                     {question.title}
                   </T>

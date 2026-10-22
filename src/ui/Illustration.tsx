@@ -1,9 +1,11 @@
-import { Image, type ImageStyle } from 'react-native';
+import { Animated, Image, type ImageStyle } from 'react-native';
+import { BrainCharacter } from './BrainCharacter';
+import { useIdleMotion } from './motion';
 
 const illustrations = {
-  wick: require('../../assets/illustrations/wick.png'),
-  focus: require('../../assets/illustrations/focus.png'),
-  friends: require('../../assets/illustrations/friends.png'),
+  wick: require('../../assets/branding/scrollsnooze/purple/fresh.png'),
+  focus: require('../../assets/branding/scrollsnooze/purple/focused.png'),
+  friends: require('../../assets/branding/scrollsnooze/purple/friends.png'),
 };
 
 export function Illustration({
@@ -17,13 +19,27 @@ export function Illustration({
   label?: string;
   style?: ImageStyle;
 }) {
+  const idle = useIdleMotion(name === 'friends');
+  if (name !== 'friends') {
+    return (
+      <Animated.View style={style} accessible={!!label} accessibilityLabel={label}>
+        <BrainCharacter pose={name === 'focus' ? 'focused' : 'fresh'} size={size} />
+      </Animated.View>
+    );
+  }
   return (
-    <Image
-      source={illustrations[name]}
-      resizeMode="contain"
-      accessible={!!label}
-      accessibilityLabel={label}
-      style={[{ width: size, height: size }, style]}
-    />
+    <Animated.View
+      style={{
+        transform: [{ translateY: idle.interpolate({ inputRange: [0, 1], outputRange: [0, -3] }) }],
+      }}
+    >
+      <Image
+        source={illustrations[name]}
+        resizeMode="contain"
+        accessible={!!label}
+        accessibilityLabel={label}
+        style={[{ width: size, height: size }, style]}
+      />
+    </Animated.View>
   );
 }

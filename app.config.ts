@@ -6,7 +6,7 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
  */
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: 'Driftless',
+  name: 'ScrollSnooze',
   slug: 'driftless',
   scheme: 'driftless',
   version: '0.1.0',
@@ -18,7 +18,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     package: 'com.siddiqkolimi.driftless',
     adaptiveIcon: {
       foregroundImage: './assets/branding/adaptive-foreground.png',
-      backgroundColor: '#FFE6AD',
+      backgroundColor: '#10102B',
     },
     // Local usage data must not leave the device via cloud backup (THREAT_MODEL T4).
     allowBackup: false,

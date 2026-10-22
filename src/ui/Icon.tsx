@@ -7,6 +7,7 @@ export type IconName =
   | 'flame'
   | 'chart'
   | 'friends'
+  | 'war'
   | 'lock'
   | 'target'
   | 'shield'
@@ -26,6 +27,7 @@ const paths: Partial<Record<IconName, string>> = {
     'M13 2c1 5-4 6-2 10 2-1 3-3 3-5 5 4 6 7 4 11-3 5-11 5-13-1C3 12 7 7 9 5c-1 4 0 5 1 6 2-3 3-5 3-9Z',
   chart: 'M4 20V10M12 20V4M20 20v-7',
   friends: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M22 21v-2a4 4 0 0 0-3-3.87M16 3a4 4 0 0 1 0 8',
+  war: 'M3 3l6 2 8 10-2 2L5 9ZM21 3l-6 2-8 10 2 2L19 9ZM12 17l5-5M7 12l5 5M16 16l5 5M8 16l-5 5M18 21l3-3M3 18l3 3',
   lock: 'M7 10V7a5 5 0 0 1 10 0v3M12 14v3',
   target: 'm12 12 8-8M16 4h4v4',
   shield: 'M12 2 3 6v6c0 5 9 10 9 10s9-5 9-10V6Z M8 12l3 3 5-6',
@@ -44,7 +46,7 @@ const paths: Partial<Record<IconName, string>> = {
 export function Icon({
   name,
   size = 24,
-  color = '#FFE8B0',
+  color = '#E4C5FF',
 }: {
   name: IconName;
   size?: number;
@@ -86,6 +88,7 @@ export function iconForMark(mark: string): IconName {
         '✦': 'flame',
         '▤': 'chart',
         '♡': 'friends',
+        '⚔': 'war',
         Ⅱ: 'lock',
         '◎': 'target',
         '⚑': 'trophy',
@@ -113,7 +116,7 @@ export function AppIcon({ name, size = 40 }: { name: string; size?: number }) {
         width: size,
         height: size,
         borderRadius: size * 0.3,
-        backgroundColor: youtube ? '#DB2222' : instagram ? '#B73287' : '#3A2915',
+        backgroundColor: youtube ? '#DB2222' : instagram ? '#B73287' : '#30214B',
         alignItems: 'center',
         justifyContent: 'center',
       }}

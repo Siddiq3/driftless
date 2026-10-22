@@ -16,11 +16,11 @@ import { Button, Notice, Screen, T } from '@/ui/kit';
 import { Icon } from '@/ui/Icon';
 import { shuffledInvitePrompts, type InvitePrompt } from './invitePrompts';
 const colors = {
-  bg: '#0B0B08',
-  header: '#301A06',
-  row: '#2C2116',
-  muted: '#B1A58F',
-  accent: '#FFD09D',
+  bg: '#10102B',
+  header: '#21183B',
+  row: '#29213F',
+  muted: '#B9AFCB',
+  accent: '#C4A0FF',
 };
 
 export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
@@ -138,7 +138,7 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
     try {
       const result = await api.createInvite();
       await Share.share({
-        message: `Join my circle on Driftless. Add me with this code: ${result.code} (valid 7 days).`,
+        message: `Join my circle on ScrollSnooze. Add me with this code: ${result.code} (valid 7 days).`,
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not share your invite.');
@@ -186,7 +186,7 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
         maxMembers: 2,
       });
       await Share.share({
-        message: `Let’s battle on Driftless: fewer short videos for 7 days. Join with code: ${challenge.challengeId}`,
+        message: `Let’s battle on ScrollSnooze: fewer short videos for 7 days. Join with code: ${challenge.challengeId}`,
       });
       router.push('/challenges');
     } catch (e) {
@@ -229,7 +229,7 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
             style={styles.profile}
           >
             <Image
-              source={require('../../assets/branding/brain-mark.png')}
+              source={require('../../assets/branding/scrollsnooze/purple/icon-master.png')}
               style={{ width: 30, height: 30 }}
             />
           </Pressable>
@@ -250,7 +250,7 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
             }}
             style={styles.friendsButton}
           >
-            <Icon name="friends" size={18} color="#FFF9ED" />
+            <Icon name="friends" size={18} color="#F7F2FF" />
             <T style={styles.friendsLabel}>Friends{requests ? ` (${requests})` : ''}</T>
           </Pressable>
         </View>
@@ -283,7 +283,7 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
         </View>
         <View style={styles.avatar}>
           <Image
-            source={require('../../assets/branding/brain-mark.png')}
+            source={require('../../assets/branding/scrollsnooze/purple/icon-master.png')}
             style={{ width: 33, height: 33, opacity: 0.8 }}
           />
         </View>
@@ -394,13 +394,13 @@ const styles = StyleSheet.create({
     lineHeight: 25,
     fontWeight: '900',
     letterSpacing: -0.7,
-    color: '#FFE4AB',
+    color: '#E4C5FF',
   },
   friendsButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#402B13',
+    backgroundColor: '#332449',
     borderRadius: 32,
     paddingHorizontal: 16,
     minHeight: 48,
@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 24,
-    backgroundColor: '#483C23',
+    backgroundColor: '#3B2D51',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     minHeight: 68,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#28241B',
+    borderBottomColor: '#30264E',
   },
   position: { width: 38, fontSize: 16 },
   inviteText: { flex: 1, color: colors.muted, fontSize: 15, lineHeight: 21 },
@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
     justifyContent: 'center',
   },
-  inviteLabel: { fontSize: 15, fontWeight: '600', color: '#51320F' },
+  inviteLabel: { fontSize: 15, fontWeight: '600', color: '#241642' },
   friendRow: {
     marginHorizontal: 26,
     gap: 16,
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minHeight: 68,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#28241B',
+    borderBottomColor: '#30264E',
   },
   friendName: { color: colors.muted, fontSize: 15 },
   actions: { paddingHorizontal: 26, paddingTop: 16, paddingBottom: 20, gap: 12 },

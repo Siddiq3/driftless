@@ -169,7 +169,9 @@ function EveningReminder() {
               .then((result) => {
                 setOn(result);
                 setNote(
-                  v && !result ? 'Notifications are off for Driftless in Android settings.' : null,
+                  v && !result
+                    ? 'Notifications are off for ScrollSnooze in Android settings.'
+                    : null,
                 );
               })
               .catch((e: unknown) =>

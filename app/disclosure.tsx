@@ -44,7 +44,7 @@ export default function Disclosure() {
           <AccessibilityWalkthrough />
           {!alreadyAgreed && (
             <T style={{ color: '#E3DFD1', fontSize: 12, lineHeight: 17, paddingHorizontal: 16 }}>
-              Driftless can track app minutes in Instagram, YouTube, Facebook, Snapchat, Moj and
+              ScrollSnooze can track app minutes in Instagram, YouTube, Facebook, Snapchat, Moj and
               ShareChat. Experimental short-video detection covers Instagram and YouTube only; video
               counts are not set up for Facebook, Snapchat, Moj or ShareChat. Where a video rule is
               active, limited player labels become one-way codes and only counts and times are saved

@@ -23,7 +23,7 @@ export function useReducedMotion() {
 }
 
 /** Native-thread idle motion only while this screen is visible and the app is active. */
-export function useIdleMotion(enabled = true) {
+export function useIdleMotion(enabled = true, duration: number = motion.breathe) {
   const reduced = useReducedMotion();
   const [value] = useState(() => new Animated.Value(0));
   useFocusEffect(
@@ -37,14 +37,14 @@ export function useIdleMotion(enabled = true) {
           Animated.sequence([
             Animated.timing(value, {
               toValue: 1,
-              duration: motion.breathe,
+              duration,
               easing: Easing.inOut(Easing.sin),
               useNativeDriver: true,
               isInteraction: false,
             }),
             Animated.timing(value, {
               toValue: 0,
-              duration: motion.breathe,
+              duration,
               easing: Easing.inOut(Easing.sin),
               useNativeDriver: true,
               isInteraction: false,
@@ -59,7 +59,7 @@ export function useIdleMotion(enabled = true) {
         loop?.stop();
         sub.remove();
       };
-    }, [enabled, reduced, value]),
+    }, [duration, enabled, reduced, value]),
   );
   return value;
 }

@@ -41,11 +41,11 @@ class PauseActivity : Activity() {
             this.text = s
             isAllCaps = false
             minHeight = dp(48)
-            setTextColor(if (primary) Color.parseColor("#643800") else Color.parseColor("#FFE8B0"))
+            setTextColor(if (primary) Color.parseColor("#241642") else Color.parseColor("#E4C5FF"))
             background = GradientDrawable().apply {
                 cornerRadius = dp(24).toFloat()
-                setColor(if (primary) Color.parseColor("#FFE8B0") else Color.parseColor("#2B2217"))
-                setStroke(dp(1), Color.parseColor("#51412A"))
+                setColor(if (primary) Color.parseColor("#E4C5FF") else Color.parseColor("#29213F"))
+                setStroke(dp(1), Color.parseColor("#493A63"))
             }
             setOnClickListener { onClick() }
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
@@ -55,7 +55,7 @@ class PauseActivity : Activity() {
 
         val title = if (reason == "SCHEDULE") "Focus time" else "You've reached today's limit"
         val body = if (reason == "SCHEDULE") {
-            "You asked Driftless to pause $label during this time."
+            "You asked ScrollSnooze to pause $label during this time."
         } else {
             "You set a daily limit for $label. Wick is glad you're taking a break."
         }
@@ -64,14 +64,14 @@ class PauseActivity : Activity() {
         setContentView(
             ScrollView(this).apply {
                 isFillViewport = true
-                setBackgroundColor(Color.parseColor("#120E09"))
+                setBackgroundColor(Color.parseColor("#10102B"))
                 addView(LinearLayout(this@PauseActivity).apply {
                     orientation = LinearLayout.VERTICAL
                     gravity = Gravity.CENTER
                     setPadding(dp(32), dp(32), dp(32), dp(32))
-                    addView(text("DRIFTLESS · TAKE A BREATH", 12f, Color.parseColor("#FFE8B0")))
+                    addView(text("SCROLLSNOOZE · TAKE A BREATH", 12f, Color.parseColor("#E4C5FF")))
                     addView(ImageView(this@PauseActivity).apply {
-                        setImageResource(R.drawable.wick_focus)
+                        setImageResource(R.drawable.scrollsnooze_focused)
                         scaleType = ImageView.ScaleType.FIT_CENTER
                         contentDescription = "Wick taking a pause"
                         layoutParams = LinearLayout.LayoutParams(dp(220), dp(220)).apply {
@@ -80,8 +80,8 @@ class PauseActivity : Activity() {
                             bottomMargin = dp(16)
                         }
                     })
-                addView(text(title, 30f, Color.parseColor("#FFF9ED")).apply { setTypeface(typeface, Typeface.BOLD) })
-                addView(text(body, 16f, Color.parseColor("#C4B69D")))
+                addView(text(title, 30f, Color.parseColor("#F7F2FF")).apply { setTypeface(typeface, Typeface.BOLD) })
+                addView(text(body, 16f, Color.parseColor("#B9AFCB")))
                 addView(button("Close $label", primary = true) { goHome() })
                 if (snoozesLeft > 0) {
                     addView(
@@ -92,12 +92,12 @@ class PauseActivity : Activity() {
                     )
                 }
                 addView(
-                    button("Open Driftless", primary = false) {
+                    button("Open ScrollSnooze", primary = false) {
                         packageManager.getLaunchIntentForPackage(packageName)?.let { startActivity(it) }
                         finish()
                     },
                 )
-                addView(text("You can turn blocking off in Driftless or in Settings › Accessibility.", 12f, Color.parseColor("#C4B69D")))
+                addView(text("You can turn blocking off in ScrollSnooze or in Settings › Accessibility.", 12f, Color.parseColor("#B9AFCB")))
                 })
             },
         )

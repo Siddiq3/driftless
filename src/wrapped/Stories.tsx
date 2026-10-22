@@ -24,7 +24,7 @@ import { useReducedMotion, useDataMotion } from '@/ui/motion';
 import { SetupButton } from '@/onboarding/Visuals';
 import { clock, peakWindow, personality, type Recap } from './model';
 
-const cream = '#FFE9AD';
+const cream = '#C4A0FF';
 type Story = { id: string; colors: [string, string]; label: string; content: ReactNode };
 export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initialIndex?: number }) {
   const insets = useSafeAreaInsets();
@@ -71,7 +71,7 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
   const stories: Story[] = [
     {
       id: 'total',
-      colors: ['#92501B', '#261207'],
+      colors: ['#61408D', '#19132E'],
       label: `Your ${periodWord} in short videos`,
       content: (
         <>
@@ -112,7 +112,7 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
       content: (
         <>
           <View style={{ height: height < 750 ? 35 : 90 }} />
-          {big(`${clock(peak.start * 60)}–${clock(peak.end * 60)}`, 52, '#FFFFF8')}
+          {big(`${clock(peak.start * 60)}–${clock(peak.end * 60)}`, 52, '#F7F2FF')}
           {body(`${peak.percent}% of your counted videos fell in these two hours.`)}
         </>
       ),
@@ -173,7 +173,7 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
             {recap.apps.map((a, i) => (
               <View
                 key={a.package}
-                style={{ flex: a.views, backgroundColor: ['#FF498D', '#FF675D', '#FFE9AD'][i % 3] }}
+                style={{ flex: a.views, backgroundColor: ['#FF498D', '#FF675D', '#C4A0FF'][i % 3] }}
               />
             ))}
           </View>
@@ -212,8 +212,8 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
       content: (
         <View style={styles.persona}>
           <BrainCharacter pose="wave" size={artSize * 0.7} />
-          {big(persona.title, 36, '#2D1907')}
-          <Text style={[styles.body, { color: '#5B4932', fontSize: 18, lineHeight: 26 }]}>
+          {big(persona.title, 36, '#241642')}
+          <Text style={[styles.body, { color: '#625170', fontSize: 18, lineHeight: 26 }]}>
             {persona.detail}
           </Text>
           <Text style={styles.badge}>{persona.fact}</Text>
@@ -228,7 +228,7 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
       content: (
         <>
           <View style={styles.bubble}>
-            <Text style={{ fontSize: 18, textAlign: 'center', color: '#171715' }}>
+            <Text style={{ fontSize: 18, textAlign: 'center', color: '#211C3D' }}>
               {recap.changePercent <= 0
                 ? 'A little room to breathe.'
                 : 'Tomorrow is a fresh start.'}
@@ -244,12 +244,12 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
     });
   stories.push({
     id: 'action',
-    colors: ['#392917', '#0B0B08'],
+    colors: ['#30214B', '#10102B'],
     label: 'A LITTLE MORE ROOM FOR YOU',
     content: (
       <>
         <View style={styles.bubble}>
-          <Text style={{ fontSize: 18, color: '#171715', textAlign: 'center' }}>
+          <Text style={{ fontSize: 18, color: '#211C3D', textAlign: 'center' }}>
             Let’s take a breather.
           </Text>
         </View>
@@ -405,7 +405,7 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
     try {
       if (!TurboModuleRegistry.get('RNViewShot') || !(await Sharing.isAvailableAsync())) {
         await Share.share({
-          message: `Driftless · ${recap.period === 'daily' ? 'Daily' : 'Weekly'} Wrapped\n${recap.from} – ${recap.to}\n${hasViews ? `${recap.views.value} short videos counted (${recap.views.trackedDays}/${recap.expectedDays} tracked days)` : recap.minutes.value !== null ? `${recap.minutes.value} minutes in supported apps` : 'No confirmed counts yet'}`,
+          message: `ScrollSnooze · ${recap.period === 'daily' ? 'Daily' : 'Weekly'} Wrapped\n${recap.from} – ${recap.to}\n${hasViews ? `${recap.views.value} short videos counted (${recap.views.trackedDays}/${recap.expectedDays} tracked days)` : recap.minutes.value !== null ? `${recap.minutes.value} minutes in supported apps` : 'No confirmed counts yet'}`,
         });
         return;
       }
@@ -457,7 +457,7 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
               <Animated.View
                 style={{
                   height: 3,
-                  backgroundColor: '#FFFFF8',
+                  backgroundColor: '#F7F2FF',
                   width:
                     i < current
                       ? '100%'
@@ -472,7 +472,7 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
         <View style={styles.header}>
           <View style={{ flex: 1, gap: 4 }}>
             <Text style={styles.brand}>
-              Driftless · {recap.period === 'daily' ? 'Reels' : 'Weekly'} Wrapped
+              ScrollSnooze · {recap.period === 'daily' ? 'Reels' : 'Weekly'} Wrapped
             </Text>
             <Text style={styles.caption}>
               {dateLabel} · {recap.source === 'phone' ? 'This phone' : 'Synced totals'}
@@ -567,7 +567,7 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
           style={{ padding: 28, gap: 24, backgroundColor: story.colors[1], alignItems: 'center' }}
         >
           <Text style={styles.brand}>
-            Driftless · {recap.period === 'daily' ? 'Daily' : 'Weekly'} Wrapped
+            ScrollSnooze · {recap.period === 'daily' ? 'Daily' : 'Weekly'} Wrapped
           </Text>
           <Text style={styles.caption}>
             {dateLabel} · {recap.source === 'phone' ? 'This phone' : 'Synced totals'}
@@ -642,7 +642,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   persona: {
-    backgroundColor: '#FFF4D2',
+    backgroundColor: '#F1E4FF',
     borderRadius: 30,
     padding: 20,
     gap: 12,
@@ -658,7 +658,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '700',
   },
-  bubble: { backgroundColor: '#FFFFF8', padding: 18, borderRadius: 30 },
+  bubble: { backgroundColor: '#F7F2FF', padding: 18, borderRadius: 30 },
   footer: { flexDirection: 'row', justifyContent: 'center', gap: 8, padding: 12 },
   share: {
     borderWidth: 1,

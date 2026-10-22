@@ -41,7 +41,7 @@ export default function ProgressScreen() {
         v="title"
         style={{
           fontFamily: fonts ? 'LilitaOne' : undefined,
-          color: '#FFE1A4',
+          color: '#C4A0FF',
           fontSize: 25,
           letterSpacing: 0.3,
         }}
@@ -59,11 +59,11 @@ export default function ProgressScreen() {
               setPeriod(value);
               setOffset(0);
             }}
-            style={[styles.pill, { backgroundColor: period === value ? '#783F00' : '#29271F' }]}
+            style={[styles.pill, { backgroundColor: period === value ? '#493078' : '#29213F' }]}
           >
             <T
               style={{
-                color: period === value ? '#FFF9ED' : '#B0ACA0',
+                color: period === value ? '#F7F2FF' : '#B9AFCB',
                 fontSize: 17,
                 fontWeight: '600',
               }}
@@ -81,7 +81,7 @@ export default function ProgressScreen() {
           onPress={() => setOffset((n) => Math.min(limit, n + 1))}
           style={[styles.arrow, { opacity: offset >= limit ? 0.3 : 1 }]}
         >
-          <Icon name="back" color="#F7F4E8" />
+          <Icon name="back" color="#F7F2FF" />
         </Pressable>
         <T v="label" style={{ textAlign: 'center', flex: 1, fontSize: 16, fontWeight: '700' }}>
           {title}
@@ -93,12 +93,12 @@ export default function ProgressScreen() {
           onPress={() => setOffset((n) => Math.max(0, n - 1))}
           style={[styles.arrow, { opacity: offset === 0 ? 0.3 : 1 }]}
         >
-          <Icon name="chevron" color="#F7F4E8" />
+          <Icon name="chevron" color="#F7F2FF" />
         </Pressable>
       </View>
       {state.state === 'loading' ? (
         <View style={styles.loading}>
-          <ActivityIndicator color="#FFE1A4" accessibilityLabel="Reading activity" />
+          <ActivityIndicator color="#C4A0FF" accessibilityLabel="Reading activity" />
         </View>
       ) : state.state === 'error' ? (
         <>
@@ -144,7 +144,7 @@ export default function ProgressScreen() {
               style={styles.pro}
             >
               <View style={styles.proBadge}>
-                <Icon name="shield" size={22} color="#2C1A08" />
+                <Icon name="shield" size={22} color="#241642" />
               </View>
               <T style={{ flex: 1, fontWeight: '700' }}>Focus &amp; app pauses</T>
               <Icon name="chevron" color="#FFF4DA" />
@@ -159,7 +159,7 @@ export default function ProgressScreen() {
                       styles.appRow,
                       i > 0 && {
                         borderTopWidth: StyleSheet.hairlineWidth,
-                        borderTopColor: '#29271F',
+                        borderTopColor: '#29213F',
                       },
                     ]}
                   >
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
   arrow: { minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
   loading: { minHeight: 300, alignItems: 'center', justifyContent: 'center' },
   totals: {
-    backgroundColor: '#15140F',
+    backgroundColor: '#17132E',
     borderRadius: 22,
     padding: 20,
     flexDirection: 'row',
@@ -225,9 +225,9 @@ const styles = StyleSheet.create({
   },
   metric: { flex: 1, alignItems: 'center', gap: 6 },
   number: { fontSize: 28, lineHeight: 36, fontWeight: '800' },
-  muted: { color: '#AAA69A', fontSize: 14 },
+  muted: { color: '#B9AFCB', fontSize: 14 },
   pro: {
-    backgroundColor: '#783F00',
+    backgroundColor: '#493078',
     borderRadius: 16,
     minHeight: 68,
     padding: 16,
@@ -236,12 +236,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   proBadge: {
-    backgroundColor: '#FFE1A4',
+    backgroundColor: '#C4A0FF',
     borderRadius: 30,
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
-  apps: { backgroundColor: '#15140F', borderRadius: 22, overflow: 'hidden', gap: 0 },
+  apps: { backgroundColor: '#17132E', borderRadius: 22, overflow: 'hidden', gap: 0 },
   appRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, minHeight: 68 },
   goal: {
     flexDirection: 'row',

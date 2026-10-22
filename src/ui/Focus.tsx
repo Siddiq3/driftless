@@ -76,7 +76,7 @@ export function FocusHero({ state, refresh }: { state: ProgressState; refresh: (
         <BrainCompanion
           initialQuote={phrase}
           quoteMood={characterMood === 'drained' ? 'drained' : 'happy'}
-          pose={characterMood === 'drained' ? 'tired' : 'wave'}
+          pose={characterMood === 'drained' ? 'drained' : 'fresh'}
           size={Math.min(width - 96, height < 780 || fontScale > 1.2 ? 144 : 180)}
           still={brain.mood === 'unavailable'}
         />
@@ -242,7 +242,7 @@ export function Dashboard({ guest = false, account }: { guest?: boolean; account
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <BrandMark size={30} />
           <T v="title" style={{ letterSpacing: -0.8 }}>
-            driftless.
+            ScrollSnooze
           </T>
         </View>
         <Pressable
@@ -264,11 +264,11 @@ export function Dashboard({ guest = false, account }: { guest?: boolean; account
         onPress={() => router.push('/blocking')}
         style={({ pressed }) => [
           styles.focusLink,
-          { backgroundColor: '#783F00', opacity: pressed ? 0.75 : 1 },
+          { backgroundColor: '#493078', opacity: pressed ? 0.75 : 1 },
         ]}
       >
         <View style={styles.proBadge}>
-          <Icon name="shield" size={24} color="#2C1A08" />
+          <Icon name="shield" size={24} color="#241642" />
         </View>
         <T v="label" style={{ flex: 1, fontWeight: '600' }}>
           Focus & app pauses
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
     paddingHorizontal: 14,
     borderRadius: 28,
-    backgroundColor: '#FFE1A4',
+    backgroundColor: '#C4A0FF',
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -41,45 +41,45 @@ class MemeMilestoneCard(private val service: AccessibilityService) {
         val column = LinearLayout(service).apply {
             orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL
             setPadding(dp(16),dp(12),dp(16),dp(20))
-            background = rounded("#12100F", "#060605", 32).apply { setStroke(dp(1),Color.parseColor("#51402A")) }
+            background = rounded("#17132E", "#10102B", 32).apply { setStroke(dp(1),Color.parseColor("#493A63")) }
             // Absorb card taps; only the outside backdrop dismisses.
             setOnClickListener { }
         }
         val header = LinearLayout(service).apply { gravity=Gravity.CENTER_VERTICAL }
         val pill = LinearLayout(service).apply {
             gravity=Gravity.CENTER; setPadding(dp(12),dp(4),dp(12),dp(4))
-            background=rounded("#682C25",radius=24)
+            background=rounded("#493078",radius=24)
         }
         pill.addView(ImageView(service).apply {
-            setImageResource(if(value.mood == CountBadgeMood.DRAINED) R.drawable.brain_tired else R.drawable.brain_wave)
+            setImageResource(if(value.mood == CountBadgeMood.DRAINED) R.drawable.scrollsnooze_drained else R.drawable.scrollsnooze_fresh)
             importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }, LinearLayout.LayoutParams(dp(36),dp(36)))
         pill.addView(TextView(service).apply {
-            text=value.text; textSize=20f; setTextColor(Color.parseColor("#FF6F75")); typeface=Typeface.DEFAULT_BOLD
+            text=value.text; textSize=20f; setTextColor(Color.parseColor("#E4C5FF")); typeface=Typeface.DEFAULT_BOLD
             setPadding(dp(6),0,0,0); contentDescription="${value.text} · ${value.status}"
         })
         header.addView(pill,LinearLayout.LayoutParams(0,dp(48),1f))
         header.addView(Button(service).apply {
             text="×"; textSize=24f; isAllCaps=false; contentDescription=copy.close
-            setTextColor(Color.parseColor("#FFE8B0")); background=rounded("#28241E",radius=24)
+            setTextColor(Color.parseColor("#E4C5FF")); background=rounded("#29213F",radius=24)
             setOnClickListener { hide() }
         },LinearLayout.LayoutParams(dp(48),dp(48)).apply { leftMargin=dp(12) })
         column.addView(header,LinearLayout.LayoutParams(-1,-2))
         val artwork=ImageView(service).apply {
             setImageResource(if(language == "te") R.drawable.meme_telugu else R.drawable.meme_global)
-            scaleType=ImageView.ScaleType.CENTER_CROP; background=rounded("#28241E",radius=20)
+            scaleType=ImageView.ScaleType.CENTER_CROP; background=rounded("#29213F",radius=20)
             clipToOutline=true; importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }
         val heightDp=service.resources.displayMetrics.heightPixels/service.resources.displayMetrics.density
         column.addView(artwork,LinearLayout.LayoutParams(-1,dp(if(heightDp < 650) 140 else 210)).apply {topMargin=dp(12)})
         column.addView(TextView(service).apply {
             text=copy.caption; textSize=20f; gravity=Gravity.CENTER; typeface=Typeface.DEFAULT_BOLD
-            setTextColor(Color.parseColor("#FFFAED")); setPadding(dp(4),dp(20),dp(4),dp(12))
+            setTextColor(Color.parseColor("#F7F2FF")); setPadding(dp(4),dp(20),dp(4),dp(12))
         },LinearLayout.LayoutParams(-1,-2))
         fun action(label: String, primary: Boolean, click: () -> Unit) = Button(service).apply {
             text=label; textSize=16f; isAllCaps=false; typeface=Typeface.DEFAULT_BOLD
-            setTextColor(Color.parseColor(if(primary) "#603500" else "#FFFAED"))
-            background=if(primary) rounded("#FFE9AE","#FFB569") else rounded("#2B2820")
+            setTextColor(Color.parseColor(if(primary) "#241642" else "#F7F2FF"))
+            background=if(primary) rounded("#E4C5FF","#AD85F2") else rounded("#30264E")
             minHeight=dp(52); setOnClickListener { hide(); click() }
         }
         column.addView(action(copy.pause,true,onBreak),LinearLayout.LayoutParams(-1,-2).apply {topMargin=dp(12)})
@@ -91,7 +91,7 @@ class MemeMilestoneCard(private val service: AccessibilityService) {
         })
         val params=WindowManager.LayoutParams(-1,-1,WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,PixelFormat.TRANSLUCENT).apply {
-            gravity=Gravity.CENTER; title="Driftless reel break"
+            gravity=Gravity.CENTER; title="ScrollSnooze reel break"
         }
         return try {
             wm.addView(backdrop,params); root=backdrop

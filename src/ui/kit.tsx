@@ -111,7 +111,7 @@ export function Screen({
   const details = PAGE_DETAILS[path];
   const tabs = [
     { label: 'Today', mark: '◉', href: '/welcome', active: ['/welcome', '/home', '/tracking'] },
-    { label: 'Circle', mark: '♡', href: '/friends', active: ['/friends', '/challenges'] },
+    { label: 'War', mark: '⚔', href: '/friends', active: ['/friends', '/challenges'] },
     {
       label: 'Progress',
       mark: '↗',

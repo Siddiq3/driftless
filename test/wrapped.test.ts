@@ -155,17 +155,15 @@ test('expired heartbeats or a failed usage refresh do not hide retained video co
     apps: [{ package: 'youtube', label: 'YouTube Shorts', installed: false, validated: false }],
     usageAccessGranted: false,
   } as TrackingHealth);
-  jest
-    .mocked(Tracking.daily)
-    .mockImplementation((date) => ({
-      localDate: date!,
-      heartbeatMinutes: 0,
-      coverage: 0,
-      apps:
-        date === '2026-10-21'
-          ? [{ package: 'youtube', views: 6, adViews: 0, surfaceMs: 0, unknownMs: 0, usageMs: 0 }]
-          : [],
-    }));
+  jest.mocked(Tracking.daily).mockImplementation((date) => ({
+    localDate: date!,
+    heartbeatMinutes: 0,
+    coverage: 0,
+    apps:
+      date === '2026-10-21'
+        ? [{ package: 'youtube', views: 6, adViews: 0, surfaceMs: 0, unknownMs: 0, usageMs: 0 }]
+        : [],
+  }));
   const recap = readPhoneWrap('daily', '2026-10-21');
   expect(recap.views.value).toBe(6);
   expect(recap.apps[0]?.views).toBe(6);

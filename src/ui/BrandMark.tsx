@@ -1,13 +1,13 @@
 import { Image } from 'react-native';
 
-/** Shared Driftless identity, matched to the illustrated brain companion. */
+/** Shared ScrollSnooze identity, matched to the illustrated brain companion. */
 export function BrandMark({ size = 34 }: { size?: number }) {
   return (
     <Image
       source={require('../../assets/branding/app-icon.png')}
       accessible={false}
       resizeMode="contain"
-      style={{ width: size, height: size, borderRadius: size * 0.27, backgroundColor: '#FFE6AD' }}
+      style={{ width: size, height: size, borderRadius: size * 0.27, backgroundColor: '#10102B' }}
     />
   );
 }

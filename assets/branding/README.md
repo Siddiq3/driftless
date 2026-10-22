@@ -1,8 +1,8 @@
-# Driftless identity
+# ScrollSnooze identity
 
-Original coral-pink brain-face mark created from the app's existing illustrated companion, with warm cream `#FFE6AD` behind launcher icons. It uses no BrainPal branding or stock logo.
+The active identity uses the [purple ScrollSnooze character set](scrollsnooze/purple/README.md), a brain hugging a paused phone, and a midnight `#10102B` launcher/splash background. The earlier coral and peach assets are retained as design history.
 
-- `brain-mark.png`: transparent generated master.
+- `scrollsnooze/purple/icon-master.png`: active transparent generated master. `brain-mark.png` is the earlier coral mark.
 - `adaptive-foreground.png`: padded transparent foreground, keeping the face inside Android's central mask-safe region.
 - `app-icon.png`: opaque 1024px launcher/store image.
 

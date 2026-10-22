@@ -89,7 +89,7 @@ export default function TrackingScreen() {
           <View style={{ flex: 1, gap: 4 }}>
             <T v="heading">Floating brain counter</T>
             <T v="caption" muted>
-              Shows over Reels &amp; Shorts. Tap to open Driftless. Long press and drag to move
+              Shows over Reels &amp; Shorts. Tap to open ScrollSnooze. Long press and drag to move
               anywhere.
             </T>
           </View>

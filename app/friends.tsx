@@ -166,7 +166,7 @@ function FriendsManager() {
               act(async () => {
                 const inv = await api.createInvite();
                 await Share.share({
-                  message: `Join me on Driftless — add me with this code: ${inv.code} (valid 7 days)`,
+                  message: `Join me on ScrollSnooze — add me with this code: ${inv.code} (valid 7 days)`,
                 });
               })
             }

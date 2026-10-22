@@ -133,7 +133,7 @@ export default function Challenges() {
         maxMembers: 10,
       });
       await Share.share({
-        message: `Join my Driftless challenge "${c.title}" — code: ${c.challengeId}`,
+        message: `Join my ScrollSnooze challenge "${c.title}" — code: ${c.challengeId}`,
       });
     });
 

@@ -6,8 +6,8 @@ const {
   compositeImagesAsync,
 } = require('@expo/image-utils');
 const root = path.resolve(__dirname, '..');
-const source = path.join(root, 'assets/branding/brain-mark.png');
-const cream = '#FFE6AD';
+const source = path.join(root, 'assets/branding/scrollsnooze/purple/icon-master.png');
+const iconBackground = '#10102B';
 async function generate(target, width, backgroundColor = 'transparent', src = source) {
   const result = await generateImageAsync(
     { projectRoot: root },
@@ -23,7 +23,7 @@ async function generate(target, width, backgroundColor = 'transparent', src = so
   await fs.writeFile(target, result.source);
 }
 async function main() {
-  await generate(path.join(root, 'assets/branding/app-icon.png'), 1024, cream);
+  await generate(path.join(root, 'assets/branding/app-icon.png'), 1024, iconBackground);
   const foreground = path.join(root, 'assets/branding/adaptive-foreground.png');
   const inner = await generateImageAsync(
     { projectRoot: root },
@@ -51,7 +51,7 @@ async function main() {
     const folder = path.join(res, `mipmap-${density}`);
     for (const name of ['ic_launcher', 'ic_launcher_round']) {
       await fs.rm(path.join(folder, `${name}.webp`), { force: true });
-      await generate(path.join(folder, `${name}.png`), Math.round(48 * scale), cream);
+      await generate(path.join(folder, `${name}.png`), Math.round(48 * scale), iconBackground);
     }
     await generate(
       path.join(folder, 'ic_launcher_foreground.png'),
@@ -75,7 +75,7 @@ async function main() {
   }
   await fs.writeFile(
     path.join(res, 'values/brand_colors.xml'),
-    `<resources><color name="brand_icon_background">${cream}</color></resources>\n`,
+    `<resources><color name="brand_icon_background">${iconBackground}</color></resources>\n`,
   );
   await fs.writeFile(
     path.join(res, 'drawable/splashscreen_logo.xml'),

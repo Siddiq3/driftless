@@ -36,7 +36,7 @@ export function CountingPermissionBanner({ health }: { health: TrackingHealth | 
         >
           {stopped
             ? 'Counting has stopped. Review access to keep counting.'
-            : 'Driftless needs permission to count Reels & Shorts.'}
+            : 'ScrollSnooze needs permission to count Reels & Shorts.'}
         </Text>
         <Pressable
           accessibilityRole="button"

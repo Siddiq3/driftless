@@ -7,11 +7,11 @@ import { SETUP_COLORS as C } from '@/onboarding/Visuals';
 
 export const ACCESSIBILITY_STEPS = [
   'Tap “Downloaded apps”',
-  'Tap “Driftless”',
+  'Tap “ScrollSnooze”',
   'Turn on the toggle',
   'Select “Allow”',
 ] as const;
-const GuideVideo = requireNativeView<ViewProps & { playing: boolean }>('DriftlessTracking');
+const GuideVideo = requireNativeView<ViewProps & { playing: boolean }>('ScrollSnoozeTracking');
 
 /** Silent local video footage: only the instructional panel, without recorded device chrome. */
 export function AccessibilityWalkthrough() {

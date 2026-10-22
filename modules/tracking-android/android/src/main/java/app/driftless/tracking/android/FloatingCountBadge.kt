@@ -110,7 +110,7 @@ class FloatingCountBadge(private val service: AccessibilityService) {
             PixelFormat.TRANSLUCENT).apply {
             gravity = Gravity.TOP or Gravity.LEFT
             x = (width - dp(96)) / 2; y = (height - dp(112)).coerceAtLeast(0)
-            title = "Driftless drag to pause"
+            title = "ScrollSnooze drag to pause"
         }
         try {
             wm.addView(target, lp); dismissTarget = target; dismissParams = lp
@@ -203,7 +203,7 @@ class FloatingCountBadge(private val service: AccessibilityService) {
         mood = next
         idle?.cancel(); image.animate().cancel()
         image.translationY = 0f; image.rotation = 0f; image.scaleX = 1f; image.scaleY = 1f
-        image.setImageResource(if (next == CountBadgeMood.DRAINED) R.drawable.brain_tired else R.drawable.brain_wave)
+        image.setImageResource(if (next == CountBadgeMood.DRAINED) R.drawable.scrollsnooze_drained else R.drawable.scrollsnooze_fresh)
         image.alpha = if (next == CountBadgeMood.UNKNOWN) 0.65f else 1f
         if (!motionEnabled() || next == CountBadgeMood.UNKNOWN) return
         if (changed) {
@@ -227,11 +227,11 @@ class FloatingCountBadge(private val service: AccessibilityService) {
             }.apply {
                 orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER
                 setPadding(dp(4), dp(4), dp(4), dp(4))
-                contentDescription = "Floating counter. Tap to open Driftless. Long press to move. Drag to the bottom pause target to dismiss."
+                contentDescription = "Floating counter. Tap to open ScrollSnooze. Long press to move. Drag to the bottom pause target to dismiss."
             }
             val image = BlinkingBrainView(service).apply {
-                setImageResource(R.drawable.brain_wave); scaleType = ImageView.ScaleType.FIT_CENTER
-                background = shape("#572421", 32); setPadding(dp(6),dp(6),dp(6),dp(6))
+                setImageResource(R.drawable.scrollsnooze_fresh); scaleType = ImageView.ScaleType.FIT_CENTER
+                background = shape("#493078", 32); setPadding(dp(6),dp(6),dp(6),dp(6))
             }
             face = image
             iconSize = prefs.floatingCountSize
@@ -240,7 +240,7 @@ class FloatingCountBadge(private val service: AccessibilityService) {
                 textSize = 20f; setTextColor(Color.WHITE); typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.CENTER; minWidth = dp(56)
                 setPadding(dp(8),0,dp(8),0)
-                background = shape("#F33446",24).apply { setStroke(dp(2), Color.parseColor("#572421")) }
+                background = shape("#F33446",24).apply { setStroke(dp(2), Color.parseColor("#493078")) }
             }
             column.addView(count, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,LinearLayout.LayoutParams.WRAP_CONTENT).apply {topMargin=-dp(7)})
             val params = WindowManager.LayoutParams(
@@ -250,7 +250,7 @@ class FloatingCountBadge(private val service: AccessibilityService) {
                 PixelFormat.TRANSLUCENT,
             ).apply {
                 gravity = Gravity.TOP or Gravity.LEFT
-                title = "Driftless live count"
+                title = "ScrollSnooze live count"
             }
             try {
                 wm.addView(column,params); root=column; this.params=params
@@ -276,7 +276,7 @@ class FloatingCountBadge(private val service: AccessibilityService) {
         count?.text=value.text
         count?.minWidth = dp(iconSize)
         count?.textSize = iconSize * 0.38f
-        root?.contentDescription = "${value.text} short videos today. ${if (value.mood == CountBadgeMood.DRAINED) "Daily limit reached." else ""} Tap to open Driftless. Long press to move. Drag to the bottom target to pause."
+        root?.contentDescription = "${value.text} short videos today. ${if (value.mood == CountBadgeMood.DRAINED) "Daily limit reached." else ""} Tap to open ScrollSnooze. Long press to move. Drag to the bottom target to pause."
     }
     fun hide() {
         hideDismissTarget()

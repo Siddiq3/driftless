@@ -23,7 +23,7 @@ export function InviteButton() {
           }
           setError(null);
           setBusy(true);
-          Share.share({ title: 'Try Driftless', message: appInviteMessage() })
+          Share.share({ title: 'Try ScrollSnooze', message: appInviteMessage() })
             .catch(() => setError('Could not open sharing. Please try again.'))
             .finally(() => setBusy(false));
         }}

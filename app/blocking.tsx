@@ -10,13 +10,13 @@ import { AppIcon, Icon, type IconName } from '@/ui/Icon';
 import { ProtectionNotice } from '@/billing/ProtectionNotice';
 
 const C = {
-  surface: '#191611',
-  raised: '#29221A',
-  border: '#393025',
-  accent: '#FFD09D',
-  muted: '#C4B69D',
-  text: '#FFF9ED',
-  amber: '#783F00',
+  surface: '#19152F',
+  raised: '#29213F',
+  border: '#443659',
+  accent: '#C4A0FF',
+  muted: '#B9AFCB',
+  text: '#F7F2FF',
+  amber: '#493078',
 };
 const LIMITS = [15, 20, 30, 45, 60, 90, 120];
 
@@ -116,7 +116,7 @@ function Choices({
           >
             <T
               style={{
-                color: value === choice ? '#492B16' : C.text,
+                color: value === choice ? '#241642' : C.text,
                 fontSize: 14,
                 fontWeight: '700',
               }}
@@ -194,7 +194,7 @@ export default function Blocking() {
           v="title"
           style={{
             flex: 1,
-            color: '#FFE1A4',
+            color: '#C4A0FF',
             fontSize: 25,
             fontFamily: fonts ? 'LilitaOne' : undefined,
             letterSpacing: 0.3,
@@ -203,8 +203,8 @@ export default function Blocking() {
           FOCUS
         </T>
         <View style={styles.proBadge}>
-          <Icon name="check" size={13} color="#492B16" />
-          <T v="caption" style={{ color: '#492B16', fontWeight: '900' }}>
+          <Icon name="check" size={13} color="#241642" />
+          <T v="caption" style={{ color: '#241642', fontWeight: '900' }}>
             INCLUDED
           </T>
         </View>
@@ -213,22 +213,22 @@ export default function Blocking() {
       <View style={styles.hero}>
         <View style={styles.heroTop}>
           <View style={{ flex: 1, gap: 8 }}>
-            <T v="title" style={{ fontSize: 27, lineHeight: 33, color: '#FFE1A4' }}>
+            <T v="title" style={{ fontSize: 27, lineHeight: 33, color: '#C4A0FF' }}>
               Less scrolling.{'\n'}More living.
             </T>
-            <T v="caption" style={{ color: '#E8D1B5' }}>
+            <T v="caption" style={{ color: '#D8C5EE' }}>
               Make a little room for your offline life.
             </T>
           </View>
           <View style={styles.heroIcon}>
-            <Icon name="shield" size={38} color="#FFE1A4" />
+            <Icon name="shield" size={38} color="#C4A0FF" />
           </View>
         </View>
         <View style={styles.heroDivider} />
         <View style={styles.masterRow}>
           <View style={{ flex: 1, gap: 4 }}>
             <T style={{ fontWeight: '700', fontSize: 16 }}>App pauses</T>
-            <T v="caption" style={{ color: '#E8D1B5' }}>
+            <T v="caption" style={{ color: '#D8C5EE' }}>
               Use your saved limits and focus times.
             </T>
           </View>
@@ -285,7 +285,7 @@ export default function Blocking() {
                       checked && { backgroundColor: C.accent, borderColor: C.accent },
                     ]}
                   >
-                    {checked && <Icon name="check" size={13} color="#492B16" />}
+                    {checked && <Icon name="check" size={13} color="#241642" />}
                   </View>
                 </View>
                 <T style={{ fontSize: 14, lineHeight: 20, fontWeight: '600' }}>{app.label}</T>
@@ -512,7 +512,7 @@ export default function Blocking() {
         <Notice
           tone="warn"
           title="Feed limits need an updated Android build"
-          body="Install the latest Driftless build to configure daily video enforcement and timed feed breaks."
+          body="Install the latest ScrollSnooze build to configure daily video enforcement and timed feed breaks."
         />
       )}
 
@@ -557,23 +557,23 @@ const styles = StyleSheet.create({
     backgroundColor: C.accent,
   },
   hero: {
-    backgroundColor: '#392310',
+    backgroundColor: '#30214B',
     borderRadius: 26,
     padding: 20,
     gap: 20,
     borderWidth: 1,
-    borderColor: '#65421F',
+    borderColor: '#60467D',
   },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   heroIcon: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#513313',
+    backgroundColor: '#493078',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  heroDivider: { height: StyleSheet.hairlineWidth, backgroundColor: '#785637' },
+  heroDivider: { height: StyleSheet.hairlineWidth, backgroundColor: '#70578E' },
   masterRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   group: {
     backgroundColor: C.surface,
@@ -581,7 +581,7 @@ const styles = StyleSheet.create({
     padding: 18,
     gap: 18,
     borderWidth: 1,
-    borderColor: '#2B251D',
+    borderColor: '#30264E',
   },
   groupHeading: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   heading: { fontSize: 18, lineHeight: 24, fontWeight: '700' },
@@ -599,18 +599,18 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: C.border,
-    backgroundColor: '#211D17',
+    backgroundColor: '#211C3D',
     padding: 14,
     gap: 10,
   },
-  appSelected: { backgroundColor: '#3B2A19', borderColor: C.accent },
+  appSelected: { backgroundColor: '#35254D', borderColor: C.accent },
   appTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
   check: {
     width: 20,
     height: 20,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#756750',
+    borderColor: '#74618C',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -656,5 +656,5 @@ const styles = StyleSheet.create({
     minHeight: 48,
     alignSelf: 'flex-start',
   },
-  nested: { backgroundColor: '#100F0C', borderRadius: 16, padding: 14, gap: 18 },
+  nested: { backgroundColor: '#10102B', borderRadius: 16, padding: 14, gap: 18 },
 });
