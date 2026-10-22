@@ -28,7 +28,7 @@ export function AnimatedCount({
       accessibilityLabel={
         value === null
           ? 'Count unavailable'
-          : `${value} short videos${approximate ? ', unconfirmed' : ''}`
+          : `${value} short videos${approximate ? ', on this phone' : ''}`
       }
     >
       <T
@@ -90,7 +90,7 @@ export function FocusHero() {
         </View>
         <BrainCharacter
           pose={brain.mood === 'high-usage' || brain.mood === 'limit-reached' ? 'tired' : 'wave'}
-          size={Math.min(width - 72, height < 760 ? 160 : 190)}
+          size={Math.min(width - 72, height < 760 ? 140 : 160)}
           still={brain.mood === 'unavailable'}
         />
         <View style={{ alignItems: 'center', gap: 4 }}>
@@ -111,6 +111,14 @@ export function FocusHero() {
             )}
         </View>
       </View>
+      {experimental !== null && (
+        <Details title="About your count">
+          <T v="caption" muted>
+            This count is recorded on your phone. App-version accuracy has not been approved for
+            goal results, weekly summaries or cloud comparisons yet.
+          </T>
+        </Details>
+      )}
       {state.state === 'error' && (
         <>
           <Button label="Try again" onPress={refresh} />
@@ -146,7 +154,7 @@ export function FocusHero() {
                   <Pressable
                     key={app.package}
                     accessibilityRole="button"
-                    accessibilityLabel={`${app.label}: ${count === null ? 'count unconfirmed' : `${count} videos`}. Open Counter`}
+                    accessibilityLabel={`${app.label}: ${count === null ? 'count unavailable' : `${count} videos`}. Open Counter`}
                     onPress={() => router.push('/tracking')}
                     style={({ pressed }) => ({
                       flexDirection: 'row',
@@ -216,12 +224,12 @@ export function VisualBanner({
 }) {
   const t = useTheme();
   return (
-    <View style={{ paddingVertical: 16, gap: 12, alignItems: 'flex-start' }}>
+    <View style={{ paddingVertical: 4, gap: 12, alignItems: 'center', flexDirection: 'row' }}>
       <View
         style={{
-          width: 56,
-          height: 56,
-          borderRadius: 28,
+          width: 44,
+          height: 44,
+          borderRadius: 22,
           backgroundColor: t.warm,
           alignItems: 'center',
           justifyContent: 'center',
@@ -229,18 +237,24 @@ export function VisualBanner({
       >
         <Icon
           name={art === 'friends' ? 'friends' : art === 'focus' ? 'target' : 'flame'}
-          size={28}
+          size={24}
         />
       </View>
-      <T v="display">
-        {title ??
-          (art === 'focus'
-            ? 'Find your focus.'
-            : art === 'friends'
-              ? 'Better, together.'
-              : 'Small goals. Real change.')}
-      </T>
-      {subtitle && <T muted>{subtitle}</T>}
+      <View style={{ flex: 1, gap: 4 }}>
+        <T v="heading">
+          {title ??
+            (art === 'focus'
+              ? 'Find your focus.'
+              : art === 'friends'
+                ? 'Better, together.'
+                : 'Small goals. Real change.')}
+        </T>
+        {subtitle && (
+          <T v="caption" muted>
+            {subtitle}
+          </T>
+        )}
+      </View>
     </View>
   );
 }

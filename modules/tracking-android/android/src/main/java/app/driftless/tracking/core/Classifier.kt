@@ -34,6 +34,7 @@ data class AppRules(
     val adViewIds: Set<String>,
     val adLabels: Set<String>,
     val validatedVersions: List<String>,
+    val captionDescriptionViewIds: Set<String> = emptySet(),
 )
 
 data class RuleSet(val version: Int, val apps: Map<String, AppRules>)
@@ -52,17 +53,19 @@ class Classifier(private val maxNodes: Int = MAX_NODES, private val maxDepth: In
         var playerControlsPresent = false
 
         // Breadth-first, bounded: never walk an unbounded tree on the UI-event hot path.
-        data class Work(val node: UiNode, val depth: Int, val scopes: Set<ItemPart>, val controls: Boolean)
+        data class Work(val node: UiNode, val depth: Int, val scopes: Set<ItemPart>, val controls: Boolean, val metadata: Boolean)
         val captions = HashMap<ItemPart, LinkedHashSet<String>>()
+        val descriptions = HashMap<ItemPart, LinkedHashSet<String>>()
         val queue = ArrayDeque<Work>()
-        queue.addLast(Work(root, 0, emptySet(), false))
+        queue.addLast(Work(root, 0, emptySet(), false, false))
         while (queue.isNotEmpty() && visited < maxNodes) {
-            val (n, depth, inheritedScopes, insideControl) = queue.removeFirst()
+            val (n, depth, inheritedScopes, insideControl, inheritedMetadata) = queue.removeFirst()
             visited++
             if (!n.isVisible) continue
             val cls = n.className?.substringAfterLast('.')
             val controls = insideControl || cls in setOf("Button", "ImageButton", "RadioButton", "CheckBox", "Switch", "SeekBar")
             val id = n.viewId
+            val metadata = inheritedMetadata || id in rules.captionDescriptionViewIds
             val scopes = inheritedScopes + rules.itemParts.filter { it.viewId == id && it.field == Field.CAPTION_TEXT }
             if (scopes.isNotEmpty() && cls in setOf("Button", "ImageButton", "RadioButton", "CheckBox", "Switch"))
                 playerControlsPresent = true
@@ -71,6 +74,15 @@ class Classifier(private val maxNodes: Int = MAX_NODES, private val maxDepth: In
             if (!controls && scopes.isNotEmpty()) {
                 val text = n.text?.trim()?.take(512)
                 if (!text.isNullOrEmpty()) scopes.forEach { captions.getOrPut(it) { linkedSetOf() }.add(text) }
+                // Some YouTube layouts expose captions as descriptions. Only read them
+                // inside the configured metadata panel, never sidebar metrics/progress.
+                if (metadata) {
+                    val desc = n.contentDesc?.trim()?.take(512)
+                    if (!desc.isNullOrEmpty()) {
+                        scopes.forEach { descriptions.getOrPut(it) { linkedSetOf() }.add(desc) }
+                        playerControlsPresent = true
+                    }
+                }
             }
             if (id != null) {
                 if (rules.itemParts.any { it.viewId == id }) containers.add(id)
@@ -92,10 +104,11 @@ class Classifier(private val maxNodes: Int = MAX_NODES, private val maxDepth: In
                 if (label != null && label in rules.adLabels) ad = true
             }
             if (depth < maxDepth) {
-                for (i in 0 until n.childCount) n.child(i)?.let { queue.addLast(Work(it, depth + 1, scopes, controls)) }
+                for (i in 0 until n.childCount) n.child(i)?.let { queue.addLast(Work(it, depth + 1, scopes, controls, metadata)) }
             }
         }
 
+        descriptions.forEach { (part, text) -> if (text.isNotEmpty()) parts[part] = text.joinToString("\n") }
         captions.forEach { (part, text) -> if (text.isNotEmpty()) parts[part] = text.joinToString("\n") }
         if (!surface) return Classification(Surface.OTHER, null, isAd = false, nodesVisited = visited)
         // Identity needs every configured part; a partial match would merge different items.

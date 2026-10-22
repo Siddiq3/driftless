@@ -1,69 +1,118 @@
 import type { Offer } from 'billing-android';
 import { Redirect } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { Linking, View } from 'react-native';
-import { createApiClient } from '@/api/client';
+import { useEffect, useRef, useState } from 'react';
+import { AppState, Linking, View } from 'react-native';
+import { useApi } from '@/api/useApi';
+import type { v1 } from '@siddiq3/driftless-contracts';
+import { entitlementGeneration } from '@/billing/cache';
 import { useSession } from '@/auth/session';
-import { buyPro, loadOffers, MANAGE_URL, restorePro } from '@/billing/pro';
-import { APP_VERSION, readEnv } from '@/config/env';
+import { buyPro, loadOffers, MANAGE_URL, restorePro, offerDisclosure } from '@/billing/pro';
 import { Button, Section, Notice, Screen, T, LoadingState } from '@/ui/kit';
 import { VisualBanner } from '@/ui/Focus';
 import { Icon } from '@/ui/Icon';
 
-const FEATURES = ['App pauses at your limit', 'Focus & bedtime schedules', 'More history & trends'];
+const FEATURES = [
+  'Minute-based app pauses',
+  'Preset focus & bedtime schedules',
+  'Experimental feed limits and breaks',
+];
 
 export default function Pro() {
   const s = useSession();
-  const env = readEnv();
-  const api = useMemo(
-    () =>
-      s.status === 'signedIn' && env
-        ? createApiClient({
-            baseUrl: env.apiUrl,
-            getAccessToken: s.getAccessToken,
-            platform: 'android',
-            appVersion: APP_VERSION,
-          })
-        : null,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [s.status, env?.apiUrl],
-  );
+  const api = useApi();
+  const [entitlement, setEntitlement] = useState<v1.Entitlement | null>(null);
+  const currentApi = useRef(api);
+  const [profileApi, setProfileApi] = useState<typeof api>(null);
+  const operation = useRef(false);
   const [offers, setOffers] = useState<Offer[] | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<{ title: string; body: string; warn?: boolean } | null>(null);
 
   useEffect(() => {
+    currentApi.current = api;
     if (!api) return;
-    api
-      .getMe()
-      .then(({ data }) => setUserId(data.userId))
-      .catch(() => undefined);
+    let active = true;
+    const generation = entitlementGeneration();
+    const refresh = () => {
+      api
+        ?.getMe()
+        .then(({ data }) => {
+          if (active && generation === entitlementGeneration()) {
+            setProfileApi(api);
+            setUserId(data.userId);
+            setEntitlement(data.entitlement);
+          }
+        })
+        .catch(() => {
+          if (active)
+            setNote({
+              title: 'Subscription status unavailable',
+              body: 'Check your connection and reopen this screen.',
+              warn: true,
+            });
+        });
+    };
+    refresh();
     loadOffers()
-      .then(setOffers)
-      .catch((e: unknown) =>
-        setNote({
-          warn: true,
-          title: 'Google Play is unavailable',
-          body: e instanceof Error ? e.message : 'Try again later.',
-        }),
-      );
+      .then((value) => {
+        if (active) setOffers(value);
+      })
+      .catch(() => {
+        if (active)
+          setNote({
+            warn: true,
+            title: 'Google Play is unavailable',
+            body: 'Reopen this screen to try again.',
+          });
+      });
+    const listener = AppState.addEventListener('change', (state) => {
+      if (state === 'active') refresh();
+    });
+    return () => {
+      active = false;
+      currentApi.current = null;
+      listener.remove();
+    };
   }, [api]);
 
   if (s.status === 'signedOut' || s.status === 'unconfigured') return <Redirect href="/welcome" />;
 
-  const run = (fn: () => Promise<string>) => {
+  const run = (fn: () => Promise<{ message: string; entitlement: v1.Entitlement | null }>) => {
+    if (operation.current) return;
+    operation.current = true;
+    const generation = entitlementGeneration();
+    const allowed = () => currentApi.current === api && generation === entitlementGeneration();
     setBusy(true);
     fn()
-      .then((msg) => setNote({ title: msg, body: '' }))
-      .catch((e: unknown) =>
-        setNote({
-          warn: true,
-          title: 'That did not work',
-          body: e instanceof Error ? e.message : '',
-        }),
-      )
-      .finally(() => setBusy(false));
+      .then(({ message, entitlement: result }) => {
+        if (allowed()) {
+          setNote({ title: message, body: '' });
+          setEntitlement(
+            result ?? {
+              tier: 'free',
+              source: 'none',
+              state: 'none',
+              expiresAt: null,
+              verifiedAt: null,
+            },
+          );
+        }
+      })
+      .catch((e: unknown) => {
+        if (allowed())
+          setNote({
+            warn: true,
+            title: 'That did not work',
+            body: e instanceof Error ? e.message : '',
+          });
+      })
+      .finally(() => {
+        operation.current = false;
+        if (allowed()) {
+          setBusy(false);
+        }
+      });
   };
 
   return (
@@ -76,7 +125,7 @@ export default function Pro() {
             key={f}
             style={{ flexDirection: 'row', gap: 12, alignItems: 'center', paddingVertical: 8 }}
           >
-            <Icon name={i === 0 ? 'lock' : i === 1 ? 'clock' : 'chart'} />
+            <Icon name={i === 0 ? 'lock' : i === 1 ? 'clock' : 'target'} />
             <T muted style={{ flex: 1 }}>
               {f}
             </T>
@@ -84,29 +133,45 @@ export default function Pro() {
         ))}
       </Section>
       <T v="caption" muted>
-        Counting, goals, Wick and your history stay free. Pro is verified by our server with Google
-        Play; cancel any time in Google Play.
+        Counting, goals and existing history stay free. Feed protection depends on supported app
+        detection and may miss videos. Pro is an auto-renewing subscription; cancel in Google Play.
       </T>
+      {entitlement && profileApi === api && (
+        <Notice
+          title={entitlement.tier === 'pro' ? 'Your plan: Pro' : 'Your plan: Free'}
+          body={`Subscription state: ${entitlement.state}.${entitlement.expiresAt ? ` Access or billing-period end: ${new Date(entitlement.expiresAt).toLocaleDateString()}.` : ''} Manage renewal and payment details in Google Play.`}
+        />
+      )}
       {note && <Notice tone={note.warn ? 'warn' : 'info'} title={note.title} body={note.body} />}
       {offers === null && !note && <LoadingState label="Checking plans in Google Play…" />}
       {offers?.length === 0 && (
         <Notice title="Not available yet" body="Pro isn't on sale in this build." />
       )}
       {api &&
+        profileApi === api &&
         userId &&
         offers?.map((o) => (
-          <Button
-            key={o.offerToken}
-            busy={busy}
-            label={`Subscribe — ${o.price}${o.period === 'P1M' ? ' / month' : o.period === 'P1Y' ? ' / year' : ''}`}
-            onPress={() =>
-              run(async () =>
-                (await buyPro(api, userId, o)).tier === 'pro'
-                  ? 'Pro is on. Thank you!'
-                  : 'Purchase received but not active yet.',
-              )
-            }
-          />
+          <View key={o.offerToken} style={{ gap: 8 }}>
+            <Button
+              busy={busy}
+              label={`Subscribe — ${o.price}${o.period === 'P1M' ? ' / month' : o.period === 'P1Y' ? ' / year' : ''}`}
+              onPress={() =>
+                run(async () => {
+                  const result = await buyPro(api, userId, o);
+                  return {
+                    entitlement: result,
+                    message:
+                      result.tier === 'pro'
+                        ? 'Pro is on. Thank you!'
+                        : 'Purchase received but not active yet.',
+                  };
+                })
+              }
+            />
+            <T v="caption" muted>
+              {offerDisclosure(o)}
+            </T>
+          </View>
         ))}
       {api && (
         <Button
@@ -114,11 +179,16 @@ export default function Pro() {
           label="Restore purchase"
           busy={busy}
           onPress={() =>
-            run(async () =>
-              (await restorePro(api))?.tier === 'pro'
-                ? 'Pro restored.'
-                : 'No active subscription found.',
-            )
+            run(async () => {
+              const result = await restorePro(api);
+              return {
+                entitlement: result,
+                message:
+                  result?.tier === 'pro'
+                    ? 'Pro restored.'
+                    : 'No active subscription found on this Google Play account.',
+              };
+            })
           }
         />
       )}

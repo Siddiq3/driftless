@@ -48,6 +48,7 @@ jest.mock('@/ui/kit', () => {
   const { View, Text, Pressable } = require('react-native');
   return {
     Screen: View,
+    Details: View,
     T: Text,
     Notice: ({ body }: { body: string }) => require('react').createElement(Text, null, body),
     Button: ({ label, onPress }: { label: string; onPress: () => void }) =>

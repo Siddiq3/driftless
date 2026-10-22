@@ -151,7 +151,7 @@ export default function Challenges() {
           onPress={() => createWeek('goal_days')}
         />
         <T v="caption" muted>
-          Video-count challenges open once counting accuracy is confirmed.
+          Video-count challenges aren’t available yet.
         </T>
       </Section>
 

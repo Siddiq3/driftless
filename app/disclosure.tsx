@@ -45,13 +45,13 @@ export default function Disclosure() {
           {!alreadyAgreed && (
             <T style={{ color: '#E3DFD1', fontSize: 12, lineHeight: 17, paddingHorizontal: 16 }}>
               Driftless can track app minutes in Instagram, YouTube, Facebook, Snapchat, Moj and
-              ShareChat. Short-video detection rules are unvalidated candidates for Instagram and
-              YouTube only; video counts are not set up for Facebook, Snapchat, Moj or ShareChat.
-              Where a video rule is active, limited player labels become one-way codes and only
-              counts and times are saved on this phone. No messages, passwords or screenshots.
-              Optional cloud sync shares daily totals only. Optional feed pauses cover a detected
-              Reels or Shorts player. The Leave feed button performs Android Back only when you
-              press it. You can always leave using system navigation.
+              ShareChat. Experimental short-video detection covers Instagram and YouTube only; video
+              counts are not set up for Facebook, Snapchat, Moj or ShareChat. Where a video rule is
+              active, limited player labels become one-way codes and only counts and times are saved
+              on this phone. No messages, passwords or screenshots. Optional cloud sync shares daily
+              totals only. Optional feed pauses cover a detected Reels or Shorts player. The Leave
+              feed button performs Android Back only when you press it. You can always leave using
+              system navigation.
             </T>
           )}
           {error && <Notice tone="warn" title="Please try again" body={error} />}

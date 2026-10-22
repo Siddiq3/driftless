@@ -13,10 +13,12 @@ import {
 } from 'react';
 import type { Env } from '../config/env';
 import { googleIdentity } from './google';
+import { invalidateEntitlement } from '@/billing/cache';
 
 // Stores only the user's choice to stay signed in. Credentials are managed by Google's SDK.
 const ENABLED_KEY = 'driftless.google.enabled.v1';
 const LEGACY_KEY = 'driftless.tokens.v1';
+const OWNER_KEY = 'driftless.google.cache-owner.v1';
 type SessionState =
   | { status: 'loading' }
   | { status: 'unconfigured' }
@@ -35,9 +37,16 @@ type SessionState =
 const Ctx = createContext<SessionState>({ status: 'loading' });
 export const useSession = () => useContext(Ctx);
 
+function UnconfiguredSession({ children }: { children: ReactNode }) {
+  useEffect(() => {
+    invalidateEntitlement();
+  }, []);
+  return <Ctx.Provider value={{ status: 'unconfigured' }}>{children}</Ctx.Provider>;
+}
+
 export function SessionProvider({ env, children }: { env: Env | null; children: ReactNode }) {
   if (!env || !TurboModuleRegistry.get('RNGoogleSignin'))
-    return <Ctx.Provider value={{ status: 'unconfigured' }}>{children}</Ctx.Provider>;
+    return <UnconfiguredSession>{children}</UnconfiguredSession>;
   return <GoogleSession env={env}>{children}</GoogleSession>;
 }
 
@@ -54,6 +63,7 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
   const enabled = useRef(false);
   const tokenRequest = useRef<Promise<string | null> | null>(null);
   const signingIn = useRef(false);
+  const accountOwner = useRef<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -64,12 +74,21 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
       await SecureStore.deleteItemAsync(LEGACY_KEY);
       const staySignedIn = await SecureStore.getItemAsync(ENABLED_KEY);
       const token = staySignedIn === 'true' ? await googleIdentity(GoogleSignin, false) : null;
+      const previousOwner = await SecureStore.getItemAsync(OWNER_KEY);
+      const owner = token ? GoogleSignin.getCurrentUser()?.user.id : null;
       if (active) {
+        if (!owner || owner !== previousOwner) invalidateEntitlement();
+        if (owner) await SecureStore.setItemAsync(OWNER_KEY, owner);
+        if (!active) return;
+        accountOwner.current = owner ?? null;
         enabled.current = Boolean(token);
         setSignedIn(Boolean(token));
       }
     })().catch(() => {
-      if (active) setSignedIn(false);
+      if (active) {
+        invalidateEntitlement();
+        setSignedIn(false);
+      }
     });
     return () => {
       active = false;
@@ -84,8 +103,13 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
     try {
       const token = await googleIdentity(GoogleSignin, true);
       if (!token) return;
+      invalidateEntitlement();
+      const owner = GoogleSignin.getCurrentUser()?.user.id;
+      if (owner) await SecureStore.setItemAsync(OWNER_KEY, owner);
+      else await SecureStore.deleteItemAsync(OWNER_KEY);
       await SecureStore.setItemAsync(ENABLED_KEY, 'true');
       generation.current.value++;
+      accountOwner.current = owner ?? null;
       enabled.current = true;
       setSignedIn(true);
     } catch {
@@ -96,12 +120,17 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
   }, [GoogleSignin]);
 
   const signOut = useCallback(async () => {
-    await SecureStore.setItemAsync(ENABLED_KEY, 'false');
+    invalidateEntitlement();
     generation.current.value++;
     tokenRequest.current = null;
     enabled.current = false;
     setSignedIn(false);
-    await GoogleSignin.signOut();
+    try {
+      await SecureStore.setItemAsync(ENABLED_KEY, 'false');
+      await SecureStore.deleteItemAsync(OWNER_KEY);
+    } finally {
+      await GoogleSignin.signOut();
+    }
   }, [GoogleSignin]);
 
   const disconnect = useCallback(async () => {
@@ -121,7 +150,20 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
     if (!tokenRequest.current) {
       const request = googleIdentity(GoogleSignin, false)
         .then((token) => {
+          if (
+            token &&
+            accountOwner.current &&
+            GoogleSignin.getCurrentUser()?.user.id !== accountOwner.current
+          ) {
+            if (generation.current.value === current) {
+              invalidateEntitlement();
+              enabled.current = false;
+              setSignedIn(false);
+            }
+            return null;
+          }
           if (!token && generation.current.value === current) {
+            invalidateEntitlement();
             enabled.current = false;
             setSignedIn(false);
           }

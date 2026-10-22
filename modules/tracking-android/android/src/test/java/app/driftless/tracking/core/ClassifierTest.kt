@@ -115,4 +115,22 @@ class ClassifierTest {
         assertFalse(c.classify(screen(null,false),modern,salt).itemContainerPresent)
     }
 
+    @Test fun describedMetadataCaptionsIgnoreSidebarAndHiddenContent() {
+        val r = rules.copy(surfaceViewIds=setOf("pager"), itemParts=listOf(ItemPart("player",Field.CAPTION_TEXT)), captionDescriptionViewIds=setOf("metapanel"))
+        fun tree(caption: String, likes: String, hidden: String) = FakeNode(viewId="pager",children=listOf(
+            FakeNode(viewId="player",children=listOf(
+                FakeNode(viewId="metapanel",children=listOf(
+                    FakeNode(className="android.view.ViewGroup",contentDesc=caption),
+                    FakeNode(contentDesc=hidden,isVisible=false))),
+                FakeNode(className="android.view.ViewGroup",contentDesc=likes),
+                FakeNode(className="android.widget.SeekBar",contentDesc="00:01")))))
+        val a=c.classify(tree("Caption one","Like 10","hidden one"),r,salt)
+        assertNotNull(a.fingerprint)
+        assertTrue(a.itemContainerPresent)
+        assertEquals(a.fingerprint,c.classify(tree("Caption one","Like 11","hidden two"),r,salt).fingerprint)
+        assertNotEquals(a.fingerprint,c.classify(tree("Caption two","Like 11","hidden two"),r,salt).fingerprint)
+        assertNull(c.classify(tree("","Like 11","hidden two"),r,salt).fingerprint)
+        assertNull(c.classify(tree("Caption one","Like 11","hidden two"),r.copy(captionDescriptionViewIds=emptySet()),salt).fingerprint)
+    }
+
 }

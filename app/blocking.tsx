@@ -4,9 +4,19 @@ import { View } from 'react-native';
 import { Tracking, type BlockingConfig } from 'tracking-android';
 import { loadBlocking, PRESETS, saveBlocking } from '@/billing/blocking';
 import { getDb } from '@/db';
-import { Toggle, Button, Section, Notice, Screen, T, MetricPanel, Details } from '@/ui/kit';
-import { VisualBanner } from '@/ui/Focus';
+import {
+  Toggle,
+  Button,
+  Section,
+  Notice,
+  Screen,
+  T,
+  MetricPanel,
+  Details,
+  LoadingState,
+} from '@/ui/kit';
 import { AppIcon, Icon } from '@/ui/Icon';
+import { ProtectionNotice } from '@/billing/ProtectionNotice';
 
 const LIMITS = [15, 20, 30, 45, 60, 90, 120];
 
@@ -25,6 +35,7 @@ function Row({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
+        minHeight: 48,
         gap: 12,
       }}
     >
@@ -43,7 +54,6 @@ function Row({
 
 export default function Blocking() {
   const [cfg, setCfg] = useState<BlockingConfig | null>(null);
-  const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useFocusEffect(
@@ -52,7 +62,6 @@ export default function Blocking() {
         .then(loadBlocking)
         .then((c) => {
           setCfg(c);
-          setRunning(Tracking.health().serviceRunning);
         })
         .catch((e: unknown) =>
           setError(e instanceof Error ? e.message : 'Try opening this screen again.'),
@@ -63,7 +72,11 @@ export default function Blocking() {
   if (!cfg)
     return (
       <Screen>
-        {error ? <Notice tone="warn" title="App pauses could not be loaded" body={error} /> : null}
+        {error ? (
+          <Notice tone="warn" title="App pauses could not be loaded" body={error} />
+        ) : (
+          <LoadingState label="Loading app pauses…" />
+        )}
       </Screen>
     );
   const update = (next: BlockingConfig) => {
@@ -81,16 +94,9 @@ export default function Blocking() {
   return (
     <Screen>
       {error && <Notice tone="warn" title="App pauses need attention" body={error} />}
-      <VisualBanner art="focus" />
-      {!running && (
-        <Notice
-          tone="warn"
-          title="The counter isn't running"
-          body="Pausing needs the Driftless counter switched on in Accessibility settings."
-        />
-      )}
+      <ProtectionNotice config={cfg} />
       <Section>
-        <T v="heading">Your pause switch</T>
+        <T v="heading">App pauses</T>
         <Row
           label="Pause apps"
           value={cfg.enabled}
@@ -190,28 +196,25 @@ export default function Blocking() {
       </Section>
       {Tracking.health().feedLimitsImplemented ? (
         <Section>
-          <T v="heading">Reels &amp; Shorts limits and breaks</T>
-          <T muted>
-            These controls need the pause switch, selected apps and active Pro. They apply only to a
-            detected short-video feed.
+          <T v="heading">Reels &amp; Shorts</T>
+          <T v="caption" muted>
+            Requires App pauses, selected apps and Pro. Applies to detected feeds only.
           </T>
           <Row
             label="Pause only Reels and Shorts"
             value={cfg.feedOnly ?? false}
             onChange={(v) => update({ ...cfg, feedOnly: v })}
           />
-          <T muted>
-            Applies your minute limits and focus times only inside the feed. Other screens stay
-            available after you leave the feed. Unsupported or undetected screens remain usable.
+          <T v="caption" muted>
+            Keeps other screens available. Undetected feeds remain usable.
           </T>
           <Row
             label="Enforce my daily video goal"
             value={cfg.enforceVideoGoal ?? false}
             onChange={(v) => update({ ...cfg, enforceVideoGoal: v })}
           />
-          <T muted>
-            Uses the enabled Videos a day goal. At the Nth qualifying video, the feed pauses until
-            the next local day. A bypass temporarily allows more videos.
+          <T v="caption" muted>
+            Pauses at your saved video goal until tomorrow, unless you use a bypass.
           </T>
           <Button
             kind="secondary"
@@ -230,31 +233,35 @@ export default function Blocking() {
               ['Bypasses per local day', 'maxBypassesPerDay', [0, 1, 3, 5]],
               ['Bypass duration (minutes)', 'bypassMinutes', [1, 5, 10, 15]],
             ] as const
-          ).map(([label, key, choices]) => (
-            <View key={key} style={{ gap: 8 }}>
-              <T>{label}</T>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                {choices.map((value) => (
-                  <Button
-                    key={value}
-                    label={`${value}${(cfg[key] ?? (key === 'breakEveryViews' ? 50 : key === 'maxBypassesPerDay' ? 3 : 5)) === value ? ' ✓' : ''}`}
-                    kind="secondary"
-                    onPress={() => update({ ...cfg, [key]: value })}
-                  />
-                ))}
+          )
+            .filter(([, key]) =>
+              key === 'breakEveryViews' || key === 'breakMinutes'
+                ? cfg.breaksEnabled
+                : cfg.enforceVideoGoal || cfg.breaksEnabled,
+            )
+            .map(([label, key, choices]) => (
+              <View key={key} style={{ gap: 8 }}>
+                <T>{label}</T>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {choices.map((value) => (
+                    <Button
+                      key={value}
+                      label={`${value}${(cfg[key] ?? (key === 'breakEveryViews' ? 50 : key === 'maxBypassesPerDay' ? 3 : 5)) === value ? ' ✓' : ''}`}
+                      kind="secondary"
+                      onPress={() => update({ ...cfg, [key]: value })}
+                    />
+                  ))}
+                </View>
               </View>
-            </View>
-          ))}
+            ))}
           <Row
-            label="Use unverified local detection"
+            label="Use experimental feed detection"
             value={cfg.allowUnvalidatedCounts ?? false}
             onChange={(v) => update({ ...cfg, allowUnvalidatedCounts: v })}
           />
-          <T muted>
-            Off by default. Without approved app versions, feed pauses stay unavailable unless you
-            enable this experiment. It can miss videos or interrupt the wrong screen. It never makes
-            counts eligible for cloud comparisons. Home, Back and Open Driftless remain available;
-            media may keep playing underneath.
+          <T v="caption" muted>
+            Experimental: may miss videos or pause the wrong screen. Required for unapproved app
+            versions; counts remain ineligible for cloud comparisons.
           </T>
         </Section>
       ) : (
@@ -269,7 +276,8 @@ export default function Blocking() {
           Whole-app minute and schedule pauses show Driftless’s pause screen with five-minute
           snoozes, three per day. Feed pauses use the bypass budget above, shared across Reels and
           Shorts. Timed breaks resume after their countdown; a daily video cap remains until the
-          next local day. Leaving the feed, Home and turning protection off remain available.
+          next local day. Back, Home, Open Driftless and turning protection off remain available.
+          Playback and audio may continue under the feed overlay.
         </T>
       </Details>
       <Button kind="secondary" label="Driftless Pro" onPress={() => router.push('/pro')} />

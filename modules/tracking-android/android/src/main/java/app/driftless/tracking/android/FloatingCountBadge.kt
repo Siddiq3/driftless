@@ -276,7 +276,7 @@ class FloatingCountBadge(private val service: AccessibilityService) {
         count?.text=value.text
         count?.minWidth = dp(iconSize)
         count?.textSize = iconSize * 0.38f
-        root?.contentDescription = "${value.text} short videos today. ${if (value.mood == CountBadgeMood.DRAINED) "Daily limit exceeded." else ""} Tap to open Driftless. Long press to move. Drag to the bottom target to pause."
+        root?.contentDescription = "${value.text} short videos today. ${if (value.mood == CountBadgeMood.DRAINED) "Daily limit reached." else ""} Tap to open Driftless. Long press to move. Drag to the bottom target to pause."
     }
     fun hide() {
         hideDismissTarget()

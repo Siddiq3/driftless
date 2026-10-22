@@ -44,7 +44,9 @@ export function capabilityReport({
       : videoTargets.length === 0
         ? unavailable('Short-video detection rules are not configured for the installed apps yet')
         : videoTargets.some((a) => !a.validated)
-          ? unavailable('Local counting available; accuracy unverified for installed app versions')
+          ? unavailable(
+              'Local counting available; cloud video scores unavailable for these app versions',
+            )
           : available('Service running; installed versions approved');
   const minutesTracking = !android
     ? unavailable('Not implemented on this platform')

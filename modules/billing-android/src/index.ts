@@ -1,6 +1,12 @@
-import { requireNativeModule } from 'expo';
+import { requireOptionalNativeModule } from 'expo';
 
-export type Offer = { offerToken: string; basePlanId: string; price: string; period: string };
+export type Offer = {
+  offerToken: string;
+  basePlanId: string;
+  price: string;
+  period: string;
+  phases?: { price: string; period: string; cycles: number; mode: number }[];
+};
 export type Subscription = { productId: string; title: string; offers: Offer[] };
 export type Purchase = {
   purchaseToken: string;
@@ -15,12 +21,16 @@ type NativeBilling = {
   activeSubscriptions(): Promise<Purchase[]>;
 };
 
-const native = requireNativeModule<NativeBilling>('DriftlessBilling');
+const native = requireOptionalNativeModule<NativeBilling>('DriftlessBilling');
+function ready(): NativeBilling {
+  if (!native) throw new Error('Google Play Billing requires an updated Android build.');
+  return native;
+}
 
 /** Obtains purchase tokens only. Pro is granted by the server after it verifies the token. */
 export const Billing = {
-  subscriptions: (ids: string[]) => native.getSubscriptions(ids),
+  subscriptions: (ids: string[]) => ready().getSubscriptions(ids),
   purchase: (productId: string, offerToken: string, accountId: string) =>
-    native.purchase(productId, offerToken, accountId),
-  active: () => native.activeSubscriptions(),
+    ready().purchase(productId, offerToken, accountId),
+  active: () => ready().activeSubscriptions(),
 };

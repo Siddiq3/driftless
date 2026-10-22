@@ -103,6 +103,12 @@ class BillingModule : Module() {
                                         "basePlanId" to o.basePlanId,
                                         "price" to (phase?.formattedPrice ?: ""),
                                         "period" to (phase?.billingPeriod ?: ""),
+                                        "phases" to o.pricingPhases.pricingPhaseList.map { price -> mapOf(
+                                            "price" to price.formattedPrice,
+                                            "period" to price.billingPeriod,
+                                            "cycles" to price.billingCycleCount,
+                                            "mode" to price.recurrenceMode,
+                                        ) },
                                     )
                                 },
                             )

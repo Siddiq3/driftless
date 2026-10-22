@@ -41,7 +41,7 @@ class ViewCounter(initialRing: List<String> = emptyList()) {
     private var lastFpNull = false
     private var transitionUntil: Long? = null
 
-    private class Current(val fp: String, val since: Long, val isAd: Boolean, var pending: Boolean) {
+    private class Current(val fp: String, val since: Long, val isAd: Boolean, var pending: Boolean, var awaitingSignal: Boolean = false) {
         var dwellMs = 0L
     }
 
@@ -65,13 +65,24 @@ class ViewCounter(initialRing: List<String> = emptyList()) {
             cur = null // left the feed, or identity unknown; ring buffer is kept
             return out
         }
-        if (cur?.fp == o.fingerprint) return out // repeated callback for the same item
+        val current = cur
+        if (current?.fp == o.fingerprint) {
+            // Identity and pager replacement can arrive in either order. Only a novel,
+            // unarmed candidate can consume a late signal, within the same settle window.
+            if (current.awaitingSignal && o.pagerScrolled && o.tMs - current.since <= IDENTITY_SETTLE_MS) {
+                current.awaitingSignal = false
+                current.pending = true
+                current.dwellMs = 0L // require full qualifying dwell after confirmation
+                transitionUntil = null
+            }
+            return out
+        }
 
         val novel = !ring.contains(o.fingerprint)
         val structural = transitionUntil != null
         if (structural) transitionUntil = null
         remember(o.fingerprint)
-        cur = Current(o.fingerprint, o.tMs, o.isAd, pending = novel && structural)
+        cur = Current(o.fingerprint, o.tMs, o.isAd, pending = novel && structural, awaitingSignal = novel && !structural)
         return out
     }
 

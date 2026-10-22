@@ -16,22 +16,22 @@ class BadgeStateTest {
     }
     @Test fun savedCountStaysVisibleWhileNextVideoIsBeingIdentified() {
         assertEquals(CountBadgeValue("7","Today"),countBadgeValue(7,true,true))
-        assertEquals(CountBadgeValue("7","Unconfirmed"),countBadgeValue(7,false,true))
+        assertEquals(CountBadgeValue("7","On this phone"),countBadgeValue(7,false,true))
         assertEquals(CountBadgeValue("7","Not detected",CountBadgeMood.HAPPY),countBadgeValue(7,false,false))
         assertEquals(CountBadgeValue("7","Not detected",CountBadgeMood.HAPPY),countBadgeValue(7,true,false))
         assertEquals("0",countBadgeValue(-1,true,true).text)
     }
-    @Test fun happyThroughTheLimitAndDrainedOnlyAboveIt() {
+    @Test fun drainedAtTheExactEnforcedLimit() {
         for (limit in listOf(25,50,100,150)) {
             assertEquals(CountBadgeMood.HAPPY, countBadgeValue(0,true,true,limit).mood)
             assertEquals(CountBadgeMood.HAPPY, countBadgeValue(limit-1,true,true,limit).mood)
-            assertEquals(CountBadgeMood.HAPPY, countBadgeValue(limit,true,true,limit).mood)
+            assertEquals(CountBadgeMood.DRAINED, countBadgeValue(limit,true,true,limit).mood)
             assertEquals(CountBadgeMood.DRAINED, countBadgeValue(limit+1,true,true,limit).mood)
             assertEquals(CountBadgeMood.HAPPY, countBadgeValue(0,true,true,limit).mood)
         }
     }
     @Test fun moodReflectsSavedCountEvenWhileIdentityIsPending() {
-        assertEquals(CountBadgeValue("101","Unconfirmed",CountBadgeMood.DRAINED),countBadgeValue(101,false,true,100))
+        assertEquals(CountBadgeValue("101","On this phone",CountBadgeMood.DRAINED),countBadgeValue(101,false,true,100))
         assertEquals(CountBadgeMood.DRAINED,countBadgeValue(101,true,false,100).mood)
         assertEquals(CountBadgeMood.HAPPY,countBadgeValue(101,true,true,null).mood)
         assertEquals(CountBadgeMood.HAPPY,countBadgeValue(101,true,true,0).mood)

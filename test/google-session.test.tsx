@@ -3,11 +3,14 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { TurboModuleRegistry } from 'react-native';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as SecureStore from 'expo-secure-store';
+import { invalidateEntitlement } from '../src/billing/cache';
 import { SessionProvider, useSession } from '../src/auth/session';
 
+jest.mock('../src/billing/cache', () => ({ invalidateEntitlement: jest.fn() }));
 jest.mock('@react-native-google-signin/google-signin', () => ({
   GoogleSignin: {
     configure: jest.fn(),
+    getCurrentUser: jest.fn(() => ({ user: { id: '100000000000000000001' } })),
     hasPlayServices: jest.fn(),
     signIn: jest.fn(),
     signInSilently: jest.fn(),
@@ -80,6 +83,9 @@ beforeEach(() => {
   mockMarkers.clear();
   jest.clearAllMocks();
   jest.spyOn(TurboModuleRegistry, 'get').mockReturnValue({} as never);
+  jest
+    .mocked(GoogleSignin.getCurrentUser)
+    .mockReturnValue({ user: { id: '100000000000000000001' } } as never);
   jest.mocked(GoogleSignin.hasPlayServices).mockResolvedValue(true);
   jest.mocked(GoogleSignin.signIn).mockResolvedValue(response());
   jest.mocked(GoogleSignin.signInSilently).mockResolvedValue(response('renewed-token'));
@@ -120,11 +126,13 @@ test('canceling the Google picker leaves guest mode and no saved session', async
   expect(latest).toMatchObject({ status: 'signedOut', error: null });
   expect(mockMarkers.has('driftless.google.enabled.v1')).toBe(false);
 });
-test('a successful account choice saves only the restoration marker', async () => {
+test('a successful account choice stores a non-credential owner marker and clears prior access', async () => {
   await mount();
   await login();
   expect(latest.status).toBe('signedIn');
-  expect([...mockMarkers.entries()]).toEqual([['driftless.google.enabled.v1', 'true']]);
+  expect(mockMarkers.get('driftless.google.enabled.v1')).toBe('true');
+  expect(mockMarkers.get('driftless.google.cache-owner.v1')).toBe('100000000000000000001');
+  expect(invalidateEntitlement).toHaveBeenCalled();
 });
 test('sign-out invalidates a pending token and cached API-client getters', async () => {
   await mount();
@@ -184,4 +192,44 @@ test('an older native binary keeps guest mode usable without loading the Google 
   await mount();
   expect(latest.status).toBe('unconfigured');
   expect(GoogleSignin.configure).not.toHaveBeenCalled();
+});
+
+test('a restored account preserves bounded offline access only for the same recorded owner', async () => {
+  mockMarkers.set('driftless.google.enabled.v1', 'true');
+  mockMarkers.set('driftless.google.cache-owner.v1', '100000000000000000001');
+  await mount();
+  expect(invalidateEntitlement).not.toHaveBeenCalled();
+});
+test('a restored different account clears the previous native entitlement', async () => {
+  mockMarkers.set('driftless.google.enabled.v1', 'true');
+  mockMarkers.set('driftless.google.cache-owner.v1', 'previous-owner');
+  await mount();
+  expect(invalidateEntitlement).toHaveBeenCalledTimes(1);
+});
+test('sign-out clears native access immediately even when saving the marker fails', async () => {
+  await mount();
+  await login();
+  jest.mocked(invalidateEntitlement).mockClear();
+  jest.mocked(SecureStore.setItemAsync).mockRejectedValueOnce(new Error('storage unavailable'));
+  await act(async () => {
+    await expect(signedIn().signOut()).rejects.toThrow('storage unavailable');
+  });
+  expect(invalidateEntitlement).toHaveBeenCalledTimes(1);
+  expect(latest.status).toBe('signedOut');
+  expect(GoogleSignin.signOut).toHaveBeenCalled();
+});
+
+test('silent account replacement never reuses the previous account entitlement or API client', async () => {
+  await mount();
+  await login();
+  const previous = signedIn();
+  jest.mocked(invalidateEntitlement).mockClear();
+  jest
+    .mocked(GoogleSignin.getCurrentUser)
+    .mockReturnValue({ user: { id: 'another-owner' } } as never);
+  await act(async () => {
+    await expect(previous.getAccessToken()).resolves.toBeNull();
+  });
+  expect(invalidateEntitlement).toHaveBeenCalledTimes(1);
+  expect(latest.status).toBe('signedOut');
 });

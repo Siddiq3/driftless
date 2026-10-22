@@ -11,7 +11,7 @@ export function ActivityChart({ data, period }: { data: ActivityData; period: Ac
   const known = data.bars.some((b) => b.value !== null);
   const sparse = data.bars.filter((b) => (b.value ?? 0) > 0).length <= 8;
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, !known && styles.emptyCard]}>
       {!known ? (
         <View style={styles.empty}>
           <Icon name="chart" size={32} color="#FFE1A4" />
@@ -109,5 +109,13 @@ const styles = StyleSheet.create({
   yAxis: { width: 22, justifyContent: 'space-between', paddingBottom: 0 },
   bars: { flex: 1, height: 155, flexDirection: 'row', gap: 2, alignItems: 'flex-end' },
   xAxis: { marginTop: 14, marginLeft: 32, flexDirection: 'row', justifyContent: 'space-between' },
-  empty: { minHeight: 170, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  emptyCard: { minHeight: 0, padding: 16, paddingTop: 16 },
+  empty: {
+    minHeight: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
 });

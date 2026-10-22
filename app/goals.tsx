@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { getDb } from '@/db';
+import { ProtectionNotice } from '@/billing/ProtectionNotice';
 import { canUseViewGoals } from '@/goals/progress';
 import {
   ensureNotificationPermission,
@@ -14,7 +15,6 @@ import { loadGoals, saveGoal } from '@/goals/store';
 import { Tracking } from 'tracking-android';
 import { useProgress } from '@/goals/useProgress';
 import { Details, MetricPanel, Toggle, Button, Section, Notice, Screen, T } from '@/ui/kit';
-import { VisualBanner } from '@/ui/Focus';
 
 const STEPS: Record<v1.Goal['metric'], number[]> = {
   minutes: [10, 15, 20, 30, 45, 60, 90, 120],
@@ -99,7 +99,7 @@ function GoalEditor({
       </View>
       {!enabledAllowed && (
         <T v="caption" muted>
-          Available once video counting accuracy is confirmed for your app versions.
+          Video goals are not available for these app versions.
         </T>
       )}
       <MetricPanel
@@ -203,14 +203,16 @@ export default function Goals() {
   const find = (m: v1.Goal['metric']) => s.goals.find((g) => g.metric === m);
   return (
     <Screen>
-      <VisualBanner art="wick" />
+      <ProtectionNotice />
       <GoalEditor metric="minutes" existing={find('minutes')} enabledAllowed />
       <GoalEditor metric="views" existing={find('views')} enabledAllowed />
       {!canUseViewGoals(s.health) && (
-        <Notice
-          title="Video accuracy is unverified"
-          body="Your video target can be saved. Goal results and cloud scores still require approved app versions. Feed enforcement requires approved versions or the explicit local experiment in App pauses."
-        />
+        <Details title="About video goals">
+          <T v="caption" muted>
+            Save a target for this phone. Goal results and cloud scores depend on app-version
+            support. Configure feed pauses in Focus.
+          </T>
+        </Details>
       )}
       <Details title="Reminders" icon="clock">
         <EveningReminder />

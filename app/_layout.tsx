@@ -8,6 +8,7 @@ import { getDb } from '@/db';
 import { useReducedMotion } from '@/ui/motion';
 import { OnboardingProvider } from '@/onboarding/context';
 import { FirstLaunchRedirect } from '@/onboarding/FirstLaunchRedirect';
+import { EntitlementRecovery } from '@/billing/EntitlementRecovery';
 import { Notice, Screen, useTheme } from '@/ui/kit';
 
 const env = readEnv();
@@ -37,6 +38,7 @@ export default function RootLayout() {
         <SessionProvider env={env}>
           <StatusBar style="light" />
           <FirstLaunchRedirect />
+          <EntitlementRecovery />
           <Stack
             screenOptions={{
               headerShown: false,

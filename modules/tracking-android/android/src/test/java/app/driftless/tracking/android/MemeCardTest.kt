@@ -37,11 +37,11 @@ class MemeCardTest {
     @Test fun attachesOnlyOneCardAndCanDismissAndShowNextMilestone() {
         val controller=Robolectric.buildService(MemeTestService::class.java).create()
         val card=MemeMilestoneCard(controller.get())
-        assertTrue(card.show(CountBadgeValue("~50","Unconfirmed"),50,"te") {})
+        assertTrue(card.show(CountBadgeValue("~50","On this phone"),50,"te") {})
         assertTrue(card.isShowing)
-        assertFalse(card.show(CountBadgeValue("~50","Unconfirmed"),50,"te") {})
+        assertFalse(card.show(CountBadgeValue("~50","On this phone"),50,"te") {})
         card.hide(); assertFalse(card.isShowing)
-        assertTrue(card.show(CountBadgeValue("~100","Unconfirmed"),100,"en") {})
+        assertTrue(card.show(CountBadgeValue("~100","On this phone"),100,"en") {})
         card.hide(); controller.destroy()
     }
 }

@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react';
 import { View } from 'react-native';
 import { Tracking, type Daily, type TrackingHealth } from 'tracking-android';
 import { currentTimeZone } from '@/sync/run';
-import { Button, Section, Notice, Screen, T, useTheme } from '@/ui/kit';
+import { Button, Section, Notice, Screen, T, useTheme, Details } from '@/ui/kit';
 import { Icon } from '@/ui/Icon';
 
 const DAYS = 14;
@@ -13,7 +13,6 @@ type Row = {
   date: string;
   minutes: number | null;
   videos: number | null;
-  confirmed: boolean;
   gap: boolean;
 };
 
@@ -30,13 +29,10 @@ function toRow(d: Daily, h: TrackingHealth): Row {
         ? Math.round(counter / 60_000)
         : null;
   const videos = ran ? d.apps.reduce((n, a) => n + a.views, 0) : null;
-  const confirmed =
-    h.apps.filter((a) => a.installed).every((a) => a.validated) && h.apps.some((a) => a.installed);
   return {
     date: d.localDate,
     minutes,
     videos,
-    confirmed,
     gap: !hasRows || (!ran && !h.usageAccessGranted),
   };
 }
@@ -68,13 +64,19 @@ export default function History() {
           body="Turn on the counter or Usage Access to start building your history."
         />
       )}
+      <Details title="About your history">
+        <T v="caption" muted>
+          These are local counts and minutes. Stats, goal results and cloud comparisons use
+          eligibility checks, so their totals may differ. Missing data is shown as a dash.
+        </T>
+      </Details>
       {rows && (
         <Section>
           {rows.map((r) => (
             <View
               key={r.date}
               accessible
-              accessibilityLabel={`${r.date}: ${r.gap ? 'not tracked' : `${r.minutes ?? 'untracked'} minutes, ${r.videos ?? 'untracked'} videos${r.confirmed ? '' : ', unconfirmed'}`}`}
+              accessibilityLabel={`${r.date}: ${r.gap ? 'not tracked' : `${r.minutes ?? 'untracked'} minutes, ${r.videos ?? 'untracked'} videos`}`}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -96,19 +98,11 @@ export default function History() {
                   <Icon name="clock" size={16} color={t.textMuted} />
                   <T v="label">{r.minutes ?? '—'}m</T>
                   <Icon name="play" size={16} />
-                  <T v="label">
-                    {r.videos ?? '—'}
-                    {r.videos !== null && !r.confirmed ? '*' : ''}
-                  </T>
+                  <T v="label">{r.videos ?? '—'}</T>
                 </>
               )}
             </View>
           ))}
-          {rows.some((r) => r.videos !== null && !r.confirmed) && (
-            <T v="caption" muted>
-              * Unconfirmed counts
-            </T>
-          )}
         </Section>
       )}
     </Screen>

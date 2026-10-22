@@ -33,7 +33,7 @@ export const STATE_COPY: Record<TrackingState, { title: string; body: string }> 
   },
   tracking: { title: 'Counting on this phone', body: 'Counts stay on this phone.' },
   tracking_unvalidated: {
-    title: 'Counting (accuracy not yet confirmed)',
+    title: 'Counting on this phone',
     body: 'Your app versions have not passed our accuracy tests yet, so these numbers may be off. They stay on this phone and are not used for goals or friends.',
   },
 };

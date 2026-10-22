@@ -76,10 +76,6 @@ class MemeMilestoneCard(private val service: AccessibilityService) {
             text=copy.caption; textSize=20f; gravity=Gravity.CENTER; typeface=Typeface.DEFAULT_BOLD
             setTextColor(Color.parseColor("#FFFAED")); setPadding(dp(4),dp(20),dp(4),dp(12))
         },LinearLayout.LayoutParams(-1,-2))
-        if(value.status == "Unconfirmed") column.addView(TextView(service).apply {
-            text=value.status; textSize=11f; gravity=Gravity.CENTER
-            setTextColor(Color.parseColor("#ADA495"))
-        })
         fun action(label: String, primary: Boolean, click: () -> Unit) = Button(service).apply {
             text=label; textSize=16f; isAllCaps=false; typeface=Typeface.DEFAULT_BOLD
             setTextColor(Color.parseColor(if(primary) "#603500" else "#FFFAED"))

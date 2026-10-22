@@ -67,7 +67,7 @@ class FeedPauseOverlay(private val service: AccessibilityService) {
             FeedReason.BREAK -> "Feed break: ${time / 60}:${(time % 60).toString().padStart(2, '0')} remaining. Other app screens remain available after leaving the feed."
             FeedReason.APP_LIMIT -> "Your app-minute limit is reached. This pause applies only to the recognized short-video feed."
             FeedReason.SCHEDULE -> "Focus time: the recognized short-video feed is paused."
-        } + if (experimental) "\nExperimental local detection: accuracy is unverified." else ""
+        } + if (experimental) "\nLocal feed detection is enabled." else ""
         bypass?.apply {
             text = "$bypassMinutes more minutes ($bypassesLeft bypasses left today)"
             isEnabled = bypassesLeft > 0

@@ -225,9 +225,6 @@ export default function TrackingScreen() {
                   <T v="display">{a.views}</T>
                   <T v="caption" muted>
                     Videos
-                    {health.apps.find((app) => app.package === a.package)?.validated
-                      ? ''
-                      : ' · unconfirmed'}
                   </T>
                 </View>
                 <View style={{ flex: 1 }}>
@@ -274,11 +271,6 @@ export default function TrackingScreen() {
         {health.apps.map((a) => (
           <T key={a.package} muted>
             {a.label}: {a.installed ? `version ${a.version}` : 'not installed'}
-            {a.installed
-              ? a.validated
-                ? ' · accuracy confirmed'
-                : ' · accuracy not yet confirmed'
-              : ''}
           </T>
         ))}
       </Details>

@@ -12,7 +12,7 @@ import { ApiError, type ApiClient } from '@/api/client';
 import { useSession } from '@/auth/session';
 import { InviteSignInSheet } from '@/auth/InviteSignInSheet';
 import { currentTimeZone, syncNow } from '@/sync/run';
-import { Button, Notice, Screen, T } from '@/ui/kit';
+import { Button, Details, Notice, Screen, T } from '@/ui/kit';
 import { Icon } from '@/ui/Icon';
 import { shuffledInvitePrompts, type InvitePrompt } from './invitePrompts';
 const colors = {
@@ -285,7 +285,7 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
             style={{ width: 33, height: 33, opacity: 0.8 }}
           />
         </View>
-        <T style={styles.you}>You{api ? '' : ' · local estimate'}</T>
+        <T style={styles.you}>You</T>
         <T
           accessibilityLabel={`Your daily count: ${ownViews ?? 'unavailable'}`}
           style={styles.count}
@@ -345,10 +345,6 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
         ))}
       </View>
       <View style={styles.actions}>
-        <T muted>
-          Synced eligible video counts · lower is better. Dates use each phone’s local day. A dash
-          means no shared eligible count.
-        </T>
         {api && (
           <Button
             label="Sync and refresh counts"
@@ -374,6 +370,12 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
           <T style={{ color: colors.muted, fontSize: 13 }}>View your battles</T>
           <Icon name="chevron" size={16} color={colors.muted} />
         </Pressable>
+        <Details title="How counts compare">
+          <T v="caption" muted>
+            Lower eligible video counts win. Each phone uses its local day. A dash means no shared
+            eligible count. Counts on this phone do not affect cloud scores.
+          </T>
+        </Details>
       </View>
       {managerOpen && (
         <Modal visible animationType="slide" onRequestClose={() => setManagerOpen(false)}>
@@ -418,8 +420,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 28,
-    paddingTop: 26,
-    paddingBottom: 23,
+    paddingTop: 8,
+    paddingBottom: 8,
   },
   date: { fontSize: 16, fontWeight: '700', minWidth: 90, textAlign: 'center' },
   arrow: { minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
@@ -428,7 +430,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     paddingHorizontal: 24,
-    paddingVertical: 18,
+    paddingVertical: 10,
     minHeight: 80,
     backgroundColor: colors.row,
   },
@@ -448,8 +450,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 18,
-    minHeight: 76,
+    paddingVertical: 10,
+    minHeight: 68,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#28241B',
   },
@@ -468,12 +470,12 @@ const styles = StyleSheet.create({
     gap: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 76,
+    minHeight: 68,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#28241B',
   },
   friendName: { color: colors.muted, fontSize: 15 },
-  actions: { paddingHorizontal: 26, paddingTop: 28, paddingBottom: 24, gap: 12 },
+  actions: { paddingHorizontal: 26, paddingTop: 16, paddingBottom: 20, gap: 12 },
   allBattles: {
     minHeight: 48,
     flexDirection: 'row',

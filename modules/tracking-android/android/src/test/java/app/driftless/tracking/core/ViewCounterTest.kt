@@ -116,4 +116,19 @@ class ViewCounterTest {
         assertEquals(1,run(listOf(o(0,null),o(300,"skip",scrolled=false),o(600,"watched")),3000).views)
     }
 
+    @Test fun identityBeforeStructuralSignalCountsAfterFreshDwell() {
+        val c = ViewCounter()
+        val outs = c.observe(o(0,"a",scrolled=false)) + c.observe(o(3000,"b",scrolled=false)) +
+            c.observe(o(3200,"b")) + c.observe(o(3300,"b")) + c.flush(4699)
+        assertEquals(1,outs.count { it is CounterOutput.Counted })
+        val counted = c.flush(4700).filterIsInstance<CounterOutput.Counted>()
+        assertEquals(1,counted.size)
+        assertEquals(4700L,counted.single().countedAtMs)
+        assertEquals(0,c.observe(o(4800,"b")).filterIsInstance<CounterOutput.Counted>().size)
+    }
+    @Test fun lateStructuralSignalCannotReviveStaleOrRestoredIdentity() {
+        assertEquals(1,run(listOf(o(0,"a",scrolled=false),o(3000,"b",scrolled=false),o(4300,"b")),7000).views)
+        assertEquals(0,run(listOf(o(0,"b",scrolled=false),o(200,"b")),3000,ViewCounter(listOf("b"))).views)
+    }
+
 }

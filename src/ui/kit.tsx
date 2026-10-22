@@ -204,8 +204,9 @@ export function Section({ children, style }: { children: ReactNode; style?: View
     <View
       style={[
         {
-          paddingVertical: 20,
-          gap: 16,
+          paddingTop: 16,
+          paddingBottom: 0,
+          gap: 12,
           borderTopWidth: StyleSheet.hairlineWidth,
           borderColor: t.border,
         },
@@ -350,8 +351,8 @@ export function Details({
           flexDirection: 'row',
           alignItems: 'center',
           gap: 12,
-          minHeight: 64,
-          paddingVertical: 16,
+          minHeight: 52,
+          paddingVertical: 12,
         }}
       >
         <Icon name={icon} size={22} />
@@ -467,8 +468,7 @@ export function MetricPanel({
 
 const styles = StyleSheet.create({
   screen: {
-    padding: 24,
-    paddingBottom: space.xxl,
+    padding: 20,
     gap: space.lg,
     flexGrow: 1,
     width: '100%',

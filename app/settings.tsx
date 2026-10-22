@@ -8,6 +8,7 @@ import { ApiError, createApiClient } from '@/api/client';
 import { useSession } from '@/auth/session';
 import { APP_VERSION, readEnv } from '@/config/env';
 import { cacheEntitlement } from '@/billing/pro';
+import { entitlementGeneration } from '@/billing/cache';
 import { cancelGoalSync, syncGoals } from '@/goals/sync';
 import { registerPush } from '@/sync/push';
 import { syncNow } from '@/sync/run';
@@ -51,12 +52,17 @@ export default function Settings() {
   const fetchMe = useCallback(() => {
     if (!api) return;
     const generation = ++requestGeneration.current;
+    const accountGeneration = entitlementGeneration();
     api
       .getMe()
       .then(({ data }) => {
-        if (generation !== requestGeneration.current) return;
+        if (
+          generation !== requestGeneration.current ||
+          accountGeneration !== entitlementGeneration()
+        )
+          return;
         try {
-          cacheEntitlement(data.entitlement);
+          cacheEntitlement(data.entitlement, Date.now(), accountGeneration);
         } catch {
           // A missing native entitlement bridge does not make the backend unavailable.
           // Runtime support and native health below still fail closed for Pro features.
@@ -69,7 +75,11 @@ export default function Settings() {
         setLoad({ state: 'ok', me: data });
       })
       .catch((e: unknown) => {
-        if (generation !== requestGeneration.current) return;
+        if (
+          generation !== requestGeneration.current ||
+          accountGeneration !== entitlementGeneration()
+        )
+          return;
         setLoad({
           state: 'error',
           offline: e instanceof ApiError && e.offline,

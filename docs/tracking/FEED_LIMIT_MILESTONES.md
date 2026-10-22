@@ -88,3 +88,30 @@ entitlement was modified.
 3. Verify countdown expiry, bypass exhaustion, account/entitlement changes and midnight/time-zone
    transitions end to end on a signed test build. Do not approve versions using fixtures.
 4. Keep feed enforcement experimental until those gates pass. No deployment or publication was done.
+
+
+## Shorts counting follow-up — 22 October 2026
+
+Two detector defects were addressed without approving any app version:
+
+- `ViewCounter` previously discarded a novel identity when its structural transition signal
+  arrived on a subsequent callback. It now accepts that signal within the existing 1.2-second
+  settling window, consumes it once and requires a fresh 1.5-second dwell. Stale identities,
+  restored recent items and duplicate callbacks remain excluded. The TypeScript reference
+  in the backend contracts matches this behavior.
+- YouTube 20.10.41 on the isolated validation emulator exposes player metadata through
+  accessibility descriptions rather than caption text. Rules version 6 enables a description
+  fallback inside `metapanel` only. Text captions take precedence; sidebar metrics, progress
+  descriptions, controls and hidden nodes remain excluded. Labels are hashed in memory.
+
+Verification: 115 native JVM/Robolectric tests and 20 reference counting tests passed; targeted
+reference lint and whitespace checks passed. The regression for identity-before-transition failed
+before the fix. The isolated arm64 debug APK built and was installed on emulator-5556. Its
+Accessibility counter was enabled with user authorization; the original emulator was untouched.
+
+The live test confirmed that the metadata fallback restores non-null video identity. YouTube
+also became unresponsive and several injected swipes left the same video playing. Local totals
+remained zero in that session, so this is **not** evidence that the reported counting stall is
+fully resolved. Sequential normal/rapid swipes, stationary playback and restart validation still
+need a successful live run. Neither approval lists nor social/cloud eligibility was changed.
+Diagnostic artifacts are in `/private/tmp/driftless-isolated-validation-20261021/`.

@@ -3,7 +3,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { addDays } from '@siddiq3/driftless-contracts/domain';
-import { Screen, T, Notice, Button } from '@/ui/kit';
+import { Screen, T, Notice, Button, Details } from '@/ui/kit';
 import { AppIcon, Icon } from '@/ui/Icon';
 import { WrapEntry } from '@/wrapped/Entry';
 import { useActivity } from '@/activity/useActivity';
@@ -36,7 +36,7 @@ export default function ProgressScreen() {
       : '…';
   const limit = period === 'daily' ? 59 : 8;
   return (
-    <Screen contentStyle={{ padding: 18, gap: 20 }}>
+    <Screen contentStyle={{ padding: 20, gap: 16 }}>
       <T
         v="title"
         style={{
@@ -48,6 +48,7 @@ export default function ProgressScreen() {
       >
         PROGRESS
       </T>
+      <Button kind="secondary" label="History and stats" onPress={() => router.push('/history')} />
       <View accessibilityRole="tablist" style={styles.switcher}>
         {(['daily', 'weekly'] as const).map((value) => (
           <Pressable
@@ -176,6 +177,14 @@ export default function ProgressScreen() {
                 <SetupButton label="Enable counting" onPress={() => router.push('/tracking')} />
               </View>
             )}
+            <Details title="About these counts">
+              <T v="caption" muted>
+                Daily views are recorded on this phone. Weekly views, goal results, recaps and
+                friend scores require eligible app versions and may be unavailable even when a daily
+                count exists. A dash means unavailable, not zero. Hourly bars appear only when
+                retained events match the daily total.
+              </T>
+            </Details>
             <WrapEntry />
             <Pressable
               accessibilityRole="button"
@@ -197,8 +206,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 8,
-    paddingTop: 16,
-    paddingBottom: 6,
+    paddingTop: 0,
+    paddingBottom: 0,
   },
   pill: {
     borderRadius: 30,
@@ -212,15 +221,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'center',
     width: '85%',
-    minHeight: 62,
-    marginBottom: 8,
+    minHeight: 48,
   },
   arrow: { minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
   loading: { minHeight: 300, alignItems: 'center', justifyContent: 'center' },
   totals: {
     backgroundColor: '#15140F',
     borderRadius: 22,
-    padding: 24,
+    padding: 20,
     flexDirection: 'row',
     gap: 12,
     minHeight: 110,
@@ -244,7 +252,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   apps: { backgroundColor: '#15140F', borderRadius: 22, overflow: 'hidden', gap: 0 },
-  appRow: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 20, minHeight: 80 },
+  appRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, minHeight: 68 },
   goal: {
     flexDirection: 'row',
     justifyContent: 'center',

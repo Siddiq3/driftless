@@ -93,7 +93,7 @@ it('offers app minutes but no video counting for apps without player rules', () 
 it('running unapproved versions remain unverified and cannot imply cloud reel scores', () => {
   const r = report({ ...health, apps: [{ ...health.apps[0]!, validated: false }] });
   expect(r.videoCounting).toMatchObject({ available: false });
-  expect(r.videoCounting.detail).toContain('unverified');
+  expect(r.videoCounting.detail).toContain('cloud video scores unavailable');
   expect(r.socialSharingOfUsage.available).toBe(false);
 });
 it('no installed targets or missing native health never implies tracking readiness', () => {

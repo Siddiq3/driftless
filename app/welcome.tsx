@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 import { useSession } from '@/auth/session';
-import { Button, Notice, Screen, T, useTheme } from '@/ui/kit';
+import { Button, Notice, Screen, useTheme } from '@/ui/kit';
 import { Dashboard } from '@/ui/Focus';
 
 export default function Welcome() {
@@ -15,10 +15,7 @@ export default function Welcome() {
         account={
           session.status === 'signedOut' ? (
             <View style={{ backgroundColor: t.surface, borderRadius: 18, padding: 12, gap: 12 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <T v="label" style={{ flex: 1 }}>
-                  Your Driftless account
-                </T>
+              <View>
                 <Button
                   label="Sign in with Google"
                   busy={busy}

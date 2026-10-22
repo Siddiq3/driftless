@@ -21,15 +21,18 @@ object GoalNotifier {
 
     fun check(context: Context, store: SqliteStore, prefs: TrackingPrefs, nowMs: Long = System.currentTimeMillis()) {
         val limits = prefs.limits
+        // Minute protection must stay fresh even with no goals or notification permission.
+        val zone = ZoneId.systemDefault()
+        val rules = RulesLoader.load(context)
+        val block = prefs.blockConfig
+        if ((limits.isNotEmpty() || (block.enabled && block.dailyMinutes != null && block.apps.isNotEmpty())) && UsageReader.granted(context)) {
+            UsageReader.refresh(context, store, rules.apps.keys, 1, zone)
+        }
         if (limits.isEmpty()) return
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (!nm.areNotificationsEnabled()) return
 
-        val zone = ZoneId.systemDefault()
         val today = Recorder.localDate(nowMs, zone)
-        val rules = RulesLoader.load(context)
-        val pkgs = rules.apps.keys
-        if (UsageReader.granted(context)) UsageReader.refresh(context, store, pkgs, 1, zone)
         val rows = store.daily(today)
         val minutes = if (UsageReader.granted(context)) {
             (rows.sumOf { it.usageMs } / 60_000L).toInt()

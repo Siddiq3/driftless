@@ -49,6 +49,7 @@ object RulesLoader {
                 adViewIds = a.getJSONArray("adViewIds").strings().toSet(),
                 adLabels = a.getJSONArray("adLabels").strings().map { it.lowercase() }.toSet(),
                 validatedVersions = a.optJSONArray("validatedVersions")?.strings().orEmpty(),
+                captionDescriptionViewIds = a.optJSONArray("captionDescriptionViewIds")?.strings()?.toSet().orEmpty(),
             )
             map[r.pkg] = r
         }
