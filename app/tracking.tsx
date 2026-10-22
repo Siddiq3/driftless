@@ -1,4 +1,4 @@
-import { router, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, AppState, View } from 'react-native';
@@ -6,6 +6,7 @@ import { Tracking, type Daily, type TrackingHealth, type MemePreferences } from 
 import { STATE_COPY, trackingState } from '@/tracking/state';
 import { Button, Section, Notice, Screen, T, EmptyState, Details, Toggle } from '@/ui/kit';
 import { AppIcon, Icon } from '@/ui/Icon';
+import { CountingPermissionBanner } from '@/permissions/CountingPermissionBanner';
 
 const minutes = (ms: number) => Math.round(ms / 60_000);
 
@@ -75,21 +76,12 @@ export default function TrackingScreen() {
   const label = (pkg: string) => health.apps.find((a) => a.package === pkg)?.label ?? pkg;
 
   return (
-    <Screen>
-      {state.startsWith('tracking') ? (
+    <Screen topBanner={<CountingPermissionBanner health={health} />}>
+      {state.startsWith('tracking') && (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <Icon name="check" />
           <T v="label">{copy.title}</T>
         </View>
-      ) : (
-        <Notice tone="warn" title={copy.title} body={copy.body} />
-      )}
-
-      {state === 'needs_disclosure' && (
-        <Button label="How counting works" onPress={() => router.push('/disclosure')} />
-      )}
-      {(state === 'needs_service' || state === 'enabled_not_running') && (
-        <Button label="Enable accessibility" onPress={() => router.push('/disclosure')} />
       )}
 
       <Section>
@@ -120,9 +112,6 @@ export default function TrackingScreen() {
           <T v="caption" muted>
             Rebuild the Android app to use the floating counter.
           </T>
-        )}
-        {!health.disclosureAccepted && (
-          <Button label="How counting works" onPress={() => router.push('/disclosure')} />
         )}
         <T v="caption" muted>
           Long press, then drag to the pause target at the bottom to hide for one hour or one day. —
