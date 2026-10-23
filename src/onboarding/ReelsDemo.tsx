@@ -5,7 +5,7 @@ import { AppState, View, type ViewProps } from 'react-native';
 import { useReducedMotion } from '@/ui/motion';
 
 const ReelsVideo = requireNativeView<ViewProps & { source: 'reels'; playing: boolean }>(
-  'ScrollSnoozeTracking',
+  'DriftlessTracking',
 );
 
 /** The approved continuous MP4, played locally. Preview counts never enter real history. */

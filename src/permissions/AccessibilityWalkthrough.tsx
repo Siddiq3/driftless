@@ -11,7 +11,7 @@ export const ACCESSIBILITY_STEPS = [
   'Turn on the toggle',
   'Select “Allow”',
 ] as const;
-const GuideVideo = requireNativeView<ViewProps & { playing: boolean }>('ScrollSnoozeTracking');
+const GuideVideo = requireNativeView<ViewProps & { playing: boolean }>('DriftlessTracking');
 
 /** Silent local video footage: only the instructional panel, without recorded device chrome. */
 export function AccessibilityWalkthrough() {
