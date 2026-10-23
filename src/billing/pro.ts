@@ -7,7 +7,7 @@ import { entitlementGeneration } from './cache';
 import { SUBSCRIPTIONS_REQUIRED } from '../config/access';
 
 export const PRO_PRODUCT = 'driftless_pro';
-export const MANAGE_URL = `https://play.google.com/store/account/subscriptions?sku=${PRO_PRODUCT}&package=com.siddiqkolimi.driftless`;
+export const MANAGE_URL = `https://play.google.com/store/account/subscriptions?sku=${PRO_PRODUCT}&package=com.siddiqkolimi.scrollsnooze`;
 
 /** Must match the server's obfuscatedAccountId(): sha256("driftless:" + sub), hex. */
 export async function accountIdFor(sub: string): Promise<string> {

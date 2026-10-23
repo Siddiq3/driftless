@@ -7,7 +7,7 @@ This replaces the earlier Cognito/Hosted UI/federation design in D-003 and older
 ## Configure Google and the app
 
 1. Create a Google Cloud OAuth consent screen and a **Web application OAuth client ID** for the backend audience.
-2. In the same project, create an **Android OAuth client** for package `com.siddiqkolimi.driftless` with the signing certificate SHA-1. Register each certificate actually used: debug, release, and Google Play App Signing where applicable. Use `cd android && ./gradlew signingReport` to inspect local fingerprints.
+2. In the same project, create an **Android OAuth client** for package `com.siddiqkolimi.scrollsnooze` with the signing certificate SHA-1. Register each certificate actually used: debug, release, and Google Play App Signing where applicable. Use `cd android && ./gradlew signingReport` to inspect local fingerprints.
 3. Set these public build variables:
 
    ```dotenv
@@ -46,3 +46,9 @@ Deleting an account deletes Driftless cloud data and relationships. The app then
 - A real Google account-picker/login round trip still needs configured OAuth client IDs, signing certificates and a rebuilt device app connected to the updated backend.
 
 References: [Expo Google authentication](https://docs.expo.dev/guides/google-authentication/), [native Google sign-in SDK API](https://react-native-google-signin.github.io/docs/original), [Google backend authentication](https://developers.google.com/identity/sign-in/android/backend-auth), [Google OpenID Connect](https://developers.google.com/identity/openid-connect/openid-connect).
+
+## ScrollSnooze package identity
+
+The Android application ID is now `com.siddiqkolimi.scrollsnooze`. Register an Android OAuth client for this package and each signing SHA-1 before testing sign-in; an OAuth client registered only for the former package will not authorize the new app. The Web client ID and backend token audience can remain the same when using the same Google Cloud project.
+
+Android treats this as a separate application from the former `com.siddiqkolimi.driftless`. Existing installs cannot be upgraded in place under the new ID, and their private local database, permissions and sign-in state do not transfer automatically. Do not uninstall the old app if its local data is still needed. Use the new package for the Play Console listing and any future Play API configuration; the backend `PLAY_PACKAGE_NAME` default and deployment environment have been updated accordingly. Rebuild the native Android app after this change.

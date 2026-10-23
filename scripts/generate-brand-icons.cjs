@@ -53,6 +53,8 @@ async function main() {
       await fs.rm(path.join(folder, `${name}.webp`), { force: true });
       await generate(path.join(folder, `${name}.png`), Math.round(48 * scale), iconBackground);
     }
+    // Expo may emit a WebP foreground; Android treats it as the same resource as our PNG.
+    await fs.rm(path.join(folder, 'ic_launcher_foreground.webp'), { force: true });
     await generate(
       path.join(folder, 'ic_launcher_foreground.png'),
       Math.round(108 * scale),

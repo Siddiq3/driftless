@@ -69,7 +69,7 @@ Captions narrate what is read and that nothing leaves the phone.
 
 | # | Task | Where |
 |---|---|---|
-| 1 | Create the Play Console app `com.siddiqkolimi.driftless`, closed testing track | Play Console |
+| 1 | Create the Play Console app `com.siddiqkolimi.scrollsnooze`, closed testing track | Play Console |
 | 2 | Create subscription `driftless_pro` (monthly base plan) | Play Console › Monetize |
 | 3 | Create a Google Cloud service account with Play Developer API access; paste its JSON into the `PlayServiceAccount` secret after deploy | Play Console › API access, AWS Secrets Manager |
 | 4 | Create a Pub/Sub topic for RTDN, a push subscription to `https://<api>/webhooks/play-rtdn` with OIDC auth; set `rtdnAudience`/`rtdnServiceAccount` in the CDK app | Google Cloud, `infra/bin/app.ts` |

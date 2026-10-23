@@ -15,7 +15,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   userInterfaceStyle: 'dark',
   platforms: ['android'],
   android: {
-    package: 'com.siddiqkolimi.driftless',
+    package: 'com.siddiqkolimi.scrollsnooze',
     adaptiveIcon: {
       foregroundImage: './assets/branding/adaptive-foreground.png',
       backgroundColor: '#10102B',

@@ -39,7 +39,7 @@ Evidence labels:
 | Backend/contracts/infra | sibling `../driftless-backend`, commit `488dba169fdaf22019e2c250828232851c740c95` |
 | Initial tracked working trees | Clean in both repositories |
 | App stack | Expo 57, React Native 0.86.3, React 19, TypeScript, local Kotlin Expo tracking and billing modules |
-| App config | `app.config.ts`: Android only, portrait, package `com.siddiqkolimi.driftless`, version `0.1.0` |
+| App config | `app.config.ts`: Android only, portrait, package `com.siddiqkolimi.scrollsnooze`, version `0.1.0` |
 | Storage | Kotlin SQLiteOpenHelper `driftless_tracking.db` for tracking; Expo SQLite `driftless.db` for settings, goals and sync bookkeeping; SharedPreferences for native settings |
 | Credentials | Values of `.env`, OAuth identifiers, access tokens and private configuration were not read or printed |
 | Device activity in this audit | No installation, login, permission change, reboot, service toggle, purchase, account deletion or third-party app automation |

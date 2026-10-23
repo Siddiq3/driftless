@@ -6,13 +6,13 @@ Submit **one request per bundle ID** (Apple requires the same request for the ap
 ## Bundle IDs (proposed — confirm before submitting)
 | Target | Bundle ID |
 |---|---|
-| App | `com.siddiqkolimi.driftless` |
-| DeviceActivityMonitor extension | `com.siddiqkolimi.driftless.monitor` |
-| DeviceActivityReport extension | `com.siddiqkolimi.driftless.report` |
-| ShieldConfiguration extension | `com.siddiqkolimi.driftless.shieldconfig` |
-| ShieldAction extension | `com.siddiqkolimi.driftless.shieldaction` |
+| App | `com.siddiqkolimi.scrollsnooze` |
+| DeviceActivityMonitor extension | `com.siddiqkolimi.scrollsnooze.monitor` |
+| DeviceActivityReport extension | `com.siddiqkolimi.scrollsnooze.report` |
+| ShieldConfiguration extension | `com.siddiqkolimi.scrollsnooze.shieldconfig` |
+| ShieldAction extension | `com.siddiqkolimi.scrollsnooze.shieldaction` |
 
-Register these App IDs (with Family Controls capability and a shared App Group `group.com.siddiqkolimi.driftless`) in Certificates, Identifiers & Profiles first.
+Register these App IDs (with Family Controls capability and a shared App Group `group.com.siddiqkolimi.scrollsnooze`) in Certificates, Identifiers & Profiles first.
 
 ## Description of use (paste into the form)
 
