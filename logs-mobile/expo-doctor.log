@@ -1,0 +1,2 @@
+npm warn exec The following package was not found and will be installed: expo-doctor@1.21.5
+Error: npx expo config --json --full exited with non-zero code: 1

@@ -1,0 +1,14 @@
+ WARN  Issue while reading "/home/runner/work/driftless/driftless/.npmrc". Failed to replace env in config: ${NODE_AUTH_TOKEN}
+
+> driftless@0.1.0 typecheck /home/runner/work/driftless/driftless
+> tsc --noEmit
+
+error TS2688: Cannot find type definition file for 'jest'.
+  The file is in the program because:
+    Entry point of type library 'jest' specified in compilerOptions
+error TS2688: Cannot find type definition file for 'node'.
+  The file is in the program because:
+    Entry point of type library 'node' specified in compilerOptions
+tsconfig.json(2,14): error TS6053: File 'expo/tsconfig.base' not found.
+ ELIFECYCLE  Command failed with exit code 1.
+ WARN   Local package.json exists, but node_modules missing, did you mean to install?

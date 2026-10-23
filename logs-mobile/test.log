@@ -1,0 +1,8 @@
+ WARN  Issue while reading "/home/runner/work/driftless/driftless/.npmrc". Failed to replace env in config: ${NODE_AUTH_TOKEN}
+
+> driftless@0.1.0 test /home/runner/work/driftless/driftless
+> jest --ci
+
+sh: 1: jest: not found
+ ELIFECYCLE  Test failed. See above for more details.
+ WARN   Local package.json exists, but node_modules missing, did you mean to install?

@@ -1,0 +1,9 @@
+install exit=1 secs=12
+format exit=1 secs=0
+expo-check exit=1 secs=28
+expo-doctor exit=1 secs=2
+typecheck exit=1 secs=2
+lint exit=1 secs=0
+test exit=1 secs=1
+scorer-test exit=0 secs=0
+prebuild exit=1 secs=1

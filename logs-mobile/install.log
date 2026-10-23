@@ -1,0 +1,72 @@
+Progress: resolved 1, reused 0, downloaded 0, added 0
+ WARN  deprecated eslint@9.39.5: This version is no longer supported. Please see https://eslint.org/version-support for other options.
+Progress: resolved 117, reused 0, downloaded 0, added 0
+Progress: resolved 313, reused 0, downloaded 0, added 0
+Progress: resolved 541, reused 0, downloaded 0, added 0
+Progress: resolved 809, reused 0, downloaded 0, added 0
+Progress: resolved 1017, reused 0, downloaded 0, added 0
+ WARN  5 deprecated subdependencies found: abab@2.0.6, domexception@4.0.0, glob@7.2.3, inflight@1.0.6, whatwg-encoding@2.0.0
+ WARN  Issues with peer dependencies found
+.
+├─┬ expo 57.0.31
+│ ├── ✕ missing peer react-dom@"*"
+│ ├─┬ @expo/cli 57.0.32
+│ │ └─┬ @expo/router-server 57.0.14
+│ │   └── ✕ missing peer react-dom@"*"
+│ └─┬ expo-modules-core 57.0.24
+│   └── ✕ unmet peer react-native-worklets@"^0.7.4 || ^0.8.0 || ^0.9.0 || ^0.10.0": found 0.13.0
+├─┬ expo-router 57.0.29
+│ ├── ✕ missing peer react-dom@"*"
+│ ├─┬ vaul 1.1.2
+│ │ ├── ✕ missing peer react-dom@"^16.8 || ^17.0 || ^18.0 || ^19.0.0 || ^19.0.0-rc"
+│ │ └─┬ @radix-ui/react-dialog 1.3.1
+│ │   ├── ✕ missing peer react-dom@"^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc"
+│ │   ├─┬ @radix-ui/react-presence 1.1.11
+│ │   │ └── ✕ missing peer react-dom@"^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc"
+│ │   ├─┬ @radix-ui/react-primitive 2.2.0
+│ │   │ └── ✕ missing peer react-dom@"^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc"
+│ │   ├─┬ @radix-ui/react-portal 1.2.0
+│ │   │ ├── ✕ missing peer react-dom@"^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc"
+│ │   │ └─┬ @radix-ui/react-primitive 2.2.0
+│ │   │   └── ✕ missing peer react-dom@"^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc"
+│ │   ├─┬ @radix-ui/react-focus-scope 1.3.1
+│ │   │ ├── ✕ missing peer react-dom@"^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc"
+│ │   │ └─┬ @radix-ui/react-primitive 2.2.0
+│ │   │   └── ✕ missing peer react-dom@"^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc"
+│ │   └─┬ @radix-ui/react-dismissable-layer 1.2.1
+│ │     ├── ✕ missing peer react-dom@"^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc"
+│ │     └─┬ @radix-ui/react-primitive 2.2.0
+│ │       └── ✕ missing peer react-dom@"^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc"
+│ ├─┬ @expo/ui 57.0.26
+│ │ ├── ✕ missing peer react-dom@"*"
+│ │ └─┬ vaul 1.1.2
+│ │   └── ✕ missing peer react-dom@"^16.8 || ^17.0 || ^18.0 || ^19.0.0 || ^19.0.0-rc"
+│ └─┬ @radix-ui/react-tabs 1.2.1
+│   ├── ✕ missing peer react-dom@"^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc"
+│   ├─┬ @radix-ui/react-presence 1.1.11
+│   │ └── ✕ missing peer react-dom@"^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc"
+│   ├─┬ @radix-ui/react-primitive 2.2.0
+│   │ └── ✕ missing peer react-dom@"^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc"
+│   └─┬ @radix-ui/react-roving-focus 1.2.1
+│     ├── ✕ missing peer react-dom@"^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc"
+│     ├─┬ @radix-ui/react-primitive 2.2.0
+│     │ └── ✕ missing peer react-dom@"^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc"
+│     └─┬ @radix-ui/react-collection 1.2.0
+│       ├── ✕ missing peer react-dom@"^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc"
+│       └─┬ @radix-ui/react-primitive 2.2.0
+│         └── ✕ missing peer react-dom@"^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc"
+├─┬ @expo/metro-runtime 57.0.17
+│ └── ✕ missing peer react-dom@"*"
+└─┬ react-native 0.86.3
+  └─┬ @react-native/community-cli-plugin 0.86.3
+    └── ✕ unmet peer @react-native/metro-config@0.86.3: found 0.88.0
+✕ Conflicting peer dependencies:
+  react-dom
+
+Packages: +1075
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 1045, reused 0, downloaded 0, added 0
+Progress: resolved 1045, reused 0, downloaded 18, added 0
+Progress: resolved 1045, reused 0, downloaded 86, added 0
+Progress: resolved 1045, reused 0, downloaded 168, added 0
+ ERR_PNPM_ENOENT  ENOENT: no such file or directory, mkdir '/home/runner/work/driftless/driftless/node_modules'
