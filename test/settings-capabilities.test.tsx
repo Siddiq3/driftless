@@ -24,6 +24,9 @@ jest.mock('@/api/client', () => ({
   ...jest.requireActual('@/api/client'),
   createApiClient: jest.fn(),
 }));
+jest.mock('@/api/useApi', () => ({
+  useApi: () => require('@/api/client').createApiClient(),
+}));
 jest.mock('@/billing/pro', () => ({ cacheEntitlement: jest.fn() }));
 jest.mock('@/goals/sync', () => ({ syncGoals: jest.fn(), cancelGoalSync: jest.fn() }));
 jest.mock('@/sync/push', () => ({ registerPush: jest.fn().mockResolvedValue(undefined) }));

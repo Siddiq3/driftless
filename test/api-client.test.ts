@@ -177,3 +177,83 @@ describe('api client', () => {
     });
   });
 });
+
+describe('session-scoped request sharing', () => {
+  it('coalesces simultaneous reads and does not cache completed private responses', async () => {
+    let finish!: (response: Response) => void;
+    const f = jest.fn().mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+    const api = client(f);
+    const one = api.getMe();
+    const two = api.getMe();
+    await Promise.resolve();
+    expect(f).toHaveBeenCalledTimes(1);
+    finish(resp(200, me));
+    await expect(Promise.all([one, two])).resolves.toHaveLength(2);
+    f.mockResolvedValue(resp(200, me));
+    await api.getMe();
+    expect(f).toHaveBeenCalledTimes(2);
+  });
+
+  it('releases a rejected read so an explicit retry reaches the network', async () => {
+    const f = jest.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValue(resp(200, me));
+    const api = client(f);
+    await expect(api.getMe()).rejects.toMatchObject({ code: 'network' });
+    await expect(api.getMe()).resolves.toMatchObject({ data: me });
+    expect(f).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not reuse a pending pre-mutation read after a write', async () => {
+    let finish!: (response: Response) => void;
+    const f = jest.fn()
+      .mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }))
+      .mockResolvedValue(resp(200, { ...me, profile: { ...me.profile, rev: 2 } }));
+    const api = client(f);
+    const old = api.getMe();
+    await Promise.resolve();
+    await api.patchMe({ displayName: 'New' }, 1);
+    await api.getMe();
+    expect(f).toHaveBeenCalledTimes(3);
+    finish(resp(200, me));
+    await old;
+  });
+
+  it('never combines mutations or independently cancelled goal reads', async () => {
+    const f = jest.fn().mockResolvedValue(resp(200, { goals: [] }));
+    const api = client(f);
+    await Promise.all([api.getGoals(() => true), api.getGoals(() => true)]);
+    await Promise.all([api.putGoals([], '"a"'), api.putGoals([], '"a"')]);
+    expect(f).toHaveBeenCalledTimes(4);
+  });
+
+  it('discards an already-dispatched response after the session retires', async () => {
+    let active = true;
+    let finish!: (response: Response) => void;
+    const f = jest.fn(() => new Promise<Response>((resolve) => { finish = resolve; }));
+    const api = createApiClient({ baseUrl: 'https://api.example.test', platform: 'android', appVersion: '1',
+      getAccessToken: async () => 'account-a', isSessionActive: () => active, fetchImpl: f });
+    const pending = api.getMe();
+    await Promise.resolve();
+    active = false;
+    finish(resp(200, me));
+    await expect(pending).rejects.toMatchObject({ code: 'session_changed' });
+    await expect(api.getMe()).rejects.toMatchObject({ code: 'session_changed' });
+    expect(f).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the timeout active until the response body finishes', async () => {
+    jest.useFakeTimers();
+    try {
+      const f = jest.fn(async (_url, init) => ({
+        text: () => new Promise((_resolve, reject) => init.signal.addEventListener('abort', () => reject(new Error('aborted')))),
+      }) as Response);
+      const api = createApiClient({ baseUrl: 'https://api.example.test', platform: 'android', appVersion: '1',
+        getAccessToken: async () => 'a', fetchImpl: f, timeoutMs: 10 });
+      const pending = api.getMe();
+      const rejected = expect(pending).rejects.toMatchObject({ code: 'network' });
+      await jest.advanceTimersByTimeAsync(11);
+      await rejected;
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});

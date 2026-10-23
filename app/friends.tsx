@@ -1,8 +1,9 @@
 import type { v1 } from '@siddiq3/driftless-contracts';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Share, View } from 'react-native';
 import { useApi } from '@/api/useApi';
+import { apiSessionKey } from '@/api/sessionClient';
 import { useSession } from '@/auth/session';
 import {
   Toggle,
@@ -27,39 +28,61 @@ export default function Friends() {
 
 function FriendsManager() {
   const api = useApi();
+  return <FriendsForSession key={api ? apiSessionKey(api) : 'guest'} />;
+}
+
+function FriendsForSession() {
+  const api = useApi();
   const session = useSession();
   const [s, setS] = useState<State | null>(null);
   const [input, setInput] = useState('');
   const [handle, setHandle] = useState('');
   const [note, setNote] = useState<{ title: string; body: string; warn?: boolean } | null>(null);
+  const submitting = useRef(false);
+  const requestGeneration = useRef(0);
 
   const load = useCallback(() => {
     if (!api) return;
+    const generation = ++requestGeneration.current;
     Promise.all([api.getMe(), api.friends()])
-      .then(([me, friends]) => setS({ me: me.data, friends }))
-      .catch((e: unknown) =>
-        setNote({
-          warn: true,
-          title: 'Could not load friends',
-          body: e instanceof Error ? e.message : '',
-        }),
-      );
-  }, [api]);
-  useFocusEffect(load);
-
-  const act = (fn: () => Promise<unknown>, ok?: string) =>
-    fn()
-      .then(() => {
-        if (ok) setNote({ title: ok, body: '' });
-        load();
+      .then(([me, friends]) => {
+        if (generation === requestGeneration.current) setS({ me: me.data, friends });
       })
-      .catch((e: unknown) =>
-        setNote({
-          warn: true,
-          title: 'That did not work',
-          body: e instanceof Error ? e.message : '',
-        }),
-      );
+      .catch((e: unknown) => {
+        if (generation === requestGeneration.current)
+          setNote({
+            warn: true,
+            title: 'Could not load friends',
+            body: e instanceof Error ? e.message : '',
+          });
+      });
+  }, [api]);
+  useFocusEffect(
+    useCallback(() => {
+      load();
+      return () => {
+        requestGeneration.current++;
+      };
+    }, [load]),
+  );
+
+  const act = async (fn: () => Promise<unknown>, ok?: string) => {
+    if (submitting.current) return;
+    submitting.current = true;
+    try {
+      await fn();
+      if (ok) setNote({ title: ok, body: '' });
+      load();
+    } catch (e) {
+      setNote({
+        warn: true,
+        title: 'That did not work',
+        body: e instanceof Error ? e.message : '',
+      });
+    } finally {
+      submitting.current = false;
+    }
+  };
 
   if (session.status === 'loading')
     return (

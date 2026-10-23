@@ -19,6 +19,7 @@ export class ApiError extends Error {
 export type ApiClientOptions = {
   baseUrl: string;
   getAccessToken: () => Promise<string | null>;
+  isSessionActive?: () => boolean;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
   platform: 'android' | 'ios';
@@ -30,6 +31,8 @@ export function createApiClient(o: ApiClientOptions) {
   const f = o.fetchImpl ?? fetch;
   const base = o.baseUrl.replace(/\/+$/, '');
   if (!/^https:\/\//.test(base)) throw new Error('API base URL must be https');
+  const reads = new Map<string, Promise<{ data: unknown; etag: string | null }>>();
+  const invalidateReads = () => reads.clear();
 
   async function request<S extends z.ZodType>(
     method: string,
@@ -38,6 +41,8 @@ export function createApiClient(o: ApiClientOptions) {
     init: { body?: unknown; headers?: Record<string, string>; allowed?: () => boolean } = {},
   ): Promise<{ data: z.infer<S>; etag: string | null }> {
     const check = () => {
+      if (o.isSessionActive && !o.isSessionActive())
+        throw new ApiError(401, 'session_changed', 'Account changed. Please try again.');
       if (init.allowed && !init.allowed())
         throw new ApiError(409, 'sync_cancelled', 'Backup cancelled');
     };
@@ -45,46 +50,64 @@ export function createApiClient(o: ApiClientOptions) {
     const token = await o.getAccessToken();
     check();
     if (!token) throw new ApiError(401, 'unauthorized', 'not signed in');
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), o.timeoutMs ?? 15_000);
-    let res: Response;
+    // Share work only while it is in flight, within this session. Consent-aware sync
+    // has independent cancellation and must never borrow another caller's work.
+    const key = method === 'GET' && !init.allowed ? `${token}\0${path}` : null;
+    if (method !== 'GET') invalidateReads();
+    const pending = key ? reads.get(key) : undefined;
+    if (pending) return pending as Promise<{ data: z.infer<S>; etag: string | null }>;
+    const task = send();
+    if (key) reads.set(key, task);
     try {
-      res = await f(`${base}${path}`, {
-        method,
-        signal: ctrl.signal,
-        headers: {
-          authorization: `Bearer ${token}`,
-          accept: 'application/json',
-          ...(init.body !== undefined ? { 'content-type': 'application/json' } : {}),
-          ...init.headers,
-        },
-        body: init.body === undefined ? undefined : JSON.stringify(init.body),
-      });
-    } catch {
-      throw new ApiError(null, 'network', 'network unavailable');
+      return await task;
     } finally {
-      clearTimeout(timer);
+      if (key && reads.get(key) === task) reads.delete(key);
+      if (method !== 'GET') invalidateReads();
     }
-    const text = await res.text();
-    check();
-    let json: unknown = null;
-    try {
-      json = text ? JSON.parse(text) : null;
-    } catch {
-      /* fall through */
+
+    async function send(): Promise<{ data: z.infer<S>; etag: string | null }> {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), o.timeoutMs ?? 15_000);
+      let res: Response;
+      let text: string;
+      try {
+        res = await f(`${base}${path}`, {
+          method,
+          signal: ctrl.signal,
+          headers: {
+            authorization: `Bearer ${token}`,
+            accept: 'application/json',
+            ...(init.body !== undefined ? { 'content-type': 'application/json' } : {}),
+            ...init.headers,
+          },
+          body: init.body === undefined ? undefined : JSON.stringify(init.body),
+        });
+        text = await res.text();
+      } catch {
+        throw new ApiError(null, 'network', 'network unavailable');
+      } finally {
+        clearTimeout(timer);
+      }
+      check();
+      let json: unknown = null;
+      try {
+        json = text ? JSON.parse(text) : null;
+      } catch {
+        /* fall through */
+      }
+      if (!res.ok) {
+        const p = Problem.safeParse(json);
+        throw new ApiError(
+          res.status,
+          p.success ? p.data.code : 'http_error',
+          p.success ? (p.data.detail ?? p.data.title) : `HTTP ${res.status}`,
+        );
+      }
+      const parsed = schema.safeParse(json);
+      if (!parsed.success)
+        throw new ApiError(res.status, 'contract_mismatch', 'unexpected response shape');
+      return { data: parsed.data, etag: res.headers.get('etag') };
     }
-    if (!res.ok) {
-      const p = Problem.safeParse(json);
-      throw new ApiError(
-        res.status,
-        p.success ? p.data.code : 'http_error',
-        p.success ? (p.data.detail ?? p.data.title) : `HTTP ${res.status}`,
-      );
-    }
-    const parsed = schema.safeParse(json);
-    if (!parsed.success)
-      throw new ApiError(res.status, 'contract_mismatch', 'unexpected response shape');
-    return { data: parsed.data, etag: res.headers.get('etag') };
   }
 
   return {

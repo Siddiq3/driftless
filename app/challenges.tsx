@@ -1,9 +1,10 @@
 import type { v1 } from '@siddiq3/driftless-contracts';
 import { addDays, localDateOf } from '@siddiq3/driftless-contracts/domain';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Share, View } from 'react-native';
 import { useApi } from '@/api/useApi';
+import { apiSessionKey } from '@/api/sessionClient';
 import { useSession } from '@/auth/session';
 import { currentTimeZone } from '@/sync/run';
 import {
@@ -32,10 +33,21 @@ function Leaderboard({ id }: { id: string }) {
   const [err, setErr] = useState<string | null>(null);
   useFocusEffect(
     useCallback(() => {
+      let active = true;
       api
         ?.leaderboard(id)
-        .then(setLb)
-        .catch((e: unknown) => setErr(e instanceof Error ? e.message : 'unknown'));
+        .then((data) => {
+          if (active) {
+            setErr(null);
+            setLb(data);
+          }
+        })
+        .catch((e: unknown) => {
+          if (active) setErr(e instanceof Error ? e.message : 'unknown');
+        });
+      return () => {
+        active = false;
+      };
     }, [api, id]),
   );
   if (err)
@@ -71,20 +83,42 @@ function Leaderboard({ id }: { id: string }) {
 
 export default function Challenges() {
   const api = useApi();
+  return <ChallengesForSession key={api ? apiSessionKey(api) : 'guest'} />;
+}
+
+function ChallengesForSession() {
+  const api = useApi();
   const session = useSession();
   const [list, setList] = useState<v1.ChallengeSummary[] | null>(null);
   const [code, setCode] = useState('');
   const [note, setNote] = useState<{ title: string; warn?: boolean } | null>(null);
+  const submitting = useRef(false);
+  const requestGeneration = useRef(0);
 
-  const load = useCallback(() => {
-    api
-      ?.challenges()
-      .then(setList)
-      .catch((e: unknown) =>
-        setNote({ warn: true, title: e instanceof Error ? e.message : 'Could not load' }),
-      );
-  }, [api]);
-  useFocusEffect(load);
+  const load = useCallback(
+    (allowed: () => boolean = () => true) => {
+      const generation = ++requestGeneration.current;
+      const current = () => allowed() && generation === requestGeneration.current;
+      api
+        ?.challenges()
+        .then((data) => {
+          if (current()) setList(data);
+        })
+        .catch((e: unknown) => {
+          if (current())
+            setNote({ warn: true, title: e instanceof Error ? e.message : 'Could not load' });
+        });
+    },
+    [api],
+  );
+  useFocusEffect(
+    useCallback(() => {
+      load();
+      return () => {
+        requestGeneration.current++;
+      };
+    }, [load]),
+  );
 
   if (session.status === 'loading')
     return (
@@ -113,12 +147,18 @@ export default function Challenges() {
       </Screen>
     );
   }
-  const act = (fn: () => Promise<unknown>) =>
-    fn()
-      .then(load)
-      .catch((e: unknown) =>
-        setNote({ warn: true, title: e instanceof Error ? e.message : 'That did not work' }),
-      );
+  const act = async (fn: () => Promise<unknown>) => {
+    if (submitting.current) return;
+    submitting.current = true;
+    try {
+      await fn();
+      load();
+    } catch (e) {
+      setNote({ warn: true, title: e instanceof Error ? e.message : 'That did not work' });
+    } finally {
+      submitting.current = false;
+    }
+  };
 
   const createWeek = (metric: v1.ChallengeSummary['metric']) =>
     act(async () => {

@@ -31,6 +31,7 @@ type SessionState =
   | {
       status: 'signedIn';
       getAccessToken: () => Promise<string | null>;
+      isCurrent: () => boolean;
       signOut: () => Promise<void>;
       disconnect: () => Promise<void>;
     };
@@ -144,6 +145,10 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
   }, [signOut, GoogleSignin]);
 
   const credentialGeneration = generation.current.value;
+  const isCurrent = useCallback(
+    () => Boolean(signedIn && enabled.current && generation.current.value === credentialGeneration),
+    [signedIn, credentialGeneration],
+  );
   const getAccessToken = useCallback(async (): Promise<string | null> => {
     if (!signedIn || !enabled.current || generation.current.value !== credentialGeneration)
       return null;
@@ -186,7 +191,7 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
     signedIn === undefined
       ? { status: 'loading' }
       : signedIn
-        ? { status: 'signedIn', getAccessToken, signOut, disconnect }
+        ? { status: 'signedIn', getAccessToken, isCurrent, signOut, disconnect }
         : { status: 'signedOut', googleSupported: true, signIn, error };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

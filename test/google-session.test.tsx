@@ -245,3 +245,15 @@ test('an API client from a previous login cannot get the new login credentials',
   expect(GoogleSignin.signInSilently).not.toHaveBeenCalled();
   await expect(signedIn().getAccessToken()).resolves.toBe('renewed-token');
 });
+
+test('retired session liveness guards remain false after another login', async () => {
+  await mount();
+  await login();
+  const previous = signedIn();
+  expect(previous.isCurrent()).toBe(true);
+  await act(async () => previous.signOut());
+  expect(previous.isCurrent()).toBe(false);
+  await login();
+  expect(previous.isCurrent()).toBe(false);
+  expect(signedIn().isCurrent()).toBe(true);
+});

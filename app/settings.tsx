@@ -2,11 +2,12 @@ import type { v1 } from '@siddiq3/driftless-contracts';
 import { Tracking, type TrackingHealth } from 'tracking-android';
 import { capabilityReport } from '@/capabilities/model';
 import { Redirect, router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, AppState, Platform, View } from 'react-native';
-import { ApiError, createApiClient } from '@/api/client';
+import { ApiError } from '@/api/client';
+import { useApi } from '@/api/useApi';
+import { apiSessionKey } from '@/api/sessionClient';
 import { useSession } from '@/auth/session';
-import { APP_VERSION, readEnv } from '@/config/env';
 import { cacheEntitlement } from '@/billing/pro';
 import { entitlementGeneration } from '@/billing/cache';
 import { cancelGoalSync, syncGoals } from '@/goals/sync';
@@ -29,21 +30,13 @@ type Load =
   | { state: 'error'; offline: boolean; message: string };
 
 export default function Settings() {
+  const api = useApi();
+  return <SettingsForSession key={api ? apiSessionKey(api) : 'guest'} />;
+}
+
+function SettingsForSession() {
   const s = useSession();
-  const env = readEnv();
-  const api = useMemo(
-    () =>
-      s.status === 'signedIn' && env
-        ? createApiClient({
-            baseUrl: env.apiUrl,
-            getAccessToken: s.getAccessToken,
-            platform: 'android',
-            appVersion: APP_VERSION,
-          })
-        : null,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [s.status, env?.apiUrl],
-  );
+  const api = useApi();
   const [load, setLoad] = useState<Load>({ state: 'loading' });
   const [health, setHealth] = useState<TrackingHealth | null>(null);
   const requestGeneration = useRef(0);
