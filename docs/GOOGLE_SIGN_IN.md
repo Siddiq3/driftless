@@ -26,13 +26,17 @@ The API Gateway JWT authorizer issuer is `https://accounts.google.com`; its sole
 
 Code, local synth tests and native compilation were changed here. No Google project was created, cloud credentials read, live login performed, or infrastructure deployed.
 
+## Account name and invitations
+
+The app uses the Google account's display name, falling back to the mailbox name before `@` when no name is available. It saves that presentation name through the existing authenticated profile API. A unique handle is allocated internally so new users can invite friends immediately without a handle form. Name/email never establishes account ownership. Invites use the existing authenticated endpoint; no automatic friend-sharing consent or unsolicited message is sent. See `SOCIAL_COMPARISONS.md` for share targets and installed-app link limitations.
+
 ## Sessions and data ownership
 
 The native SDK handles Google credentials and silent renewal. JavaScript asks for a current **ID token**, never a Google API access token, when calling Driftless. SecureStore holds only a stay-signed-in marker; prior Cognito tokens under `driftless.tokens.v1` are removed. A sign-out invalidates pending token results and disables automatic restoration. Missing credentials, cancellation and unavailable Google Play Services never create a signed-in session.
 
 API Gateway verifies signature, issuer, audience and expiry before forwarding claims. The API also checks the configured audience, issuer, subject and token times. A stable, app-namespaced UUIDv5 derived from Google's opaque `sub` preserves the existing UUID-based friend/billing contracts; email is never an ownership key. Keep this namespace unchanged.
 
-Existing Cognito account IDs differ from these Google-derived IDs. This change does not automatically link accounts or migrate cloud history by email. If existing Cognito users have production data, migrate their verified identities/data before changing production authentication. Local guest data is retained, and cloud sync remains separately opt-in.
+Existing Cognito account IDs differ from these Google-derived IDs. This change does not automatically link accounts or migrate cloud history by email. If existing Cognito users have production data, migrate their verified identities/data before changing production authentication. Local guest data is retained. Sign-in includes automatic account backup of saved goals and supported daily history; the sign-in UI explains this before login. Friend sharing remains a separate choice. See `PERSONAL_DATA_ARCHITECTURE.md` for scoped storage, restoration, retention and validation limits.
 
 Deleting an account deletes Driftless cloud data and relationships. The app then revokes its Google grant and signs out; it does not delete the person's Google account. The delete endpoint requires a Google credential issued within five minutes using verified `iat`. Google ID tokens do not provide Cognito `auth_time`; this gate proves credential freshness, not a password/MFA challenge or recent interactive presence. If it rejects an older cached credential, sign out and sign in again.
 

@@ -6,6 +6,9 @@ import { Tracking, type Daily, type TrackingHealth, type MemePreferences } from 
 import { STATE_COPY, trackingState } from '@/tracking/state';
 import { Button, Section, Notice, Screen, T, EmptyState, Details, Toggle } from '@/ui/kit';
 import { AppIcon, Icon } from '@/ui/Icon';
+import { personalRawDay, refreshPersonalData } from '@/data/personal';
+import { localDateOf } from '@siddiq3/driftless-contracts/domain';
+import { currentTimeZone } from '@/sync/run';
 import { CountingPermissionBanner } from '@/permissions/CountingPermissionBanner';
 
 const minutes = (ms: number) => Math.round(ms / 60_000);
@@ -22,9 +25,9 @@ export default function TrackingScreen() {
   const read = useCallback(() => {
     try {
       setNow(Date.now());
-      Tracking.refreshUsage(1);
+      refreshPersonalData(1);
       const h = Tracking.health();
-      const d = Tracking.daily();
+      const d = personalRawDay(localDateOf(Date.now(), currentTimeZone()));
       setHealth(h);
       setBadgeEnabled(Tracking.floatingCountEnabled());
       setBadgePrefs(Tracking.floatingCountPreferences());

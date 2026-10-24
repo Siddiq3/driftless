@@ -6,12 +6,15 @@ import { addDays, localDateOf } from '@siddiq3/driftless-contracts/domain';
 import type { v1 } from '@siddiq3/driftless-contracts';
 import { AppState, Image, Modal, Pressable, Share, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Tracking } from 'tracking-android';
 import { useApi } from '@/api/useApi';
 import { ApiError, type ApiClient } from '@/api/client';
 import { useSession } from '@/auth/session';
+import { FriendInviteSheet } from './FriendInviteSheet';
 import { InviteSignInSheet } from '@/auth/InviteSignInSheet';
-import { currentTimeZone, syncNow } from '@/sync/run';
+import { personalDay, refreshPersonalData } from '@/data/personal';
+import { observeStorage } from '@/db/scope';
+import { currentTimeZone } from '@/sync/run';
+import { useAccountBackup } from '@/sync/AccountBackupProvider';
 import { Button, Notice, Screen, T } from '@/ui/kit';
 import { Icon } from '@/ui/Icon';
 import { shuffledInvitePrompts, type InvitePrompt } from './invitePrompts';
@@ -23,9 +26,16 @@ const colors = {
   accent: '#C4A0FF',
 };
 
-export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
+export function CircleBoard({
+  friendsPanel,
+  openFriends = false,
+}: {
+  friendsPanel: ReactNode;
+  openFriends?: boolean;
+}) {
   const [fonts] = useFonts({ LilitaOne: require('../../assets/fonts/LilitaOne-Regular.ttf') });
   const api = useApi();
+  const backup = useAccountBackup();
   const session = useSession();
   const [invitations, setInvitations] = useState<InvitePrompt[]>([]);
   useFocusEffect(
@@ -39,7 +49,8 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
   const [date, setDate] = useState(() => today);
   const [total, setTotal] = useState<number | null>(null);
   const [friends, setFriends] = useState<v1.Friend[]>([]);
-  const [managerOpen, setManagerOpen] = useState(false);
+  const [managerOpen, setManagerOpen] = useState(openFriends);
+  const [inviteApi, setInviteApi] = useState<ApiClient | null>(null);
   const [inviteSignInOpen, setInviteSignInOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,22 +74,15 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
       const read = () => {
         if (active) setToday(localDateOf(Date.now(), currentTimeZone()));
         try {
-          const daily = Tracking.daily(date);
-          const health = Tracking.health();
-          const count = daily.apps.reduce((sum, app) => sum + app.views, 0);
-          if (active)
-            setTotal(
-              daily.heartbeatMinutes > 0 ||
-                count > 0 ||
-                (date === localDateOf(Date.now(), currentTimeZone()) && health.serviceRunning)
-                ? count
-                : null,
-            );
+          refreshPersonalData(1);
+          const measurement = personalDay(date);
+          if (active) setTotal(measurement.views);
         } catch {
           if (active) setTotal(null);
         }
       };
       read();
+      const unsubscribe = observeStorage(read);
       const timer = setInterval(() => {
         if (AppState.currentState === 'active') read();
       }, 10_000);
@@ -112,6 +116,7 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
         if (AppState.currentState === 'active') void readComparison();
       }, 60_000);
       return () => {
+        unsubscribe();
         active = false;
         focused.current = false;
         clearInterval(timer);
@@ -133,18 +138,7 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
       return;
     }
     if (!api || busy) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const result = await api.createInvite();
-      await Share.share({
-        message: `Join my circle on ScrollSnooze. Add me with this code: ${result.code} (valid 7 days).`,
-      });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not share your invite.');
-    } finally {
-      setBusy(false);
-    }
+    setInviteApi(api);
   };
   const syncAndRefresh = async () => {
     if (!requireLogin() || !api || busy) return;
@@ -156,14 +150,12 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
       if (!allowed()) return;
       if (!me.data.profile.consent.cloudSync || !me.data.profile.consent.shareWithFriends)
         throw new Error(
-          'Turn on cloud backup and share progress with friends in Settings to compare counts.',
+          'Allow sharing progress in Friends to compare counts. Account backup starts automatically after sign-in.',
         );
-      const outcome = await syncNow({
-        usageSync: (days, key) => api.usageSync(days, key, allowed),
-      });
+      const backedUp = await backup.retry();
       if (!allowed()) return;
-      if (outcome.kind === 'deferred' || outcome.kind === 'rejected')
-        throw new Error('Backup could not finish. Try again from Settings.');
+      if (!backedUp)
+        throw new Error('Backup is still pending. Your local progress is safe; try again shortly.');
       setRefresh((value) => value + 1);
     } catch (e) {
       if (allowed()) setError(e instanceof Error ? e.message : 'Could not sync your counts.');
@@ -200,7 +192,8 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
     friends
       .filter((friend) => friend.status === 'accepted')
       .map((friend) => ({ ...friend, daily: null }));
-  const ownViews = api ? (currentComparison?.self.views ?? null) : total;
+  const showingLocalCount = total !== null;
+  const ownViews = total;
   const visibleFriends = accepted.slice(0, 4);
   const visibleInvitations = invitations.slice(0, 4 - visibleFriends.length);
   const requests = friends.filter((friend) => friend.status === 'pending_in').length;
@@ -287,7 +280,16 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
             style={{ width: 33, height: 33, opacity: 0.8 }}
           />
         </View>
-        <T style={styles.you}>You</T>
+        <View style={{ flex: 1, gap: 3 }}>
+          <T style={styles.you}>
+            {session.status === 'signedIn' ? session.displayName || 'You' : 'You'}
+          </T>
+          {showingLocalCount && (
+            <T v="caption" muted>
+              Your saved count · rankings are separate
+            </T>
+          )}
+        </View>
         <T
           accessibilityLabel={`Your daily count: ${ownViews ?? 'unavailable'}`}
           style={styles.count}
@@ -379,7 +381,23 @@ export function CircleBoard({ friendsPanel }: { friendsPanel: ReactNode }) {
           </SafeAreaView>
         </Modal>
       )}
-      {inviteSignInOpen && <InviteSignInSheet visible onClose={() => setInviteSignInOpen(false)} />}
+      {inviteApi === api && api && (
+        <FriendInviteSheet
+          visible
+          api={api}
+          displayName={session.status === 'signedIn' ? (session.displayName ?? null) : null}
+          onClose={() => setInviteApi(null)}
+        />
+      )}
+      {inviteSignInOpen && (
+        <InviteSignInSheet
+          visible
+          onClose={() => {
+            setInviteSignInOpen(false);
+            if (session.status === 'signedIn' && api) setInviteApi(api);
+          }}
+        />
+      )}
     </Screen>
   );
 }
@@ -434,7 +452,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  you: { flex: 1, color: colors.muted, fontSize: 16 },
+  you: { color: colors.muted, fontSize: 16 },
   count: { fontSize: 23, lineHeight: 30, fontWeight: '700', fontVariant: ['tabular-nums'] },
   invites: { paddingHorizontal: 26 },
   inviteRow: {

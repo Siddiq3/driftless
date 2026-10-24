@@ -4,7 +4,6 @@ import { AppState, Platform, Text } from 'react-native';
 import type { v1 } from '@siddiq3/driftless-contracts';
 import Settings from '../app/settings';
 import { ApiError, createApiClient } from '../src/api/client';
-import { syncGoals, cancelGoalSync } from '../src/goals/sync';
 import { cacheEntitlement } from '../src/billing/pro';
 import { Tracking } from 'tracking-android';
 
@@ -25,9 +24,11 @@ jest.mock('@/api/client', () => ({
   createApiClient: jest.fn(),
 }));
 jest.mock('@/billing/pro', () => ({ cacheEntitlement: jest.fn() }));
-jest.mock('@/goals/sync', () => ({ syncGoals: jest.fn(), cancelGoalSync: jest.fn() }));
-jest.mock('@/sync/push', () => ({ registerPush: jest.fn().mockResolvedValue(undefined) }));
-jest.mock('@/sync/run', () => ({ syncNow: jest.fn().mockResolvedValue({ kind: 'idle' }) }));
+const mockRetry = jest.fn().mockResolvedValue(undefined);
+let mockBackup = { state: 'saved', message: 'Saved to your account' };
+jest.mock('@/sync/AccountBackupProvider', () => ({
+  useAccountBackup: () => ({ status: mockBackup, retry: mockRetry }),
+}));
 jest.mock('tracking-android', () => ({
   Tracking: {
     health: jest.fn(),
@@ -106,7 +107,7 @@ beforeEach(() => {
   jest
     .mocked(createApiClient)
     .mockReturnValue({ getMe } as unknown as ReturnType<typeof createApiClient>);
-  jest.mocked(syncGoals).mockResolvedValue(undefined);
+  mockBackup = { state: 'saved', message: 'Saved to your account' };
   jest.mocked(Tracking.health).mockReturnValue(healthy as ReturnType<typeof Tracking.health>);
   jest.spyOn(AppState, 'addEventListener').mockImplementation((_event, fn) => {
     onAppState = fn as typeof onAppState;
@@ -118,11 +119,10 @@ afterEach(async () => {
   jest.restoreAllMocks();
   jest.useRealTimers();
 });
-it('shows goal backup failure independently from successful usage sync and supports retry', async () => {
-  jest.mocked(syncGoals).mockRejectedValueOnce(new Error('server validation failed'));
+it('shows the root backup status and retries through the shared coordinator', async () => {
+  mockBackup = { state: 'pending', message: 'Offline; progress is safe on this phone' };
   await mount();
-  expect(contents()).toContain('Goal backup failed: server validation failed');
-  expect(contents()).toContain('Up to date');
+  expect(contents()).toContain(mockBackup.message);
   await act(async () =>
     tree.root
       .findAll(
@@ -131,15 +131,13 @@ it('shows goal backup failure independently from successful usage sync and suppo
       )[0]!
       .props.onPress(),
   );
-  expect(jest.mocked(syncGoals)).toHaveBeenCalledTimes(2);
-  expect(contents()).toContain('Goals backed up');
+  expect(mockRetry).toHaveBeenCalledTimes(1);
 });
 it('reports local readiness during a backend outage, and refreshes revoked permissions on return', async () => {
   getMe.mockRejectedValue(new ApiError(null, 'network', 'offline'));
   await mount();
   expect(contents()).toContain('local app minutes available');
   expect(contents()).toContain('Backend status unavailable');
-  expect(syncGoals).not.toHaveBeenCalled();
   jest
     .mocked(Tracking.health)
     .mockReturnValue({ ...healthy, usageAccessGranted: false } as ReturnType<
@@ -148,18 +146,6 @@ it('reports local readiness during a backend outage, and refreshes revoked permi
   await act(async () => onAppState('active'));
   expect(contents()).toContain('Usage Access permission required');
   expect(contents()).not.toContain('local app minutes available');
-});
-it('cancels goal synchronization when cloud consent is switched off', async () => {
-  await mount();
-  getMe.mockResolvedValue({
-    data: {
-      ...me,
-      profile: { ...me.profile, consent: { cloudSync: false, shareWithFriends: false } },
-    },
-  });
-  await act(async () => onAppState('active'));
-  expect(cancelGoalSync).toHaveBeenCalled();
-  expect(syncGoals).toHaveBeenCalledTimes(1);
 });
 it('does not let an old profile response overwrite a newer offline result', async () => {
   let finish!: (value: { data: v1.MeResponse }) => void;
@@ -175,7 +161,6 @@ it('does not let an old profile response overwrite a newer offline result', asyn
   await act(async () => onAppState('active'));
   await act(async () => finish({ data: me }));
   expect(contents()).toContain('Backend status unavailable');
-  expect(syncGoals).not.toHaveBeenCalled();
 });
 
 it('a missing entitlement bridge does not misreport a working backend as offline', async () => {
@@ -185,5 +170,11 @@ it('a missing entitlement bridge does not misreport a working backend as offline
   await mount();
   expect(contents()).toContain('Welcome');
   expect(contents()).not.toContain('Cloud features are unavailable');
-  expect(syncGoals).toHaveBeenCalled();
+});
+
+it('has no backup switch or separate enable action', async () => {
+  await mount();
+  expect(contents()).toContain('Saved to your account');
+  expect(tree.root.findAll((n) => n.props.accessibilityLabel === 'Cloud backup')).toHaveLength(0);
+  expect(tree.root.findAll((n) => n.props.accessibilityLabel === 'Manage backup')).toHaveLength(0);
 });

@@ -2,8 +2,9 @@ import { addDays, localDateOf } from '@siddiq3/driftless-contracts/domain';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { View } from 'react-native';
-import { Tracking, type Daily, type TrackingHealth } from 'tracking-android';
 import { currentTimeZone } from '@/sync/run';
+import { personalDay, refreshPersonalData } from '@/data/personal';
+import { observeStorage } from '@/db/scope';
 import { Button, Section, Notice, Screen, T, useTheme, Details } from '@/ui/kit';
 import { Icon } from '@/ui/Icon';
 
@@ -16,27 +17,6 @@ type Row = {
   gap: boolean;
 };
 
-function toRow(d: Daily, h: TrackingHealth): Row {
-  const usage = d.apps.reduce((n, a) => n + a.usageMs, 0);
-  const counter = d.apps.reduce((n, a) => n + a.surfaceMs + a.unknownMs, 0);
-  const ran = d.heartbeatMinutes > 0;
-  const hasRows = d.apps.length > 0;
-  const minutes = !hasRows
-    ? null
-    : h.usageAccessGranted
-      ? Math.round(usage / 60_000)
-      : ran
-        ? Math.round(counter / 60_000)
-        : null;
-  const videos = ran ? d.apps.reduce((n, a) => n + a.views, 0) : null;
-  return {
-    date: d.localDate,
-    minutes,
-    videos,
-    gap: !hasRows || (!ran && !h.usageAccessGranted),
-  };
-}
-
 export default function History() {
   const t = useTheme();
   const [rows, setRows] = useState<Row[] | null>(null);
@@ -44,15 +24,31 @@ export default function History() {
 
   const read = useCallback(() => {
     try {
-      Tracking.refreshUsage(7);
-      const h = Tracking.health();
+      refreshPersonalData(7);
       const today = localDateOf(Date.now(), currentTimeZone());
-      setRows(Array.from({ length: DAYS }, (_, i) => toRow(Tracking.daily(addDays(today, -i)), h)));
+      setRows(
+        Array.from({ length: DAYS }, (_, i) =>
+          (() => {
+            const d = personalDay(addDays(today, -i));
+            return {
+              date: d.localDate,
+              minutes: d.minutes,
+              videos: d.views,
+              gap: d.views === null && d.minutes === null,
+            };
+          })(),
+        ),
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : 'unknown error');
     }
   }, []);
-  useFocusEffect(read);
+  useFocusEffect(
+    useCallback(() => {
+      read();
+      return observeStorage(read);
+    }, [read]),
+  );
 
   return (
     <Screen>
@@ -66,8 +62,8 @@ export default function History() {
       )}
       <Details title="About your history">
         <T v="caption" muted>
-          These are local counts and minutes. Stats, goal results and cloud comparisons use
-          eligibility checks, so their totals may differ. Missing data is shown as a dash.
+          These are local counts and minutes. Your personal screens use the same saved measurements.
+          Competitive scores apply separate eligibility checks. Missing data is shown as a dash.
         </T>
       </Details>
       {rows && (

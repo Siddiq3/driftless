@@ -36,6 +36,8 @@ class BlockingUsageRefreshTest {
         val at = maxOf(now, start + 122000)
         val store = SqliteStore(ctx, "usage-protection-test.db")
         try {
+            // Create the test guest interval before the synthetic app-use timestamps.
+            store.writableDatabase.execSQL("UPDATE scope_intervals SET start_ms=?", arrayOf(start))
             GoalNotifier.check(ctx, store, prefs, at)
             val minutes = store.daily(Recorder.localDate(at, ZoneId.systemDefault())).firstOrNull { it.pkg == pkg }?.usageMs ?: 0
             assertEquals(120000L, minutes)

@@ -14,9 +14,10 @@ export function homeAppCount(
   health: TrackingHealth | null,
   packageName: string,
 ): number | null {
-  if (!daily || !health || daily.heartbeatMinutes <= 0) return null;
-  const app = health.apps.find((app) => app.package === packageName && app.installed);
+  if (!daily || !health) return null;
+  const app = health.apps.find((app) => app.package === packageName);
   if (!app || app.videoDetectionImplemented === false) return null;
-  if (!app.validated && candidateCount(daily, health) === null) return null;
-  return daily.apps.find((row) => row.package === packageName)?.views ?? 0;
+  const row = daily.apps.find((entry) => entry.package === packageName);
+  if (!row && daily.heartbeatMinutes <= 0) return null;
+  return row?.views ?? (daily.heartbeatMinutes > 0 ? 0 : null);
 }

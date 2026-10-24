@@ -50,7 +50,11 @@ object UsageReader {
      * Recomputes foreground time for the last [days] local days and stores it. Android keeps
      * event-level history only for a limited time, so older days keep their last stored value.
      */
-    fun refresh(context: Context, store: TrackingStore, packages: Set<String>, days: Int, zone: ZoneId = ZoneId.systemDefault()): Int {
+    fun refresh(context: Context, store: TrackingStore, packages: Set<String>, days: Int, zone: ZoneId = ZoneId.systemDefault()): Int = synchronized(store) {
+        refreshLocked(context, store, packages, days, zone)
+    }
+
+    private fun refreshLocked(context: Context, store: TrackingStore, packages: Set<String>, days: Int, zone: ZoneId): Int {
         if (!granted(context)) return 0
         val now = System.currentTimeMillis()
         val today = LocalDate.now(zone)
@@ -58,7 +62,12 @@ object UsageReader {
         for (i in 0 until days.coerceIn(1, 7)) {
             val date = today.minusDays(i.toLong()).toString()
             val (start, end) = UsageMath.dayBounds(date, zone)
-            val ms = UsageMath.foregroundMs(transitions(context, packages, start, minOf(end, now)), packages, start, end, now)
+            val intervals = if (store is SqliteStore) store.usageIntervals(start, minOf(end, now)) else listOf(start to minOf(end, now))
+            val ms = mutableMapOf<String, Long>()
+            for ((a,b) in intervals) {
+                val piece = UsageMath.foregroundMs(transitions(context, packages, a, b), packages, a, b, b)
+                for((pkg,value) in piece) ms[pkg] = (ms[pkg] ?: 0L) + value
+            }
             for ((pkg, v) in ms) {
                 store.setUsage(date, pkg, v)
                 written++

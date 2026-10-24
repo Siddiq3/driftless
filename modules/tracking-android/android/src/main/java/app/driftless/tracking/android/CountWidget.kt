@@ -31,9 +31,9 @@ class CountWidget : AppWidgetProvider() {
             if (ids.isEmpty()) return
             val store = SqliteStore.get(context)
             val date = LocalDate.now().toString()
-            val validated = RulesLoader.load(context).apps.values.filter { isValidatedVersion(it, Health.appVersion(context, it.pkg)) }.map { it.pkg }.toSet()
-            val known = validated.isNotEmpty() && store.heartbeatMinutes(date) > 0
-            val count = if (known) store.daily(date).filter { it.pkg in validated }.sumOf { it.views }.coerceAtMost(5000).toString() else "—"
+            val personal = store.personalMeasurement(date, RulesLoader.load(context).apps.keys)
+            val known = personal["views"] != null
+            val count = personal["views"]?.toString() ?: "—"
             val active = TrackingPrefs(context).disclosureAccepted && Health.serviceEnabled(context) && DriftlessAccessibilityService.current != null
             val view = RemoteViews(context.packageName, R.layout.driftless_count_widget).apply {
                 setTextViewText(R.id.count_widget_value, count)

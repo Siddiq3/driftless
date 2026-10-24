@@ -17,9 +17,16 @@ export function aggregateDay(
   health: TrackingHealth,
   deviceId: string,
   tz: string,
+  currentDay = true,
 ): DayValues {
   const validated = new Set(
-    health.apps.filter((a) => a.installed && a.validated).map((a) => a.package),
+    health.apps
+      .filter((a) =>
+        daily.measurementStatus
+          ? daily.measurementStatus === 'validated'
+          : currentDay && a.installed && a.validated,
+      )
+      .map((a) => a.package),
   );
   const counterRan = daily.heartbeatMinutes > 0;
 
@@ -41,16 +48,21 @@ export function aggregateDay(
   // No rows at all for the day (e.g. before install, or older than the UsageStats refresh window)
   // means "not tracked", never 0 minutes.
   const hasRows = daily.apps.length > 0;
-  if (health.usageAccessGranted && hasRows) minutes = Math.floor(usageMs / 60_000);
+  if ((daily.usageObserved ?? health.usageAccessGranted) && hasRows)
+    minutes = Math.floor(usageMs / 60_000);
   else if (counterRan) minutes = Math.floor(counterMs / 60_000);
   if (minutes !== null) minutes = Math.min(1440, Math.max(0, minutes));
 
   const coverage =
-    views !== null ? daily.coverage : health.usageAccessGranted && hasRows ? 1 : daily.coverage;
+    views !== null
+      ? daily.coverage
+      : currentDay && health.usageAccessGranted && hasRows
+        ? 1
+        : daily.coverage;
 
   return {
     localDate: daily.localDate,
-    tz,
+    tz: daily.recordedTz ?? tz,
     platform: 'android',
     deviceId,
     views: views === null ? null : Math.min(5000, views),

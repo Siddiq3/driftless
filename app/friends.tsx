@@ -1,7 +1,7 @@
 import type { v1 } from '@siddiq3/driftless-contracts';
-import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { Share, View } from 'react-native';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useState, useRef } from 'react';
+import { View } from 'react-native';
 import { useApi } from '@/api/useApi';
 import { useSession } from '@/auth/session';
 import {
@@ -17,26 +17,47 @@ import {
   LoadingState,
 } from '@/ui/kit';
 import { CircleBoard } from '@/social/CircleBoard';
+import { FriendInviteSheet } from '@/social/FriendInviteSheet';
+import { ensureSocialProfile } from '@/social/profile';
 import { VisualBanner } from '@/ui/Focus';
 
 type State = { me: v1.MeResponse; friends: v1.Friend[] };
 
 export default function Friends() {
-  return <CircleBoard friendsPanel={<FriendsManager />} />;
+  const params = useLocalSearchParams<{ invite?: string }>();
+  const inviteCode =
+    typeof params.invite === 'string' && /^[A-HJ-NP-Z2-9]{10}$/.test(params.invite)
+      ? params.invite
+      : '';
+  return (
+    <CircleBoard
+      key={inviteCode}
+      openFriends={!!inviteCode}
+      friendsPanel={<FriendsManager initialCode={inviteCode} />}
+    />
+  );
 }
 
-function FriendsManager() {
+function FriendsManager({ initialCode = '' }: { initialCode?: string }) {
   const api = useApi();
+  const requests = useRef(0);
   const session = useSession();
   const [s, setS] = useState<State | null>(null);
-  const [input, setInput] = useState('');
-  const [handle, setHandle] = useState('');
+  const [input, setInput] = useState(initialCode);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const displayName = session.status === 'signedIn' ? (session.displayName ?? null) : null;
   const [note, setNote] = useState<{ title: string; body: string; warn?: boolean } | null>(null);
 
   const load = useCallback(() => {
     if (!api) return;
-    Promise.all([api.getMe(), api.friends()])
-      .then(([me, friends]) => setS({ me: me.data, friends }))
+    const generation = ++requests.current;
+    Promise.all([
+      ensureSocialProfile(api, displayName, () => requests.current === generation),
+      api.friends(),
+    ])
+      .then(([me, friends]) => {
+        if (requests.current === generation) setS({ me: me.data, friends });
+      })
       .catch((e: unknown) =>
         setNote({
           warn: true,
@@ -44,8 +65,16 @@ function FriendsManager() {
           body: e instanceof Error ? e.message : '',
         }),
       );
-  }, [api]);
-  useFocusEffect(load);
+  }, [api, displayName]);
+  useFocusEffect(
+    useCallback(() => {
+      setS(null);
+      load();
+      return () => {
+        requests.current++;
+      };
+    }, [load]),
+  );
 
   const act = (fn: () => Promise<unknown>, ok?: string) =>
     fn()
@@ -112,97 +141,73 @@ function FriendsManager() {
       <VisualBanner art="friends" />
       {note && <Notice tone={note.warn ? 'warn' : 'info'} title={note.title} body={note.body} />}
 
-      {!p.handle ? (
-        <Section>
-          <T v="heading">Choose a handle</T>
-          <T muted>Friends find you by this name. Lowercase letters, numbers and _ only.</T>
-          <Field
-            label="Your handle"
-            autoCapitalize="none"
-            autoCorrect={false}
-            value={handle}
-            onChangeText={(v) => setHandle(v.toLowerCase())}
-            placeholder="e.g. calm_otter"
-          />
-          <Button
-            label="Save handle"
-            onPress={() => act(() => api.patchMe({ handle }, p.rev), 'Handle saved')}
-          />
-        </Section>
-      ) : (
-        <Section>
-          <T v="heading">@{p.handle}</T>
-          <Details title="Progress sharing" icon="shield">
-            {' '}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View style={{ flex: 1 }}>
-                <T muted>Share my progress with friends</T>
-                <T v="caption" muted>
-                  Daily totals only · off by default
-                </T>
-              </View>
-              <Toggle
-                accessibilityLabel="Share my progress with friends"
-                value={p.consent.shareWithFriends}
-                onValueChange={(v) =>
-                  act(() =>
-                    api.patchMe(
-                      {
-                        consent: v
-                          ? { cloudSync: true, shareWithFriends: true }
-                          : { shareWithFriends: false },
-                      },
-                      p.rev,
-                    ),
-                  )
-                }
-              />
+      <Section>
+        <T v="heading">{displayName || p.displayName || 'Your account'}</T>
+        <Details title="Progress sharing" icon="shield">
+          {' '}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <T muted>Share my progress with friends</T>
+              <T v="caption" muted>
+                Daily totals only · off by default
+              </T>
             </View>
-          </Details>
-          <Button
-            kind="secondary"
-            label="Invite a friend"
-            onPress={() =>
-              act(async () => {
-                const inv = await api.createInvite();
-                await Share.share({
-                  message: `Join me on ScrollSnooze — add me with this code: ${inv.code} (valid 7 days)`,
-                });
-              })
-            }
-          />
-        </Section>
+            <Toggle
+              accessibilityLabel="Share my progress with friends"
+              value={p.consent.shareWithFriends}
+              onValueChange={(v) =>
+                act(() =>
+                  api.patchMe(
+                    {
+                      consent: v
+                        ? { cloudSync: true, shareWithFriends: true }
+                        : { shareWithFriends: false },
+                    },
+                    p.rev,
+                  ),
+                )
+              }
+            />
+          </View>
+        </Details>
+        <Button kind="secondary" label="Invite a friend" onPress={() => setInviteOpen(true)} />
+      </Section>
+      {inviteOpen && (
+        <FriendInviteSheet
+          visible
+          api={api}
+          displayName={displayName}
+          onClose={() => setInviteOpen(false)}
+        />
       )}
 
-      {p.handle && (
-        <Details title="Add a friend" icon="friends">
-          <Field
-            label="Handle or invite code"
-            autoCapitalize="none"
-            autoCorrect={false}
-            value={input}
-            onChangeText={setInput}
-            placeholder="handle or invite code"
-          />
-          <Button
-            label="Add"
-            onPress={() => {
-              const v = input.trim();
-              const by = /^[A-HJ-NP-Z2-9]{10}$/.test(v)
-                ? { inviteCode: v }
-                : { handle: v.replace(/^@/, '').toLowerCase() };
-              void act(() => api.addFriend(by), 'Done').then(() => setInput(''));
-            }}
-          />
-        </Details>
-      )}
+      <Details title="Add a friend" icon="friends">
+        <Field
+          label="Handle or invite code"
+          autoCapitalize="none"
+          autoCorrect={false}
+          value={input}
+          onChangeText={setInput}
+          placeholder="handle or invite code"
+        />
+        <Button
+          label="Add"
+          onPress={() => {
+            const v = input.trim();
+            const by = /^[A-HJ-NP-Z2-9]{10}$/.test(v)
+              ? { inviteCode: v }
+              : { handle: v.replace(/^@/, '').toLowerCase() };
+            void act(() => api.addFriend(by), 'Done').then(() => setInput(''));
+          }}
+        />
+      </Details>
 
       {pending.length > 0 && (
         <Section>
           <T v="heading">Requests</T>
           {pending.map((f) => (
             <View key={f.userId} style={{ gap: 8 }}>
-              <T>@{f.handle}</T>
+              <T>{f.displayName || `@${f.handle}`}</T>
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <View style={{ flex: 1 }}>
                   <Button
@@ -243,7 +248,7 @@ function FriendsManager() {
               justifyContent: 'space-between',
             }}
           >
-            <T>@{f.handle}</T>
+            <T>{f.displayName || `@${f.handle}`}</T>
             <Button
               kind="secondary"
               label="Remove"
@@ -253,7 +258,7 @@ function FriendsManager() {
         ))}
         {sent.length > 0 && (
           <T v="caption" muted>
-            Waiting: {sent.map((f) => `@${f.handle}`).join(', ')}
+            Waiting: {sent.map((f) => f.displayName || `@${f.handle}`).join(', ')}
           </T>
         )}
       </Section>

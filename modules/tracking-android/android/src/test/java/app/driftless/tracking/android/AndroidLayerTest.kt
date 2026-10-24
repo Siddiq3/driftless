@@ -80,6 +80,9 @@ class AndroidLayerTest {
                    unknown_ms INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (local_date, pkg))""",
             )
             db.execSQL("INSERT INTO daily (local_date, pkg, views) VALUES ('2026-10-01', 'com.instagram.android', 7)")
+            db.execSQL("CREATE TABLE events(event_id TEXT PRIMARY KEY, session_id TEXT NOT NULL, seq INTEGER NOT NULL, pkg TEXT NOT NULL, kind TEXT NOT NULL, item_start_ms INTEGER NOT NULL, counted_at_ms INTEGER NOT NULL, local_date TEXT NOT NULL, tz TEXT NOT NULL, rule_version INTEGER NOT NULL, app_version TEXT, UNIQUE(session_id,seq))")
+            db.execSQL("CREATE TABLE rings(pkg TEXT PRIMARY KEY, fps TEXT NOT NULL, saved_at INTEGER NOT NULL)")
+            db.execSQL("CREATE TABLE heartbeats(local_date TEXT NOT NULL, minute INTEGER NOT NULL, PRIMARY KEY(local_date,minute))")
             db.version = 1
         }
         val s = SqliteStore(ctx, dbName)

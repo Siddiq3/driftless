@@ -177,3 +177,36 @@ describe('api client', () => {
     });
   });
 });
+
+it('deduplicates simultaneous identical GETs across clients for one authenticated getter', async () => {
+  const getAccessToken = jest.fn().mockResolvedValue('token');
+  let finish!: (r: Response) => void;
+  const fetchImpl = jest.fn(
+    () =>
+      new Promise<Response>((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const options = {
+    baseUrl: 'https://api.example.test',
+    getAccessToken,
+    fetchImpl,
+    platform: 'android' as const,
+    appVersion: '1',
+  };
+  const a = createApiClient(options);
+  const b = createApiClient(options);
+  const first = a.getMe();
+  const second = b.getMe();
+  await Promise.resolve();
+  expect(fetchImpl).toHaveBeenCalledTimes(1);
+  finish(resp(200, me));
+  expect(await first).toEqual(await second);
+});
+it('never shares a request across different authenticated account getters', async () => {
+  const f = jest.fn().mockResolvedValue(resp(200, me));
+  const a = client(f);
+  const b = client(f);
+  await Promise.all([a.getMe(), b.getMe()]);
+  expect(f).toHaveBeenCalledTimes(2);
+});

@@ -14,3 +14,11 @@ export async function googleIdentity(client: GoogleIdentityClient, interactive: 
   if (!response.data?.idToken) throw new Error('Google did not return an identity token.');
   return response.data.idToken;
 }
+
+/** Presentation only: account ownership always uses the opaque Google ID. */
+export function googleDisplayName(
+  user: { name?: string | null; email?: string | null } | null | undefined,
+): string | null {
+  const name = user?.name?.trim() || user?.email?.split('@')[0]?.trim();
+  return name ? name.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 40) || null : null;
+}

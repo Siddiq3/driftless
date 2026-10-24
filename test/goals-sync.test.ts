@@ -46,14 +46,16 @@ it('upgrades v3 seed IDs once, preserving all goal fields and unrelated data', a
   await migrate(f.db, MIGRATIONS.slice(0, 3));
   const valid = goal();
   await f.db.runAsync(
-    'INSERT INTO goals VALUES (?, ?, ?, ?, ?)',
+    'INSERT INTO goals (goal_id,metric,daily_limit,enabled,rev) VALUES (?, ?, ?, ?, ?)',
     valid.goalId,
     valid.metric,
     valid.dailyLimit,
     1,
     4,
   );
-  await f.db.runAsync("INSERT INTO goals VALUES ('setup-minutes', 'minutes', 80, 0, 7)");
+  await f.db.runAsync(
+    "INSERT INTO goals (goal_id,metric,daily_limit,enabled,rev) VALUES ('setup-minutes', 'minutes', 80, 0, 7)",
+  );
   await migrate(f.db);
   await repairGoalIds(f.db);
   expect(await loadGoals(f.db)).toEqual(
@@ -66,8 +68,12 @@ it('upgrades v3 seed IDs once, preserving all goal fields and unrelated data', a
 });
 
 it('repairs seed IDs idempotently and accepts stale editor handles without duplicating goals', async () => {
-  await db.runAsync("INSERT INTO goals VALUES ('setup-views', 'views', 75, 0, 9)");
-  await db.runAsync("INSERT INTO goals VALUES ('setup-minutes', 'minutes', 45, 1, 3)");
+  await db.runAsync(
+    "INSERT INTO goals (goal_id,metric,daily_limit,enabled,rev) VALUES ('setup-views', 'views', 75, 0, 9)",
+  );
+  await db.runAsync(
+    "INSERT INTO goals (goal_id,metric,daily_limit,enabled,rev) VALUES ('setup-minutes', 'minutes', 45, 1, 3)",
+  );
   await db.runAsync("INSERT INTO settings VALUES ('unrelated', 'keep')");
   const valid = goal();
   await saveGoal(db, valid);
@@ -95,7 +101,9 @@ it('repairs seed IDs idempotently and accepts stale editor handles without dupli
 });
 
 it('rolls back ID repair failures and can retry safely', async () => {
-  await db.runAsync("INSERT INTO goals VALUES ('setup-views', 'views', 50, 1, 2)");
+  await db.runAsync(
+    "INSERT INTO goals (goal_id,metric,daily_limit,enabled,rev) VALUES ('setup-views', 'views', 50, 1, 2)",
+  );
   await db.execAsync(
     "CREATE TRIGGER fail_repair BEFORE UPDATE ON goals BEGIN SELECT RAISE(ABORT, 'disk full'); END;",
   );
@@ -262,7 +270,9 @@ it('preserves all goals and reports a merged set beyond the cloud limit', async 
 });
 
 it('legacy handles can delete a repaired goal and a pull does not resurrect it', async () => {
-  await db.runAsync("INSERT INTO goals VALUES ('setup-views', 'views', 50, 1, 2)");
+  await db.runAsync(
+    "INSERT INTO goals (goal_id,metric,daily_limit,enabled,rev) VALUES ('setup-views', 'views', 50, 1, 2)",
+  );
   await repairGoalIds(db);
   const [g] = await loadGoals(db);
   await deleteGoal(db, 'setup-views');

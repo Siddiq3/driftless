@@ -1,6 +1,6 @@
 import { addDays } from '@siddiq3/driftless-contracts/domain';
-import type { Daily, TrackingHealth, WrapDetails } from 'tracking-android';
-import { aggregateDay } from '@/sync/aggregate';
+import type { Daily, TrackingHealth, WrapDetails, PersonalMeasurement } from 'tracking-android';
+import { recordedMeasurement } from '@/data/measurement';
 export type ActivityPeriod = 'daily' | 'weekly';
 export function activityBounds(period: ActivityPeriod, offset: number, today: string) {
   const weekday = new Date(`${today}T12:00:00Z`).getUTCDay();
@@ -20,27 +20,15 @@ export function activityData(
   health: TrackingHealth,
   readDay: (date: string) => Daily,
   details: WrapDetails,
+  readMeasurement?: (date: string) => Pick<PersonalMeasurement, 'views' | 'minutes'>,
 ) {
   const bounds = activityBounds(period, offset, today);
-  const packages = new Set(health.apps.map((app) => app.package));
   const rows = bounds.dates.map((date) => {
     const raw = readDay(date);
-    const day = aggregateDay(raw, health, 'phone', 'UTC');
-    if (period === 'daily') {
-      // Match the popup's saved supported-app totals, independently of cloud accuracy gates.
-      const localViews = raw.apps
-        .filter((app) => packages.has(app.package))
-        .reduce((sum, app) => sum + app.views, 0);
-      return {
-        raw,
-        day: {
-          ...day,
-          views:
-            packages.size > 0 && (raw.heartbeatMinutes > 0 || localViews > 0) ? localViews : null,
-        },
-      };
-    }
-    return { raw, day };
+    return {
+      raw,
+      day: { localDate: date, ...(readMeasurement?.(date) ?? recordedMeasurement(raw, health)) },
+    };
   });
   const total = (key: 'views' | 'minutes') => {
     const known = rows.filter((r) => r.day[key] !== null);
@@ -86,7 +74,7 @@ export function activityData(
     .map((app) => ({
       ...app,
       views:
-        views.value === null || (period !== 'daily' && (!app.installed || !app.validated))
+        views.value === null || !app.installed
           ? null
           : rows
               .filter((r) => r.day.views !== null)

@@ -1,4 +1,48 @@
-# Guest data migration and account isolation
+# Current architecture — 24 October 2026
+
+The scoped repository implementation in [PERSONAL_DATA_ARCHITECTURE.md](PERSONAL_DATA_ARCHITECTURE.md) supersedes the earlier single-owner backup draft below. Automatic backup stays part of sign-in, without a separate switch. Native schema v3 and JavaScript schema v5 isolate account and guest records. The journal binds each imported guest dataset to one server-resolved account and records completion after supported uploads and hydration. Same-account sessions restore their own cache; new accounts do not reuse another account’s local history.
+
+The full current test results and file inventory are in the linked report. A physical device, Google SDK lifecycle, reconnect/process-death tests on a device, and new-device live-account restore remain release verification steps. No experimental counts are newly authorized for cloud storage.
+
+---
+
+# Guest progress and automatic account backup
+
+Product behavior updated: 23 October 2026.
+
+## Current behavior
+
+- Guests keep progress locally; no account means no backup requests.
+- Signing in includes account backup. All three Google sign-in entry points explain this before the button is used. There is no Cloud backup switch in Settings or Privacy & data. Friend sharing remains a separate choice.
+- The root authenticated lifecycle resolves the backend user, binds the installation dataset to that user in an exclusive SQLite transaction, enables the existing server backup preference, and syncs goals and supported daily totals. No Settings visit is required. Active-app retries run on foreground return and every minute; native tracking can continue offline or while JS is closed.
+- Local rows remain on the phone. Usage batches keep the same body/key through network failures, including after a lost response. Ownership survives process restart. Each run sends at most three batches of 31 dates, then reports pending and continues later.
+- Native stored-date enumeration includes saved daily aggregates within the server’s 400-day retention window, rather than only the UsageStats seven-day refresh window. Dates outside retention stay local. New native code is required; older binaries report that an app update is needed rather than claiming a complete backup.
+- Historical app versions and permission coverage cannot be inferred from current health. Previously established historical count eligibility is preserved. Never-validated reel counts remain local; the account receives only supported totals. Raw events, hourly sessions, watched content and onboarding answers are not uploaded.
+- Sign-out/session replacement cancels subsequent requests, local merges and acknowledgements. Requests already committed on the server cannot be undone. Explicit data/account deletion pauses this session’s automatic worker before cleanup.
+
+## Validation of this change
+
+TypeScript and focused-source ESLint pass. All 284 Jest tests pass, including real SQLite adapter tests with fake network/native inputs; both focused Robolectric stored-date tests pass. The offline ARM64 release APK builds successfully. No real-account import, production upload, cross-device restore, or full account-switch UI test was performed. These results do not reclassify the existing security-audit leads.
+
+## Conditional acceptance — 24 October 2026
+
+The owner confirmed automatic account backup on sign-in with no separate switch, conditional on isolation and migration tests passing. This retains the chosen behavior; it does not waive the outstanding integration/isolation gaps below.
+
+Additional real-SQLite tests pass for closing/reopening a file-backed database with a frozen retry; denying account B without changing A's owner/device/queue; resuming with A using the same payload/key; importing 100 historical dates across multiple runs without duplicates; and honoring legacy ownership. A new cancellation test exposed that session invalidation during the ownership SQL writes could still commit the binding. The claim transaction now checks again before commit and rolls back when cancelled.
+
+All 288 Jest tests, TypeScript and the focused-source lint check pass. Network/native inputs remain mocked in these component tests. The earlier two native stored-date tests passed, but native background scope transitions, account-isolated screen visibility, and real-backend A/B migration remain unverified. The latest source changes are not included in the previously built APK. The feature remains uncommitted on its feature branch; no main merge or deployment was performed.
+
+## Account switching and legacy data
+
+This implementation conservatively binds one local dataset to one backend account. Account B cannot upload A’s local data or frozen queue. A different account sees a backup error and the existing data is preserved. Existing goal-owner evidence is honored; an unowned legacy usage queue is held locally until its ownership can be resolved.
+
+It does **not** implement independent native/JS stores for multiple accounts on the same installation, nor certify account-isolated local screen visibility. In particular, logging out does not turn A’s old dataset into unowned guest data. Full multi-account storage partitioning remains separate work. Account deletion and concurrent backend writes retain their separately documented audit limitations.
+
+The previous one-time-import-with-an-optional-sync-switch design below is retained as historical design context. Its separate-switch requirement is superseded by the owner’s automatic-backup requirement above. No dedicated migration API or contract package change is needed for this continuous-backup flow.
+
+---
+
+# Historical guest migration design
 
 Inspection: 22 October 2026. Status: implementation design; migration is not implemented or release-certified.
 

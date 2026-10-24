@@ -83,7 +83,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
         val store = SqliteStore.get(this)
         val now = System.currentTimeMillis()
         store.purgeOlderThan(now - RETENTION_MS, Recorder.localDate(now - RETENTION_MS, ZoneId.systemDefault()))
-        engine = Engine(store, rules)
+        engine = Engine(store.capturedStore(), rules)
         if (android.os.Build.VERSION.SDK_INT >= 33) {
             // System broadcasts still reach a non-exported receiver.
             registerReceiver(screenOff, IntentFilter(Intent.ACTION_SCREEN_OFF), Context.RECEIVER_NOT_EXPORTED)
@@ -253,6 +253,23 @@ class DriftlessAccessibilityService : AccessibilityService() {
         }
     }
 
+    fun changeDataScope(next: String) {
+        val action = {
+            if (::engine.isInitialized) engine.onLeave(System.currentTimeMillis())
+            SqliteStore.get(this).selectScope(next)
+            engine = Engine(SqliteStore.get(this).capturedStore(), rules)
+            hideFloatingCount()
+            memeDate = null; memeCount = null
+        }
+        if (Looper.myLooper() == Looper.getMainLooper()) action() else {
+            val done = java.util.concurrent.CountDownLatch(1)
+            var failure: Throwable? = null
+            main.post { try { action() } catch (e: Throwable) { failure = e } finally { done.countDown() } }
+            check(done.await(5, java.util.concurrent.TimeUnit.SECONDS)) { "Scope transition timed out" }
+            failure?.let { throw it }
+        }
+    }
+
     /** Bridge calls may arrive on another thread; all WindowManager access stays on main. */
     fun refreshFloatingCount() { main.post { if (::engine.isInitialized) updateFloatingCount(System.currentTimeMillis()) } }
 
@@ -279,7 +296,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
         val today = Recorder.localDate(now, ZoneId.systemDefault())
         // One daily allowance covers Reels and Shorts together across app switches.
         val rows = SqliteStore.get(this).daily(today).filter { it.pkg in rules.apps }
-        val value = rows.sumOf { it.views }
+        val value = (SqliteStore.get(this).personalMeasurement(today, rules.apps.keys)["views"] as? Int) ?: 0
         val validated = isValidatedVersion(rules.apps.getValue(pkg), versionOf(pkg)) && rows
             .filter { it.views > 0 }.all { isValidatedVersion(rules.apps.getValue(it.pkg), versionOf(it.pkg)) }
         val limit = prefs.limits.filter { it.metric == "views" && it.dailyLimit > 0 }.minOfOrNull { it.dailyLimit }

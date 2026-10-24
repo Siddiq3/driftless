@@ -8,6 +8,8 @@ import { getDb } from '../db';
 import { currentTimeZone } from '../sync/run';
 import { progress, type Progress } from './progress';
 import { loadGoals } from './store';
+import { personalDay, personalRawDay, refreshPersonalData } from '@/data/personal';
+import { observeStorage, storageScope } from '@/db/scope';
 
 export type ProgressState =
   | { state: 'loading' }
@@ -29,6 +31,7 @@ export function useProgress(window = 60, live = false): [ProgressState, () => vo
   const read = useCallback(() => {
     const request = ++generation.current;
     (async () => {
+      const scope = storageScope();
       const db = await getDb();
       const goals = await loadGoals(db);
       if (request !== generation.current) return null;
@@ -38,21 +41,22 @@ export function useProgress(window = 60, live = false): [ProgressState, () => vo
       );
       const today = localDateOf(Date.now(), currentTimeZone());
       const fullRead = !live || history.current.today !== today || history.current.days.size === 0;
-      Tracking.refreshUsage(fullRead ? 7 : 1);
+      refreshPersonalData(fullRead ? 7 : 1);
       Tracking.refreshCountWidget();
       const health = Tracking.health();
       const samples = fullRead ? new Map<string, Daily>() : new Map(history.current.days);
       // Re-read today each time; settled history refreshes on focus or a date change.
-      samples.set(today, Tracking.daily(today));
+      samples.set(today, personalRawDay(today));
       const readDay = (date: string) => {
         const cached = samples.get(date);
         if (cached) return cached;
-        const daily = Tracking.daily(date);
+        const daily = personalRawDay(date);
         samples.set(date, daily);
         return daily;
       };
-      const p = progress(readDay, health, goals, today, window);
+      const p = progress(readDay, health, goals, today, window, personalDay);
       history.current = { today, days: samples };
+      if (scope !== storageScope()) return null;
       return {
         goals,
         health,
@@ -74,6 +78,11 @@ export function useProgress(window = 60, live = false): [ProgressState, () => vo
     useCallback(() => {
       history.current.days.clear();
       read();
+      const unsubscribe = observeStorage(() => {
+        history.current.days.clear();
+        setS({ state: 'loading' });
+        read();
+      });
       const timer = live
         ? setInterval(() => {
             if (AppState.currentState === 'active') read();
@@ -83,6 +92,7 @@ export function useProgress(window = 60, live = false): [ProgressState, () => vo
         if (state === 'active') read();
       });
       return () => {
+        unsubscribe();
         generation.current++;
         clearInterval(timer);
         sub.remove();

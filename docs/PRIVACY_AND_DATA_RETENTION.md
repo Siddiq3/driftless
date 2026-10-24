@@ -22,7 +22,7 @@ Status: [PROPOSED] · 2026-10-18
 
 ## 2. Consent model
 1. **Accessibility disclosure** (Android): dedicated full-screen disclosure before the system Settings intent, stating: which apps are read, that only counts are kept, that nothing leaves the device unless sync is on; buttons "Agree" / "Not now". "Not now" leaves the app usable with time-only tracking.
-2. **Cloud sync** off until the user creates an account and enables it. Separate toggle for **sharing with friends/challenges**.
+2. **Account backup** is included when the user signs in, with disclosure on the sign-in screen. Guests remain local. Signing out stops automatic account backup; there is no separate backup switch. **Sharing with friends/challenges** remains a separate choice.
 3. Analytics SDKs: none in v1 (D-012). Crash reporting opt-in, scrubbed.
 
 ## 3. User rights

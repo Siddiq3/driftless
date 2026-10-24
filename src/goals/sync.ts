@@ -19,7 +19,11 @@ const sameGoals = (a: v1.Goal[], b: v1.Goal[]) =>
   );
 
 /** Local-first backup. Conditional writes preserve changes made by other devices during a pull. */
-export function syncGoals(api: GoalApi, userId: string): Promise<void> {
+export function syncGoals(
+  api: GoalApi,
+  userId: string,
+  allowed: () => boolean = () => true,
+): Promise<void> {
   const active = running.get(api);
   if (active && !active.cancelled)
     return active.userId === userId
@@ -28,7 +32,7 @@ export function syncGoals(api: GoalApi, userId: string): Promise<void> {
           new Error('Another account has a goal backup in progress. Retry after it finishes.'),
         );
   const entry = { userId, cancelled: false, task: Promise.resolve() };
-  const task = synchronize(api, userId, () => !entry.cancelled).finally(() => {
+  const task = synchronize(api, userId, () => !entry.cancelled && allowed()).finally(() => {
     if (running.get(api) === entry) running.delete(api);
   });
   entry.task = task;
@@ -48,7 +52,7 @@ async function synchronize(api: GoalApi, userId: string, allowed: () => boolean)
   };
   const db = await getDb();
   check();
-  await claimGoalBackup(db, userId);
+  await claimGoalBackup(db, userId, allowed);
   for (let attempt = 0; attempt < 3; attempt++) {
     check();
     let remote: Awaited<ReturnType<GoalApi['getGoals']>>;
@@ -69,11 +73,11 @@ async function synchronize(api: GoalApi, userId: string, allowed: () => boolean)
       throw new Error(
         'Goal backup needs a compatible server update. Your goals remain on this phone.',
       );
-    await mergeGoals(db, remote.goals);
+    await mergeGoals(db, remote.goals, allowed);
     const local = await loadGoals(db);
     v1.PutGoalsRequest.parse({ goals: local });
     if (sameGoals(local, remote.goals)) {
-      await acknowledgeGoals(db, local);
+      await acknowledgeGoals(db, local, allowed);
       if (sameGoals(local, await loadGoals(db))) return;
       continue;
     }
@@ -81,7 +85,7 @@ async function synchronize(api: GoalApi, userId: string, allowed: () => boolean)
       check();
       await api.putGoals(local, remote.etag, allowed);
       check();
-      await acknowledgeGoals(db, local);
+      await acknowledgeGoals(db, local, allowed);
       if (sameGoals(local, await loadGoals(db))) return;
     } catch (e) {
       if (

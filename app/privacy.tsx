@@ -10,6 +10,7 @@ import { Button, Section, Notice, Screen, T, Details } from '@/ui/kit';
 import { clearSetup } from '@/onboarding/store';
 import { useOnboarding } from '@/onboarding/context';
 import { VisualBanner } from '@/ui/Focus';
+import { useAccountBackup } from '@/sync/AccountBackupProvider';
 
 /** Wipes everything ScrollSnooze stored on this phone (native counts + app database). */
 async function wipePhone(): Promise<void> {
@@ -18,7 +19,9 @@ async function wipePhone(): Promise<void> {
   await db.withExclusiveTransactionAsync(async (tx) => {
     await clearSetup(tx);
     await tx.runAsync("DELETE FROM settings WHERE key LIKE 'wrapped_seen_%'");
-    await tx.runAsync("DELETE FROM settings WHERE key = 'goal_backup_owner'");
+    await tx.runAsync(
+      "DELETE FROM settings WHERE key IN ('goal_backup_owner', 'account_backup_owner')",
+    );
     for (const table of [
       'sync_days',
       'sync_batch',
@@ -34,6 +37,7 @@ async function wipePhone(): Promise<void> {
 
 export default function Privacy() {
   const api = useApi();
+  const backup = useAccountBackup();
   const setup = useOnboarding();
   const s = useSession();
   const [note, setNote] = useState<{ title: string; body: string; warn?: boolean } | null>(null);
@@ -52,6 +56,7 @@ export default function Privacy() {
       'Delete account',
       () => {
         if (!api || s.status !== 'signedIn') return;
+        backup.pause();
         setBusy(true);
         let cloudDeleted = false;
         api
@@ -96,11 +101,20 @@ export default function Privacy() {
       <Details title="What we store" icon="shield">
         <T muted>
           On this phone: counts, minutes, goals and first-launch answers. Uninstalling or switching
-          phones loses local data. Setup answers are never uploaded. In the cloud (only if you
-          turned on backup): daily totals, goals, profile, friends. Never what you watched, messages
-          or screenshots.
+          phones loses unbacked-up local data. Setup answers are never uploaded. When you sign in,
+          we back up daily totals and goals to your account alongside your profile and friends.
+          Never what you watched, messages or screenshots.
         </T>
       </Details>
+
+      <Section>
+        <T v="heading">Saving your progress</T>
+        <T muted>
+          Without an account, progress stays on this phone. Signing in backs up saved goals and
+          supported daily history automatically. Sign out to stop account backup. Sharing with
+          friends is a separate choice.
+        </T>
+      </Section>
 
       <Section>
         <T v="heading">Turn counting off</T>
@@ -162,6 +176,7 @@ export default function Privacy() {
               'Counts, minutes and goals stored on this phone will be removed.',
               'Delete',
               () => {
+                backup.pause();
                 wipePhone()
                   .then(() => {
                     setup.reload();

@@ -1,13 +1,15 @@
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { Share } from 'react-native';
+import { Clipboard, Linking, Share } from 'react-native';
 import { router } from 'expo-router';
 import { CircleBoard } from '../src/social/CircleBoard';
 import { ApiError } from '../src/api/client';
 import { shuffledInvitePrompts } from '../src/social/invitePrompts';
 let mockStatus = 'signedOut';
 const mockSignIn = jest.fn();
+jest.mock('expo-crypto', () => ({ randomUUID: () => '12345678-1234-4234-8234-123456789012' }));
 const mockApi = {
+  patchMe: jest.fn(),
   friends: jest.fn(async () => []),
   friendsDaily: jest.fn(),
   getMe: jest.fn(),
@@ -21,6 +23,7 @@ jest.mock('@/auth/session', () => ({
     googleSupported: true,
     signIn: mockSignIn,
     error: null,
+    displayName: mockStatus === 'signedIn' ? 'Siddiq Kolimi' : null,
   }),
 }));
 jest.mock('expo-font', () => ({ useFonts: () => [true] }));
@@ -29,14 +32,29 @@ jest.mock('expo-router', () => ({
   useFocusEffect: (callback: () => () => void) => require('react').useEffect(callback, [callback]),
 }));
 const mockSync = jest.fn();
+jest.mock('@/sync/AccountBackupProvider', () => ({
+  useAccountBackup: () => ({
+    retry: async () => {
+      const outcome = await mockSync();
+      return outcome?.kind !== 'deferred' && outcome?.kind !== 'rejected';
+    },
+  }),
+}));
 jest.mock('@/sync/run', () => ({
   currentTimeZone: () => 'Asia/Kolkata',
   syncNow: (...args: unknown[]) => mockSync(...args),
 }));
 jest.mock('tracking-android', () => ({
   Tracking: {
-    daily: () => ({ heartbeatMinutes: 1, apps: [{ views: 12 }] }),
-    health: () => ({ serviceRunning: true }),
+    refreshUsage: jest.fn(),
+    daily: () => ({
+      heartbeatMinutes: 1,
+      apps: [{ package: 'com.instagram.android', views: 12, surfaceMs: 1000 }],
+    }),
+    health: () => ({
+      serviceRunning: true,
+      apps: [{ package: 'com.instagram.android', installed: true }],
+    }),
   },
 }));
 jest.mock('react-native-safe-area-context', () => ({
@@ -95,8 +113,20 @@ beforeEach(() => {
     self: { status: 'eligible', views: 7, updatedAt: '2026-10-21T00:00:00Z' },
     friends: [],
   }));
+  mockApi.patchMe.mockResolvedValue({
+    data: { profile: { handle: 'siddiq_12345678', displayName: 'Siddiq Kolimi', rev: 2 } },
+  });
+  jest.spyOn(Clipboard, 'setString').mockImplementation(() => undefined);
+  jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
   mockApi.getMe.mockResolvedValue({
-    data: { profile: { consent: { cloudSync: true, shareWithFriends: true } } },
+    data: {
+      profile: {
+        handle: 'test_user',
+        displayName: 'Siddiq Kolimi',
+        rev: 1,
+        consent: { cloudSync: true, shareWithFriends: true },
+      },
+    },
   });
   mockSync.mockResolvedValue({ kind: 'sent' });
 });
@@ -127,12 +157,17 @@ it('opens the reference sign-in sheet for a guest invite and calls the Google si
     tree.root.findAll((node) => node.props.accessibilityLabel === 'Continue with Google'),
   ).toHaveLength(0);
 });
-it('shares a personal invite only after login', async () => {
+it('opens the invite sheet after login and shares only when requested', async () => {
   mockStatus = 'signedIn';
   await mount();
   await tap(inviteLabels()[0]!);
   expect(mockApi.createInvite).toHaveBeenCalledTimes(1);
-  expect(Share.share).toHaveBeenCalledWith({ message: expect.stringContaining('FRIENDCODE') });
+  expect(Share.share).not.toHaveBeenCalled();
+  expect(JSON.stringify(tree.toJSON())).toContain('battle more');
+  await tap('More sharing options');
+  expect(Share.share).toHaveBeenCalledWith({
+    message: expect.stringContaining('driftless://friends?invite=FRIENDCODE'),
+  });
 });
 it('opens the battles screen without a standalone battle creation button', async () => {
   mockStatus = 'signedIn';
@@ -195,21 +230,23 @@ it('shows cloud-eligible totals rather than the local candidate count, including
     friends: [{ ...friend, daily: { status: 'eligible', views: 0 } }],
   }));
   await mount();
-  expect(labelText('Your daily count')).toBe('7');
+  expect(labelText('Your daily count')).toBe('12');
   expect(labelText('Daily count for bestie')).toBe('0');
 });
-it('clears old counts when a date request fails and when sharing is withdrawn', async () => {
+it('replaces old cloud counts with a clearly local count when requests fail or sharing is off', async () => {
   mockStatus = 'signedIn';
   await mount();
-  expect(labelText('Your daily count')).toBe('7');
+  expect(labelText('Your daily count')).toBe('12');
   mockApi.friendsDaily.mockRejectedValueOnce(new Error('offline'));
   await tap('Previous day');
-  expect(labelText('Your daily count')).toBe('—');
+  expect(labelText('Your daily count')).toBe('12');
+  expect(JSON.stringify(tree.toJSON())).toContain('Your saved count · rankings are separate');
   mockApi.friendsDaily.mockRejectedValueOnce(
     new ApiError(403, 'consent_required', 'Sharing is off'),
   );
   await tap('Next day');
-  expect(labelText('Your daily count')).toBe('—');
+  expect(labelText('Your daily count')).toBe('12');
+  expect(JSON.stringify(tree.toJSON())).toContain('Your saved count · rankings are separate');
   expect(JSON.stringify(tree.toJSON())).toContain('Sharing is off');
 });
 it('checks consent before uploading and refreshes only after successful sync', async () => {
@@ -222,7 +259,7 @@ it('checks consent before uploading and refreshes only after successful sync', a
   expect(mockSync).not.toHaveBeenCalled();
   const reads = mockApi.friendsDaily.mock.calls.length;
   await tap('Sync and refresh counts');
-  expect(mockSync).toHaveBeenCalledWith({ usageSync: expect.any(Function) });
+  expect(mockSync).toHaveBeenCalledTimes(1);
   expect(mockApi.friendsDaily.mock.calls.length).toBeGreaterThan(reads);
 });
 it('ignores a delayed response from the previously selected date', async () => {
@@ -237,11 +274,11 @@ it('ignores a delayed response from the previously selected date', async () => {
   });
   await mount();
   await tap('Previous day');
-  expect(labelText('Your daily count')).toBe('7');
+  expect(labelText('Your daily count')).toBe('12');
   await act(async () =>
     resolveOld({ localDate: oldDate, self: { status: 'eligible', views: 999 }, friends: [] }),
   );
-  expect(labelText('Your daily count')).toBe('7');
+  expect(labelText('Your daily count')).toBe('12');
 });
 it('does not start an upload when sign-out happens during the consent check', async () => {
   mockStatus = 'signedIn';
@@ -270,4 +307,89 @@ it('does not start an upload when sign-out happens during the consent check', as
     await pending;
   });
   expect(mockSync).not.toHaveBeenCalled();
+});
+
+it('keeps your local count visible when the server has no eligible comparison count', async () => {
+  mockStatus = 'signedIn';
+  mockApi.friendsDaily.mockImplementation(async (date: string) => ({
+    localDate: date,
+    self: { status: 'unavailable', views: null },
+    friends: [],
+  }));
+  await mount();
+  expect(labelText('Your daily count')).toBe('12');
+  expect(JSON.stringify(tree.toJSON())).toContain('Your saved count · rankings are separate');
+});
+it('allocates a handle automatically using the Google name, without a handle form', async () => {
+  mockStatus = 'signedIn';
+  mockApi.getMe.mockResolvedValue({
+    data: { profile: { handle: null, displayName: null, rev: 1 } },
+  });
+  await mount();
+  await tap(inviteLabels()[0]!);
+  expect(mockApi.patchMe).toHaveBeenCalledWith(
+    { displayName: 'Siddiq Kolimi', handle: 'siddiqkoli_12345678' },
+    1,
+    expect.any(Function),
+  );
+  expect(mockApi.createInvite).toHaveBeenCalledTimes(1);
+  expect(JSON.stringify(tree.toJSON())).not.toContain('Choose a handle');
+  expect(JSON.stringify(tree.toJSON())).toContain('Siddiq Kolimi');
+  expect(Share.share).not.toHaveBeenCalled();
+});
+it('copies a working installed-app link and opens Instagram only after a user action', async () => {
+  mockStatus = 'signedIn';
+  await mount();
+  await tap(inviteLabels()[0]!);
+  await tap('Copy invite link');
+  expect(Clipboard.setString).toHaveBeenCalledWith('driftless://friends?invite=FRIENDCODE');
+  await tap('Share on Instagram');
+  expect(Linking.openURL).toHaveBeenCalledWith('instagram://app');
+  expect(mockApi.createInvite).toHaveBeenCalledTimes(1);
+});
+it('does not reveal a late invitation after switching to a different account', async () => {
+  mockStatus = 'signedIn';
+  let finish!: (value: unknown) => void;
+  mockApi.createInvite.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  await mount();
+  await tap(inviteLabels()[0]!);
+  mockStatus = 'signedOut';
+  await act(async () => tree.update(<CircleBoard friendsPanel={null} />));
+  await act(async () => finish({ code: 'OLDCODE' }));
+  expect(JSON.stringify(tree.toJSON())).not.toContain('OLDCODE');
+  expect(Share.share).not.toHaveBeenCalled();
+});
+it('does not open a fallback share sheet after sign-out while WhatsApp is opening', async () => {
+  mockStatus = 'signedIn';
+  let failOpen!: (error: Error) => void;
+  jest.mocked(Linking.openURL).mockImplementationOnce(
+    () =>
+      new Promise((_resolve, reject) => {
+        failOpen = reject;
+      }),
+  );
+  await mount();
+  await tap(inviteLabels()[0]!);
+  let sharing!: Promise<void>;
+  await act(async () => {
+    sharing = tree.root
+      .findAll(
+        (node) =>
+          node.props.accessibilityLabel === 'Share on WhatsApp' &&
+          typeof node.props.onPress === 'function',
+      )[0]!
+      .props.onPress();
+  });
+  mockStatus = 'signedOut';
+  await act(async () => tree.update(<CircleBoard friendsPanel={null} />));
+  await act(async () => {
+    failOpen(new Error('unavailable'));
+    await sharing;
+  });
+  expect(Share.share).not.toHaveBeenCalled();
 });

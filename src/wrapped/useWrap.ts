@@ -1,15 +1,14 @@
 import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { useApi } from '@/api/useApi';
+import { observeStorage } from '@/db/scope';
 import { defaultEnd, readPhoneWrap, type Recap } from './model';
-import { latestWrapEnd, localDateOf, type WrapPeriod } from '@siddiq3/driftless-contracts/domain';
+import { type WrapPeriod } from '@siddiq3/driftless-contracts/domain';
 
 type State =
   | { state: 'loading' }
   | { state: 'ok'; recap: Recap; cloudUnavailable: boolean }
   | { state: 'error'; message: string };
 export function useWrap(period: WrapPeriod) {
-  const api = useApi();
   const [state, setState] = useState<State>({ state: 'loading' });
   const generation = useRef(0);
   const read = useCallback(() => {
@@ -17,21 +16,7 @@ export function useWrap(period: WrapPeriod) {
     setState({ state: 'loading' });
     (async () => {
       const end = defaultEnd(period);
-      const local = readPhoneWrap(period, end);
-      if (local.views.value !== null || local.minutes.value !== null || !api)
-        return { recap: local, cloudUnavailable: false };
-      try {
-        const { data } = await api.getMe();
-        if (!data.profile.consent.cloudSync) return { recap: local, cloudUnavailable: false };
-        const cloudEnd = latestWrapEnd(period, localDateOf(Date.now(), data.profile.tz));
-        const cloud = await api.wrapped(period, cloudEnd);
-        return {
-          recap: { ...cloud, apps: [], hours: null, sessions: [], returnCount: 0 } as Recap,
-          cloudUnavailable: false,
-        };
-      } catch {
-        return { recap: local, cloudUnavailable: true };
-      }
+      return { recap: readPhoneWrap(period, end), cloudUnavailable: false };
     })()
       .then((result) => {
         if (generation.current === id) setState({ state: 'ok', ...result });
@@ -40,11 +25,13 @@ export function useWrap(period: WrapPeriod) {
         if (generation.current === id)
           setState({ state: 'error', message: 'Your wrap could not be read.' });
       });
-  }, [api, period]);
+  }, [period]);
   useFocusEffect(
     useCallback(() => {
       read();
+      const unsubscribe = observeStorage(read);
       return () => {
+        unsubscribe();
         generation.current++;
       };
     }, [read]),

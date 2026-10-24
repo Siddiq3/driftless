@@ -92,6 +92,9 @@ export function InviteSignInSheet({ visible, onClose }: { visible: boolean; onCl
             >
               Login or Create an account{'\n'}to invite a friend
             </Text>
+            <Text style={styles.link}>
+              Signing in also backs up saved goals and daily history to your account automatically.
+            </Text>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Continue with Google"

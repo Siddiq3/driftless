@@ -10,6 +10,7 @@ import type { v1 } from '@siddiq3/driftless-contracts';
 import { Tracking, type WrapSession, type WrapDetails } from 'tracking-android';
 import { aggregateDay } from '@/sync/aggregate';
 import { currentTimeZone } from '@/sync/run';
+import { personalDay, personalRawDay, refreshPersonalData } from '@/data/personal';
 
 export type Recap = Omit<v1.WrapResponse, 'source'> & {
   source: 'phone' | 'synced';
@@ -27,7 +28,7 @@ export function readPhoneWrap(period: WrapPeriod, end: string): Recap {
   const health = Tracking.health();
   const tz = currentTimeZone();
   try {
-    Tracking.refreshUsage(7);
+    refreshPersonalData(7);
   } catch {
     // Saved video counts and events remain usable if Usage Access cannot be refreshed.
   }
@@ -35,16 +36,13 @@ export function readPhoneWrap(period: WrapPeriod, end: string): Recap {
   const days = [];
   const appTotals = new Map<string, number>();
   for (let date = bounds.previousFrom; date <= end; date = addDays(date, 1)) {
-    const daily = Tracking.daily(date);
-    const aggregate = aggregateDay(daily, health, 'this-phone', tz);
+    const daily = personalRawDay(date);
     const localApps = daily.apps.filter((app) => packages.has(app.package));
-    const localViews = localApps.reduce((total, app) => total + app.views, 0);
-    // Personal recaps follow saved on-phone counts, just like Home and the popup.
-    // Cloud aggregates and competitive scores keep their separate accuracy gates.
+    const personal = personalDay(date);
     const day = {
-      ...aggregate,
-      views:
-        packages.size > 0 && (daily.heartbeatMinutes > 0 || localViews > 0) ? localViews : null,
+      ...aggregateDay(daily, health, 'this-phone', tz),
+      views: personal.views,
+      minutes: personal.minutes,
     };
     days.push(day);
     if (date >= bounds.from && day.views !== null) {

@@ -2,8 +2,8 @@ import { DatabaseSync } from 'node:sqlite';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 /** Execute the production SQL against SQLite, with real rollback semantics. */
-export function sqlite() {
-  const raw = new DatabaseSync(':memory:');
+export function sqlite(filename = ':memory:') {
+  const raw = new DatabaseSync(filename);
   const adapter = {
     execAsync: async (sql: string) => {
       raw.exec(sql);

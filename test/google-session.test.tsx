@@ -1,3 +1,6 @@
+jest.mock('@/data/session', () => ({
+  selectPersonalSession: jest.fn().mockResolvedValue(undefined),
+}));
 import { createElement, useEffect } from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { TurboModuleRegistry } from 'react-native';
@@ -244,4 +247,13 @@ test('an API client from a previous login cannot get the new login credentials',
   await expect(previous.getAccessToken()).resolves.toBeNull();
   expect(GoogleSignin.signInSilently).not.toHaveBeenCalled();
   await expect(signedIn().getAccessToken()).resolves.toBe('renewed-token');
+});
+
+it('uses the signed-in Google profile name as the presentation name', async () => {
+  jest.mocked(GoogleSignin.getCurrentUser).mockReturnValue({
+    user: { id: '100000000000000000001', name: 'Siddiq Kolimi', email: 'siddiq@example.test' },
+  } as never);
+  await mount();
+  await login();
+  expect(signedIn().displayName).toBe('Siddiq Kolimi');
 });

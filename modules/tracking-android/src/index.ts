@@ -47,6 +47,9 @@ export type DailyApp = {
 };
 /** coverage: share of the day the accessibility counter was running (0..1). */
 export type Daily = {
+  recordedTz?: string;
+  measurementStatus?: 'validated' | 'experimental' | 'unavailable';
+  usageObserved?: boolean;
   localDate: string;
   heartbeatMinutes: number;
   coverage: number;
@@ -87,7 +90,24 @@ export type WrapDetails = {
 
 export type MemePreferences = { enabled: boolean };
 
+export type PersonalMeasurement = {
+  localDate: string;
+  views: number | null;
+  minutes: number | null;
+  status: 'experimental' | 'validated' | 'unavailable' | 'synced';
+  tz: string;
+  scope: string;
+  source: 'phone' | 'account';
+};
+
 type NativeTracking = {
+  getDataRevision?(): number;
+  getDataScope?(): string;
+  selectDataScope?(scope: string): void;
+  importGuestScope?(source: string, target: string, legacy: boolean): void;
+  setSourceDevice?(id: string): void;
+  mergeSyncedDays?(json: string, scope: string): void;
+  getPersonalMeasurement?(date: string): PersonalMeasurement;
   memePreferences(): MemePreferences;
   setMemePreferences(enabled: boolean, legacyLanguage: string): void;
   floatingCountPreferences(): { size: number; pausedUntil: number };
@@ -108,6 +128,7 @@ type NativeTracking = {
   openUsageAccessSettings(): void;
   refreshUsage(days: number): number;
   getDaily(localDate: string | null): Daily;
+  getStoredDates?(from: string, to: string): string[];
   exportSessionLog(days: number): { uri: string; count: number };
   scheduleStructureCapture(delayMs: number): void;
   lastStructureCapture(): string;
@@ -127,6 +148,26 @@ const native =
   requireOptionalNativeModule<NativeTracking>('DriftlessTracking') ?? ({} as NativeTracking);
 
 export const Tracking = {
+  dataRevision: () => native.getDataRevision?.() ?? 0,
+  dataScope: () => {
+    if (!native.getDataScope) throw new Error('Update the app to use account-isolated history.');
+    return native.getDataScope();
+  },
+  selectDataScope: (scope: string) => {
+    if (!native.selectDataScope) throw new Error('Update the app to use account-isolated history.');
+    native.selectDataScope(scope);
+  },
+  importGuestScope: (source: string, target: string, legacy = false) => {
+    if (!native.importGuestScope) throw new Error('Update the app to import guest history.');
+    native.importGuestScope(source, target, legacy);
+  },
+  setSourceDevice: (id: string) => native.setSourceDevice?.(id),
+  mergeSyncedDays: (days: unknown[], scope: string) => {
+    if (!native.mergeSyncedDays) throw new Error('Update the app to restore history.');
+    native.mergeSyncedDays(JSON.stringify(days), scope);
+  },
+  personalMeasurement: (date: string) => native.getPersonalMeasurement?.(date) ?? null,
+
   runtimeSupport: () => ({
     counting: typeof native.getHealth === 'function' && typeof native.getDaily === 'function',
     minutes: typeof native.refreshUsage === 'function' && typeof native.getDaily === 'function',
@@ -162,6 +203,13 @@ export const Tracking = {
       : native.openAccessibilitySettings(),
   openUsageAccessSettings: () => native.openUsageAccessSettings(),
   refreshUsage: (days = 7) => native.refreshUsage(days),
+  storedDates: (from: string, to: string) => {
+    if (!native.getStoredDates)
+      throw new Error(
+        'Update ScrollSnooze to back up all saved history. Your data is still on this phone.',
+      );
+    return native.getStoredDates(from, to);
+  },
   daily: (localDate: string | null = null) => native.getDaily(localDate),
   exportSessionLog: (days = 7) => native.exportSessionLog(days),
   scheduleStructureCapture: (delayMs = 8000) => native.scheduleStructureCapture(delayMs),

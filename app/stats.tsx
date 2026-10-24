@@ -48,6 +48,11 @@ export default function Stats() {
       </View>
       <Section>
         <T v="heading">Reels & Shorts</T>
+        {days.some((day) => day.measurementStatus === 'experimental') && (
+          <T v="caption" muted>
+            Includes experimental personal measurements. Competition eligibility is separate.
+          </T>
+        )}
         <Bars
           unit="videos"
           bars={days.map((d) => ({ key: d.localDate, label: short(d.localDate), value: d.views }))}

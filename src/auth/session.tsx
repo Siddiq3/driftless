@@ -12,8 +12,9 @@ import {
   type ReactNode,
 } from 'react';
 import type { Env } from '../config/env';
-import { googleIdentity } from './google';
+import { googleIdentity, googleDisplayName } from './google';
 import { invalidateEntitlement } from '@/billing/cache';
+import { selectPersonalSession } from '@/data/session';
 
 // Stores only the user's choice to stay signed in. Credentials are managed by Google's SDK.
 const ENABLED_KEY = 'driftless.google.enabled.v1';
@@ -30,6 +31,7 @@ type SessionState =
     }
   | {
       status: 'signedIn';
+      displayName?: string | null;
       getAccessToken: () => Promise<string | null>;
       signOut: () => Promise<void>;
       disconnect: () => Promise<void>;
@@ -38,10 +40,22 @@ const Ctx = createContext<SessionState>({ status: 'loading' });
 export const useSession = () => useContext(Ctx);
 
 function UnconfiguredSession({ children }: { children: ReactNode }) {
+  const [ready, setReady] = useState(false);
   useEffect(() => {
+    let active = true;
     invalidateEntitlement();
+    void selectPersonalSession(null)
+      .then(() => {
+        if (active) setReady(true);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
   }, []);
-  return <Ctx.Provider value={{ status: 'unconfigured' }}>{children}</Ctx.Provider>;
+  return (
+    <Ctx.Provider value={{ status: ready ? 'unconfigured' : 'loading' }}>{children}</Ctx.Provider>
+  );
 }
 
 export function SessionProvider({ env, children }: { env: Env | null; children: ReactNode }) {
@@ -82,12 +96,19 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
         if (!active) return;
         accountOwner.current = owner ?? null;
         enabled.current = Boolean(token);
+        await selectPersonalSession(owner ?? null);
+        if (!active) return;
         setSignedIn(Boolean(token));
       }
-    })().catch(() => {
+    })().catch(async () => {
       if (active) {
         invalidateEntitlement();
-        setSignedIn(false);
+        try {
+          await selectPersonalSession(null);
+          if (active) setSignedIn(false);
+        } catch {
+          /* Keep session loading if safe local scope cannot be selected. */
+        }
       }
     });
     return () => {
@@ -112,6 +133,7 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
       tokenRequest.current = null;
       accountOwner.current = owner ?? null;
       enabled.current = true;
+      await selectPersonalSession(owner ?? null);
       setSignedIn(true);
     } catch {
       setError('Google sign-in could not complete. Please try again.');
@@ -125,6 +147,8 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
     generation.current.value++;
     tokenRequest.current = null;
     enabled.current = false;
+    setSignedIn(undefined);
+    await selectPersonalSession(null);
     setSignedIn(false);
     try {
       await SecureStore.setItemAsync(ENABLED_KEY, 'false');
@@ -152,7 +176,7 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
     // Share a concurrent refresh; an explicit sign-out invalidates its result.
     if (!tokenRequest.current) {
       const request = googleIdentity(GoogleSignin, false)
-        .then((token) => {
+        .then(async (token) => {
           if (
             token &&
             accountOwner.current &&
@@ -161,14 +185,16 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
             if (generation.current.value === current) {
               invalidateEntitlement();
               enabled.current = false;
-              setSignedIn(false);
+              await selectPersonalSession(null);
+              if (generation.current.value === current) setSignedIn(false);
             }
             return null;
           }
           if (!token && generation.current.value === current) {
             invalidateEntitlement();
             enabled.current = false;
-            setSignedIn(false);
+            await selectPersonalSession(null);
+            if (generation.current.value === current) setSignedIn(false);
           }
           return token;
         })
@@ -186,7 +212,13 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
     signedIn === undefined
       ? { status: 'loading' }
       : signedIn
-        ? { status: 'signedIn', getAccessToken, signOut, disconnect }
+        ? {
+            status: 'signedIn',
+            displayName: googleDisplayName(GoogleSignin.getCurrentUser()?.user),
+            getAccessToken,
+            signOut,
+            disconnect,
+          }
         : { status: 'signedOut', googleSupported: true, signIn, error };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -102,7 +102,7 @@ test.each(['instagram', 'youtube'])('local %s hours do not require an approved v
   expect(aggregateDay(raw, unvalidated, 'phone', 'UTC').views).toBeNull();
   expect(
     activityData('weekly', 0, raw.localDate, unvalidated, () => raw, details).views.value,
-  ).toBeNull();
+  ).toBe(3);
 });
 
 test('local totals exclude other packages and are not constrained by the cloud count cap', () => {

@@ -1,5 +1,6 @@
 import { Problem, v1 } from '@siddiq3/driftless-contracts';
 import { z } from 'zod';
+import { entitlementGeneration } from '@/billing/cache';
 
 const OkResponse = z.object({ ok: z.literal(true) });
 
@@ -25,20 +26,53 @@ export type ApiClientOptions = {
   appVersion: string;
 };
 
+const sharedReads = new WeakMap<() => Promise<string | null>, Map<string, Promise<unknown>>>();
+
 /** Thin typed client. Every response is validated against the shared contract. */
 export function createApiClient(o: ApiClientOptions) {
+  const credentialGeneration = entitlementGeneration();
   const f = o.fetchImpl ?? fetch;
   const base = o.baseUrl.replace(/\/+$/, '');
   if (!/^https:\/\//.test(base)) throw new Error('API base URL must be https');
 
+  let inFlight = sharedReads.get(o.getAccessToken);
+  if (!inFlight) {
+    inFlight = new Map();
+    sharedReads.set(o.getAccessToken, inFlight);
+  }
+  const reads = inFlight;
   async function request<S extends z.ZodType>(
     method: string,
     path: string,
     schema: S,
     init: { body?: unknown; headers?: Record<string, string>; allowed?: () => boolean } = {},
   ): Promise<{ data: z.infer<S>; etag: string | null }> {
-    const check = () => {
+    // Share transport for the same credential getter/query; each caller checks its own cancellation.
+    if (init.allowed && !init.allowed())
+      throw new ApiError(409, 'sync_cancelled', 'Request cancelled');
+    if (method !== 'GET') return send(method, path, schema, init);
+    const key = `${base}:${path}`;
+    const previous = reads.get(key);
+    if (previous) {
+      const result = (await previous) as { data: z.infer<S>; etag: string | null };
       if (init.allowed && !init.allowed())
+        throw new ApiError(409, 'sync_cancelled', 'Request cancelled');
+      return result;
+    }
+    const task = send(method, path, schema, init).finally(() => {
+      if (reads.get(key) === task) reads.delete(key);
+    });
+    reads.set(key, task);
+    return task;
+  }
+  async function send<S extends z.ZodType>(
+    method: string,
+    path: string,
+    schema: S,
+    init: { body?: unknown; headers?: Record<string, string>; allowed?: () => boolean } = {},
+  ): Promise<{ data: z.infer<S>; etag: string | null }> {
+    const check = () => {
+      if (credentialGeneration !== entitlementGeneration() || (init.allowed && !init.allowed()))
         throw new ApiError(409, 'sync_cancelled', 'Backup cancelled');
     };
     check();
@@ -96,11 +130,12 @@ export function createApiClient(o: ApiClientOptions) {
           v1.WrapResponse,
         )
       ).data,
-    getMe: () =>
+    getMe: (allowed?: () => boolean) =>
       request(
         'GET',
         `/v1/me?platform=${o.platform}&appVersion=${encodeURIComponent(o.appVersion)}`,
         v1.MeResponse,
+        { allowed },
       ),
     usageSync: async (days: v1.DailyAggregate[], idempotencyKey: string, allowed?: () => boolean) =>
       (
@@ -175,11 +210,16 @@ export function createApiClient(o: ApiClientOptions) {
         })
       ).data;
     },
-    usageHistory: async (from: string, to: string) =>
-      (await request('GET', `/v1/usage/history?from=${from}&to=${to}`, v1.HistoryResponse)).data,
-    patchMe: (patch: v1.PatchMeRequest, rev: number) =>
+    usageHistory: async (from: string, to: string, allowed?: () => boolean) =>
+      (
+        await request('GET', `/v1/usage/history?from=${from}&to=${to}`, v1.HistoryResponse, {
+          allowed,
+        })
+      ).data,
+    patchMe: (patch: v1.PatchMeRequest, rev: number, allowed?: () => boolean) =>
       request('PATCH', '/v1/me', v1.MeResponse, {
         body: patch,
+        allowed,
         headers: { 'if-match': `"${rev}"` },
       }),
   };

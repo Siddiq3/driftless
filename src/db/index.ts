@@ -1,11 +1,12 @@
 import { openDatabaseAsync, type SQLiteDatabase } from 'expo-sqlite';
 import { repairGoalIds } from '../goals/store';
 import { migrate } from './migrations';
+import { scopedDatabase, storageScope } from './scope';
 
 let dbPromise: Promise<SQLiteDatabase> | null = null;
 
 /** Opens the app database once, enables WAL and applies migrations before first use. */
-export function getDb(): Promise<SQLiteDatabase> {
+export function getStorageDb(): Promise<SQLiteDatabase> {
   dbPromise ??= (async () => {
     const db = await openDatabaseAsync('driftless.db');
     try {
@@ -22,4 +23,8 @@ export function getDb(): Promise<SQLiteDatabase> {
     throw error;
   });
   return dbPromise;
+}
+
+export async function getDb(scope = storageScope()): Promise<SQLiteDatabase> {
+  return scopedDatabase(await getStorageDb(), scope);
 }

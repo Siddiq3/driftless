@@ -180,27 +180,49 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
   useEffect(() => {
     scroll.current?.scrollTo({ y: 0, animated: false });
   }, [step]);
-  const record = (next: number): SetupRecord => ({
-    version: 1,
-    completed: initial?.completed ?? false,
-    step: next,
-    answers,
-    plan,
-  });
-  const move = async (next: number) => {
-    if (busy) return;
-    setBusy(true);
-    setError(null);
-    const target = activeSetupStep(next, next < step ? 'back' : 'next');
-    try {
-      await setup.save(record(target));
-      setStep(target);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not save. Try again.');
-    } finally {
-      setBusy(false);
-    }
-  };
+  const record = useCallback(
+    (next: number): SetupRecord => ({
+      version: 1,
+      completed: initial?.completed ?? false,
+      step: next,
+      answers,
+      plan,
+    }),
+    [initial?.completed, answers, plan],
+  );
+  const move = useCallback(
+    async (next: number) => {
+      if (busy) return;
+      setBusy(true);
+      setError(null);
+      let target = activeSetupStep(next, next < step ? 'back' : 'next');
+      if (target === 10 && session.status === 'signedIn') target = next < step ? 9 : 11;
+      try {
+        await setup.save(record(target));
+        setStep(target);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Could not save. Try again.');
+      } finally {
+        setBusy(false);
+      }
+    },
+    [busy, step, session.status, setup, record],
+  );
+  useEffect(() => {
+    if (step !== 10 || session.status !== 'signedIn' || busy || error) return;
+    let active = true;
+    setup
+      .save(record(11))
+      .then(() => {
+        if (active) setStep(11);
+      })
+      .catch((e: unknown) => {
+        if (active) setError(e instanceof Error ? e.message : 'Could not save. Try again.');
+      });
+    return () => {
+      active = false;
+    };
+  }, [step, session.status, busy, error, setup, record]);
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       if (step > 0 && !busy) void move(step - 1);
@@ -506,7 +528,8 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
                   : 'Create an account\nto save your progress',
               )}
               <T v="caption" style={styles.small}>
-                Local tracking works without login. Backup is opt-in.
+                Sign in to save your goals and daily history to your account automatically. Skip to
+                keep progress on this phone.
               </T>
               {session.status === 'signedOut' && session.error && (
                 <Notice title="Sign-in didn’t complete" body={session.error} tone="warn" />

@@ -1,8 +1,10 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { ActivityIndicator } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { SessionProvider } from '@/auth/session';
+import { SessionProvider, useSession } from '@/auth/session';
+import { AccountBackupProvider } from '@/sync/AccountBackupProvider';
 import { readEnv } from '@/config/env';
 import { getDb } from '@/db';
 import { useReducedMotion } from '@/ui/motion';
@@ -37,18 +39,29 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <OnboardingProvider>
         <SessionProvider env={env}>
-          <StatusBar style="light" />
-          <FirstLaunchRedirect />
-          {SUBSCRIPTIONS_REQUIRED && <EntitlementRecovery />}
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              animation: reduced ? 'none' : 'fade_from_bottom',
-              contentStyle: { backgroundColor: t.bg },
-            }}
-          />
+          <PersonalSessionBoundary>
+            <AccountBackupProvider>
+              <StatusBar style="light" />
+              <FirstLaunchRedirect />
+              {SUBSCRIPTIONS_REQUIRED && <EntitlementRecovery />}
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  animation: reduced ? 'none' : 'fade_from_bottom',
+                  contentStyle: { backgroundColor: t.bg },
+                }}
+              />
+            </AccountBackupProvider>
+          </PersonalSessionBoundary>
         </SessionProvider>
       </OnboardingProvider>
     </SafeAreaProvider>
   );
+}
+
+function PersonalSessionBoundary({ children }: { children: ReactNode }) {
+  const session = useSession();
+  if (session.status === 'loading')
+    return <ActivityIndicator accessibilityLabel="Opening your saved progress" />;
+  return children;
 }

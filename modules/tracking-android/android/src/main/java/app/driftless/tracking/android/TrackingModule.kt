@@ -130,6 +130,19 @@ class TrackingModule : Module() {
         Function("getLocalActivityDetails") { from: String, to: String -> WrappedDetails.readLocalActivity(context, from, to) }
         Function("getWrappedDetails") { from: String, to: String -> WrappedDetails.read(context, from, to) }
 
+        Function("getDataRevision") { SqliteStore.get(context).dataRevision().toDouble() }
+        Function("getDataScope") { SqliteStore.get(context).activeScope() }
+        Function("selectDataScope") { scope: String ->
+            val service = DriftlessAccessibilityService.current
+            if(service != null) service.changeDataScope(scope) else SqliteStore.get(context).selectScope(scope)
+        }
+        Function("importGuestScope") { source: String, target: String, legacy: Boolean -> SqliteStore.get(context).importGuest(source, target, legacy) }
+        Function("setSourceDevice") { id: String -> SqliteStore.get(context).setSourceDevice(id) }
+        Function("mergeSyncedDays") { json: String, scope: String -> SqliteStore.get(context).mergeSynced(json, scope) }
+        Function("getPersonalMeasurement") { date: String -> SqliteStore.get(context).personalMeasurement(date, RulesLoader.load(context).apps.keys) }
+
+        Function("getStoredDates") { from: String, to: String -> SqliteStore.get(context).storedDates(from, to) }
+
         Function("getDaily") { localDate: String? ->
             val ctx = context
             val zone = ZoneId.systemDefault()
@@ -139,6 +152,9 @@ class TrackingModule : Module() {
             val beats = store.heartbeatMinutes(d)
             mapOf(
                 "localDate" to d,
+                "recordedTz" to store.localMetadata(d)["recordedTz"],
+                "measurementStatus" to store.localMetadata(d)["measurementStatus"],
+                "usageObserved" to store.localMetadata(d)["usageObserved"],
                 "heartbeatMinutes" to beats,
                 "coverage" to UsageMath.coverage(beats, d, zone, now),
                 "apps" to store.daily(d).map {

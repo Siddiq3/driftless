@@ -35,8 +35,8 @@ test('home keeps unavailable counts unknown and does not invent video counts for
   expect(homeAppCount(null, health, 'youtube')).toBeNull();
   expect(homeAppCount(daily, null, 'youtube')).toBeNull();
   expect(homeAppCount(daily, health, 'missing')).toBeNull();
-  expect(homeAppCount({ ...daily, heartbeatMinutes: 0 }, health, 'youtube')).toBeNull();
-  expect(homeAppCount({ ...daily, apps: [] }, health, 'youtube')).toBeNull();
+  expect(homeAppCount({ ...daily, heartbeatMinutes: 0 }, health, 'youtube')).toBe(2);
+  expect(homeAppCount({ ...daily, apps: [] }, health, 'youtube')).toBe(0);
   const minutesOnly = {
     ...health,
     apps: [{ ...health.apps[0]!, videoDetectionImplemented: false }],

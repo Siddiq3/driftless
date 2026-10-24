@@ -1,4 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
+import { ApiError } from '../api/client';
+import { scopeOf } from '../db/scope';
 import type { Batch, DayState, SyncRepo } from './engine';
 
 type DayRow = {
@@ -24,33 +26,51 @@ const toDay = (r: DayRow): DayState => ({
   values: JSON.parse(r.values_json),
 });
 
-export function sqliteSyncRepo(db: SQLiteDatabase): SyncRepo {
+export function sqliteSyncRepo(db: SQLiteDatabase, allowed: () => boolean = () => true): SyncRepo {
+  const scope = scopeOf(db);
+  const check = () => {
+    if (!allowed()) throw new ApiError(409, 'sync_cancelled', 'Backup cancelled');
+  };
+  const write = async (fn: (tx: SQLiteDatabase) => Promise<unknown>) =>
+    db.withExclusiveTransactionAsync(async (tx) => {
+      check();
+      await fn(tx);
+      check();
+    });
   return {
     async getDay(localDate) {
       const r = await db.getFirstAsync<DayRow>(
-        'SELECT * FROM sync_days WHERE local_date = ?',
+        'SELECT * FROM sync_days WHERE local_date = ? AND scope = ?',
         localDate,
+        scope,
       );
       return r ? toDay(r) : null;
     },
     async putDay(d) {
-      await db.runAsync(
-        `INSERT OR REPLACE INTO sync_days (local_date, values_key, rev, synced_rev, values_json) VALUES (?, ?, ?, ?, ?)`,
-        d.localDate,
-        d.key,
-        d.rev,
-        d.syncedRev,
-        JSON.stringify(d.values),
+      await write((tx) =>
+        tx.runAsync(
+          `INSERT OR REPLACE INTO sync_days (local_date, values_key, rev, synced_rev, values_json, scope) VALUES (?, ?, ?, ?, ?, ?)`,
+          d.localDate,
+          d.key,
+          d.rev,
+          d.syncedRev,
+          JSON.stringify(d.values),
+          scope,
+        ),
       );
     },
     async pendingDays() {
       const rows = await db.getAllAsync<DayRow>(
-        'SELECT * FROM sync_days WHERE rev > synced_rev ORDER BY local_date',
+        'SELECT * FROM sync_days WHERE scope = ? AND rev > synced_rev ORDER BY local_date',
+        scope,
       );
       return rows.map(toDay);
     },
     async getBatch() {
-      const r = await db.getFirstAsync<BatchRow>('SELECT * FROM sync_batch LIMIT 1');
+      const r = await db.getFirstAsync<BatchRow>(
+        'SELECT * FROM sync_batch WHERE scope = ? LIMIT 1',
+        scope,
+      );
       return r
         ? {
             id: r.id,
@@ -62,20 +82,23 @@ export function sqliteSyncRepo(db: SQLiteDatabase): SyncRepo {
         : null;
     },
     async putBatch(b: Batch) {
-      await db.withExclusiveTransactionAsync(async (txn) => {
-        await txn.runAsync('DELETE FROM sync_batch WHERE id != ?', b.id);
+      await write(async (txn) => {
+        await txn.runAsync('DELETE FROM sync_batch WHERE id != ? AND scope = ?', b.id, scope);
         await txn.runAsync(
-          `INSERT OR REPLACE INTO sync_batch (id, idempotency_key, days_json, attempts, next_attempt_at) VALUES (?, ?, ?, ?, ?)`,
+          `INSERT OR REPLACE INTO sync_batch (id, idempotency_key, days_json, attempts, next_attempt_at, scope) VALUES (?, ?, ?, ?, ?, ?)`,
           b.id,
           b.idempotencyKey,
           JSON.stringify(b.days),
           b.attempts,
           b.nextAttemptAt,
+          scope,
         );
       });
     },
     async deleteBatch(id) {
-      await db.runAsync('DELETE FROM sync_batch WHERE id = ?', id);
+      await write((tx) =>
+        tx.runAsync('DELETE FROM sync_batch WHERE id = ? AND scope = ?', id, scope),
+      );
     },
   };
 }

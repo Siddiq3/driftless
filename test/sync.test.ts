@@ -258,3 +258,38 @@ it('syncing and restaging local activity neither validates it nor duplicates loc
   expect(client.calls[0]!.days[0]).toMatchObject({ views: null, adViews: null });
   expect(readLocal()).toEqual(before);
 });
+
+it('keeps the original retry body on a partial response without losing successful acknowledgements', async () => {
+  const repo = new MemorySyncRepo();
+  await stage(repo, [day('2026-10-17', 5), day('2026-10-18', 6)]);
+  let body: unknown;
+  let key = '';
+  let attempts = 0;
+  const c: SyncClient = {
+    usageSync: async (days, idempotencyKey) => {
+      attempts++;
+      if (attempts === 1) {
+        body = days;
+        key = idempotencyKey;
+      } else {
+        expect(days).toEqual(body);
+        expect(idempotencyKey).toBe(key);
+      }
+      return {
+        results: days.slice(0, attempts === 1 ? 1 : 2).map((d) => ({
+          localDate: d.localDate,
+          deviceId: d.deviceId,
+          status: 'applied' as const,
+          serverRev: d.rev,
+        })),
+      };
+    },
+  };
+  const first = await flush(repo, c, ids, 1, () => 0);
+  expect(first.kind).toBe('deferred');
+  expect((await repo.getDay('2026-10-17'))!.syncedRev).toBe(1);
+  expect(await repo.getBatch()).not.toBeNull();
+  await flush(repo, c, ids, 100000, () => 0);
+  expect(await repo.pendingDays()).toHaveLength(0);
+  expect(await repo.getBatch()).toBeNull();
+});

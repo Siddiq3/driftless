@@ -119,7 +119,11 @@ export async function flush(
   let applied = 0;
   let unchanged = 0;
   let stale = 0;
-  for (const r of res.results) {
+  const received = new Map(res.results.map((r) => [`${r.localDate}:${r.deviceId}`, r]));
+  for (const sent of batch.days) {
+    const r = received.get(`${sent.localDate}:${sent.deviceId}`);
+    if (!r) continue;
+
     const d = await repo.getDay(r.localDate);
     if (!d) continue;
     if (r.status === 'stale') {
@@ -132,6 +136,20 @@ export async function flush(
       const sentRev = batch.days.find((x) => x.localDate === r.localDate)?.rev ?? r.serverRev;
       await repo.putDay({ ...d, syncedRev: Math.max(d.syncedRev, sentRev) });
     }
+  }
+  const remaining = batch.days.filter((d) => !received.has(`${d.localDate}:${d.deviceId}`));
+  if (remaining.length) {
+    // Retain the original frozen body and key. Replaying already applied rows is idempotent.
+    const attempts = batch.attempts + 1;
+    const until = now + nextDelayMs(attempts, random);
+    await repo.putBatch({ ...batch, attempts, nextAttemptAt: until });
+    return {
+      kind: 'deferred',
+      until,
+      attempts,
+      stuck: attempts >= STUCK_AFTER_ATTEMPTS,
+      reason: 'partial_response',
+    };
   }
   await repo.deleteBatch(batch.id);
   return { kind: 'sent', applied, unchanged, stale };

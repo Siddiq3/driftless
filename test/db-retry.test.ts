@@ -4,7 +4,7 @@ jest.mock('../src/goals/store', () => ({ repairGoalIds: jest.fn() }));
 import { openDatabaseAsync, type SQLiteDatabase } from 'expo-sqlite';
 import { migrate } from '../src/db/migrations';
 import { repairGoalIds } from '../src/goals/store';
-import { getDb } from '../src/db';
+import { getStorageDb as getDb } from '../src/db';
 
 it('closes a failed database initialization and retries repair without a poisoned cached promise', async () => {
   const failed = { execAsync: jest.fn(), closeAsync: jest.fn().mockResolvedValue(undefined) };
