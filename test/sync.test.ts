@@ -293,3 +293,29 @@ it('keeps the original retry body on a partial response without losing successfu
   expect(await repo.pendingDays()).toHaveLength(0);
   expect(await repo.getBatch()).toBeNull();
 });
+
+it('backs up recorded personal totals after historical heartbeats expire without promoting competitive counts', () => {
+  const recorded = aggregateDay(
+    daily({ heartbeatMinutes: 0 }),
+    health(),
+    DEV,
+    'Asia/Kolkata',
+    false,
+  );
+  expect(recorded).toMatchObject({ personalViews: 30, views: null, adViews: null });
+});
+
+it('backfills personal counts for an already acknowledged day using a new revision', async () => {
+  const repo = new MemorySyncRepo();
+  const client = okClient();
+  const previous = day('2026-10-17', 10);
+  await stage(repo, [previous]);
+  await flush(repo, client, ids, 100);
+  expect(await repo.pendingDays()).toHaveLength(0);
+  await stage(repo, [{ ...previous, personalViews: 73 }]);
+  await flush(repo, client, ids, 101);
+  expect(client.calls[1]!.days).toEqual([
+    expect.objectContaining({ personalViews: 73, views: null, rev: 2 }),
+  ]);
+  expect(client.calls[0]!.key).not.toBe(client.calls[1]!.key);
+});

@@ -16,6 +16,10 @@ jest.mock('tracking-android', () => ({
   },
 }));
 import { Tracking } from 'tracking-android';
+import { aggregateDay } from '@/sync/aggregate';
+import { createApiClient } from '@/api/client';
+import { stage, flush } from '@/sync/engine';
+import { sqliteSyncRepo } from '@/sync/sqliteRepo';
 import { getStorageDb } from '@/db';
 import { migrate, MIGRATIONS } from '@/db/migrations';
 import { selectStorageScope, scopedDatabase } from '@/db/scope';
@@ -325,4 +329,66 @@ it('incremental foreground hydration reads recent dates instead of downloading a
   );
   const [from, to] = usageHistory.mock.calls[0]!;
   expect((Date.parse(to) - Date.parse(from)) / 86400000).toBeLessThanOrEqual(2);
+});
+
+it('restores personal counts into a fresh install without uploading them as competitive views', async () => {
+  nativeScope = 'account:a';
+  selectStorageScope(nativeScope);
+  await db.runAsync('INSERT INTO data_scopes(scope,backend_owner) VALUES (?,?)', nativeScope, 'a');
+  const account = scopedDatabase(db, nativeScope);
+  const today = new Date().toISOString().slice(0, 10);
+  const sourceId = '00000000-0000-4000-8000-000000000001';
+  const value = aggregateDay(Tracking.daily(today), Tracking.health(), sourceId, 'UTC');
+  expect(value).toMatchObject({ personalViews: 42, views: null, minutes: 1 });
+  let backedUp: unknown[] = [];
+  const fetchImpl = jest.fn(async (_url, options) => {
+    if (options?.method === 'POST') {
+      backedUp = JSON.parse(options.body as string).days;
+      return {
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            results: [{ localDate: today, deviceId: sourceId, status: 'applied', serverRev: 1 }],
+          }),
+        headers: { get: () => null },
+      } as unknown as Response;
+    }
+    return {
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ days: backedUp }),
+      headers: { get: () => null },
+    } as unknown as Response;
+  }) as unknown as typeof fetch;
+  const api = createApiClient({
+    baseUrl: 'https://validation.invalid',
+    getAccessToken: async () => 'test',
+    fetchImpl,
+    platform: 'android',
+    appVersion: 'test',
+  });
+  const repo = sqliteSyncRepo(account);
+  await stage(repo, [value]);
+  expect(
+    (await flush(repo, api, { uuid: () => require('node:crypto').randomUUID() }, Date.now())).kind,
+  ).toBe('sent');
+
+  // A new empty database models loss of every installation-local row after uninstall.
+  close();
+  ({ db, close } = sqlite());
+  await migrate(db);
+  await db.runAsync('INSERT INTO data_scopes(scope,backend_owner) VALUES (?,?)', nativeScope, 'a');
+  const restored = scopedDatabase(db, nativeScope);
+  await hydratePersonalHistory(api, restored, 'a', () => true);
+  const row = await db.getFirstAsync<{ views: number; minutes: number }>(
+    'SELECT views, minutes FROM daily_cache WHERE scope=?',
+    nativeScope,
+  );
+  expect(row).toEqual({ views: 42, minutes: 1 });
+  expect(Tracking.mergeSyncedDays).toHaveBeenLastCalledWith(
+    [expect.objectContaining({ views: 42, personalViews: 42 })],
+    nativeScope,
+  );
+  expect(backedUp).toEqual([expect.objectContaining({ views: null, personalViews: 42 })]);
 });

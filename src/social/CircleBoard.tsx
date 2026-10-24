@@ -286,7 +286,7 @@ export function CircleBoard({
           </T>
           {showingLocalCount && (
             <T v="caption" muted>
-              Your saved count · rankings are separate
+              Your saved count
             </T>
           )}
         </View>
@@ -307,8 +307,8 @@ export function CircleBoard({
               {friend.daily?.status === 'private'
                 ? 'Sharing off'
                 : friend.daily?.status !== 'eligible'
-                  ? 'No eligible count'
-                  : 'Eligible videos'}
+                  ? 'No synced count yet'
+                  : 'Recorded videos'}
             </T>
           </View>
           <T

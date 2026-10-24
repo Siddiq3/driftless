@@ -1,4 +1,5 @@
 import type { v1 } from '@siddiq3/driftless-contracts';
+import type { PersonalDailyAggregate } from '@/api/personalUsage';
 import { ApiError } from '../api/client';
 import { isRetryable, nextDelayMs, STUCK_AFTER_ATTEMPTS } from '../db/outbox';
 import { valuesKey, type DayValues } from './aggregate';
@@ -15,7 +16,7 @@ export type DayState = {
 export type Batch = {
   id: string;
   idempotencyKey: string;
-  days: v1.DailyAggregate[];
+  days: PersonalDailyAggregate[];
   attempts: number;
   nextAttemptAt: number;
 };
@@ -31,7 +32,7 @@ export interface SyncRepo {
 }
 
 export type SyncClient = {
-  usageSync(days: v1.DailyAggregate[], idempotencyKey: string): Promise<v1.UsageSyncResponse>;
+  usageSync(days: PersonalDailyAggregate[], idempotencyKey: string): Promise<v1.UsageSyncResponse>;
 };
 
 export type SyncOutcome =

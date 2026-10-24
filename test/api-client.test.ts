@@ -210,3 +210,20 @@ it('never shares a request across different authenticated account getters', asyn
   await Promise.all([a.getMe(), b.getMe()]);
   expect(f).toHaveBeenCalledTimes(2);
 });
+
+it('keeps personal recorded counts when decoding restored history', async () => {
+  const row = {
+    localDate: '2026-10-24',
+    tz: 'UTC',
+    platform: 'android',
+    deviceId: '00000000-0000-4000-8000-000000000001',
+    views: null,
+    adViews: null,
+    personalViews: 73,
+    minutes: 12,
+    coverage: 1,
+    rev: 2,
+  };
+  const api = client(jest.fn().mockResolvedValue(resp(200, { days: [row] })));
+  expect((await api.usageHistory('2026-10-24', '2026-10-24')).days).toEqual([row]);
+});

@@ -40,10 +40,13 @@ export function hydratePersonalHistory(
     const result = await api.usageHistory(from, to, allowed);
     if (!allowed()) throw new Error('History restore cancelled');
     const retained = result.days.filter((d) => d.localDate >= from && d.localDate <= to);
+    // Both caches serve personal screens only. Never write these totals to the recorder or
+    // to the competitive `views` upload field. Legacy server rows fall back to approved views.
+    const personalDays = retained.map((day) => ({ ...day, views: day.personalViews ?? day.views }));
     const source = await deviceId(db, randomUUID);
     Tracking.setSourceDevice(source);
     await db.withExclusiveTransactionAsync(async (tx) => {
-      for (const d of retained) {
+      for (const d of personalDays) {
         if (d.localDate < from || d.localDate > to) continue;
         await tx.runAsync(
           `INSERT INTO daily_cache(scope,local_date,device_id,platform,tz,views,ad_views,minutes,coverage,rev) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(scope,local_date,device_id) DO UPDATE SET platform=excluded.platform,tz=excluded.tz,views=excluded.views,ad_views=excluded.ad_views,minutes=excluded.minutes,coverage=excluded.coverage,rev=excluded.rev WHERE excluded.rev>=daily_cache.rev`,
@@ -63,9 +66,9 @@ export function hydratePersonalHistory(
     });
     if (!allowed()) throw new Error('History restore cancelled');
     // Cache becomes visible only in this scope; never modifies native recorded counters.
-    for (let offset = 0; offset < retained.length; offset += 1000) {
+    for (let offset = 0; offset < personalDays.length; offset += 1000) {
       if (!allowed()) throw new Error('History restore cancelled');
-      Tracking.mergeSyncedDays(retained.slice(offset, offset + 1000), scope);
+      Tracking.mergeSyncedDays(personalDays.slice(offset, offset + 1000), scope);
     }
     await db.runAsync('UPDATE data_scopes SET hydrated_at=? WHERE scope=?', Date.now(), scope);
     publishLocalChange();

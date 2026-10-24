@@ -1,5 +1,6 @@
 import { Problem, v1 } from '@siddiq3/driftless-contracts';
 import { z } from 'zod';
+import { PersonalHistoryResponse, type PersonalDailyAggregate } from './personalUsage';
 import { entitlementGeneration } from '@/billing/cache';
 
 const OkResponse = z.object({ ok: z.literal(true) });
@@ -137,14 +138,19 @@ export function createApiClient(o: ApiClientOptions) {
         v1.MeResponse,
         { allowed },
       ),
-    usageSync: async (days: v1.DailyAggregate[], idempotencyKey: string, allowed?: () => boolean) =>
-      (
+    usageSync: async (
+      days: PersonalDailyAggregate[],
+      idempotencyKey: string,
+      allowed?: () => boolean,
+    ) => {
+      return (
         await request('POST', '/v1/usage/sync', v1.UsageSyncResponse, {
           body: { days },
           headers: { 'idempotency-key': idempotencyKey },
           allowed,
         })
-      ).data,
+      ).data;
+    },
     playVerify: async (productId: string, purchaseToken: string) =>
       (
         await request('POST', '/v1/billing/play/verify', v1.VerifyResponse, {
@@ -212,9 +218,14 @@ export function createApiClient(o: ApiClientOptions) {
     },
     usageHistory: async (from: string, to: string, allowed?: () => boolean) =>
       (
-        await request('GET', `/v1/usage/history?from=${from}&to=${to}`, v1.HistoryResponse, {
-          allowed,
-        })
+        await request(
+          'GET',
+          `/v1/usage/history?from=${from}&to=${to}&includePersonal=true`,
+          PersonalHistoryResponse,
+          {
+            allowed,
+          },
+        )
       ).data,
     patchMe: (patch: v1.PatchMeRequest, rev: number, allowed?: () => boolean) =>
       request('PATCH', '/v1/me', v1.MeResponse, {

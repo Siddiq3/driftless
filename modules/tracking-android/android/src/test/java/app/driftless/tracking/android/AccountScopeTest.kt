@@ -77,4 +77,21 @@ class AccountScopeTest {
         assertTrue(store.daily("2026-10-24").isEmpty())
         store.close();context.deleteDatabase(name)
     }
+    @Test fun freshInstallationRestoresPersonalCountAndAddsOnlyNewLocalObservations() {
+        val store = SqliteStore(context, null)
+        store.selectScope("account:a")
+        store.setSourceDevice("new-installation")
+        val restored = """[{"localDate":"2026-10-24","deviceId":"old-installation","tz":"UTC","views":73,"minutes":12,"coverage":1,"rev":2}]"""
+        store.mergeSynced(restored, "account:a")
+        store.mergeSynced(restored, "account:a")
+        assertEquals(73, store.personalMeasurement("2026-10-24", setOf("com.instagram.android"))["views"])
+        assertTrue(store.daily("2026-10-24").isEmpty()) // Never restage restored counts as local observations.
+        store.recordView(event("after-reinstall"))
+        assertEquals(74, store.personalMeasurement("2026-10-24", setOf("com.instagram.android"))["views"])
+        assertEquals(1, store.daily("2026-10-24").sumOf { it.views })
+        store.selectScope("account:b")
+        assertNull(store.personalMeasurement("2026-10-24", setOf("com.instagram.android"))["views"])
+        store.close()
+    }
+
 }
