@@ -1,0 +1,67 @@
+package app.driftless.tracking.android
+
+import android.content.Context
+import android.content.Intent
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
+import androidx.test.core.app.ApplicationProvider
+import app.driftless.tracking.core.BlockPolicy
+import org.junit.After
+import org.junit.Assert.*
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.Robolectric
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
+class PauseActivityTest {
+    private val context = ApplicationProvider.getApplicationContext<Context>()
+    private val pkg = "com.google.android.youtube"
+
+    @Before fun reset() { context.getSharedPreferences("driftless_tracking", Context.MODE_PRIVATE).edit().clear().commit() }
+    @After fun cleanup() { reset() }
+
+    private fun views(view: View): List<View> = listOf(view) +
+        if (view is ViewGroup) (0 until view.childCount).flatMap { views(view.getChildAt(it)) } else emptyList()
+    private fun find(activity: PauseActivity, prefix: String) = views(activity.window.decorView)
+        .filterIsInstance<TextView>().first { it.text.startsWith(prefix) }
+    private fun launch(reason: String = "LIMIT") = Robolectric.buildActivity(PauseActivity::class.java,
+        Intent(context, PauseActivity::class.java).putExtra(PauseActivity.EXTRA_PKG, pkg).putExtra(PauseActivity.EXTRA_REASON, reason)).setup()
+
+    @Test fun bypassStillGrantsExactlyFiveMinutesAndConsumesOneDailyUse() {
+        val controller = launch()
+        val activity = controller.get()
+        val before = System.currentTimeMillis()
+        find(activity, "5 more minutes").performClick()
+        val prefs = TrackingPrefs(context)
+        assertEquals(1, prefs.snoozesToday())
+        assertTrue(prefs.snoozedUntil(pkg) >= before + BlockPolicy.SNOOZE_MS)
+        assertTrue(prefs.snoozedUntil(pkg) <= System.currentTimeMillis() + BlockPolicy.SNOOZE_MS)
+        assertTrue(activity.isFinishing)
+        controller.pause().stop().destroy()
+    }
+
+    @Test fun leaveFeedReturnsHomeWithoutConsumingBypass() {
+        val controller = launch()
+        val activity = controller.get()
+        find(activity, "Leave feed").performClick()
+        assertEquals(Intent.ACTION_MAIN, shadowOf(activity).nextStartedActivity.action)
+        assertEquals(0, TrackingPrefs(context).snoozesToday())
+        assertTrue(activity.isFinishing)
+        controller.pause().stop().destroy()
+    }
+
+    @Test fun scheduleUsesScheduleExplanationAndExhaustedBypassesStayUnavailable() {
+        repeat(BlockPolicy.MAX_SNOOZES_PER_DAY) { TrackingPrefs(context).snooze(pkg, System.currentTimeMillis()) }
+        val controller = launch("SCHEDULE")
+        val activity = controller.get()
+        find(activity, "Your focus schedule is active")
+        assertFalse(views(activity.window.decorView).filterIsInstance<TextView>().any { it.text.startsWith("5 more minutes") })
+        controller.pause().stop().destroy()
+    }
+}

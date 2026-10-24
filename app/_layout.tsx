@@ -37,9 +37,9 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <OnboardingProvider>
-        <SessionProvider env={env}>
-          <PersonalSessionBoundary>
+      <SessionProvider env={env}>
+        <PersonalSessionBoundary>
+          <OnboardingProvider>
             <AccountBackupProvider>
               <StatusBar style="light" />
               <FirstLaunchRedirect />
@@ -52,9 +52,9 @@ export default function RootLayout() {
                 }}
               />
             </AccountBackupProvider>
-          </PersonalSessionBoundary>
-        </SessionProvider>
-      </OnboardingProvider>
+          </OnboardingProvider>
+        </PersonalSessionBoundary>
+      </SessionProvider>
     </SafeAreaProvider>
   );
 }

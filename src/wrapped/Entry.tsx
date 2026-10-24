@@ -124,7 +124,7 @@ export function WrapEntry({ prompt = false }: { prompt?: boolean }) {
               >
                 <T style={{ fontSize: 26 }}>×</T>
               </Pressable>
-              <T v="title" style={{ color: '#C4A0FF', textAlign: 'center', fontWeight: '900' }}>
+              <T v="title" style={{ color: '#FFE9AD', textAlign: 'center', fontWeight: '900' }}>
                 REELS WRAPPED
               </T>
               <BrainCharacter pose="wrapped" size={240} />

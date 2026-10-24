@@ -38,4 +38,27 @@ class FeedPauseTest {
         assertTrue(overlay.isShowing)
         overlay.hide(); controller.destroy()
     }
+    @Test fun redesignedOverlayUpdatesCountdownAndUsesLatestBypassCallback() {
+        val controller = Robolectric.buildService(MemeTestService::class.java).create()
+        val overlay = FeedPauseOverlay(controller.get())
+        var oldCalls = 0
+        var newCalls = 0
+        fun field(name: String) = FeedPauseOverlay::class.java.getDeclaredField(name).apply { isAccessible = true }.get(overlay)
+        overlay.show(FeedReason.BREAK, 60000, 0, 5, true) { oldCalls++ }
+        val bypass = field("bypass") as android.widget.Button
+        assertFalse(bypass.isEnabled)
+        assertTrue((field("summary") as android.widget.TextView).text.contains("1:00"))
+        overlay.show(FeedReason.BREAK, 59000, 2, 5, false) { newCalls++ }
+        assertTrue((field("summary") as android.widget.TextView).text.contains("0:59"))
+        assertEquals(android.view.View.GONE, (field("detection") as android.view.View).visibility)
+        assertTrue(bypass.isEnabled)
+        bypass.performClick()
+        assertEquals(0, oldCalls)
+        assertEquals(1, newCalls)
+        overlay.hide()
+        assertNull(field("floatAnimation"))
+        assertNull(field("mascot"))
+        controller.destroy()
+    }
+
 }

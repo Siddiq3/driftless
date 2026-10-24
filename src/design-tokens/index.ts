@@ -1,5 +1,5 @@
 /**
- * ScrollSnooze design tokens — midnight, plum and lavender accents.
+ * ScrollSnooze design tokens — dark cocoa, warm cream and apricot accents.
  * Every foreground/background pair used for text is listed in TEXT_PAIRS and must meet WCAG AA.
  */
 
@@ -34,33 +34,33 @@ export type Theme = {
 };
 
 export const dark: Theme = {
-  bg: '#10102B',
-  surface: '#211C3D',
-  surfaceRaised: '#30264E',
-  text: '#F7F2FF',
-  textMuted: '#B9AFCB',
-  accent: '#C4A0FF',
-  onAccent: '#241642',
+  bg: '#0B0B08',
+  surface: '#201B16',
+  surfaceRaised: '#30271F',
+  text: '#FFF9ED',
+  textMuted: '#C4B69D',
+  accent: '#FFD09D',
+  onAccent: '#492B16',
   success: '#BEDC93',
   warning: '#FFAE94',
-  border: '#493A63',
-  hero: '#191632',
-  warm: '#30214B',
+  border: '#4A3E32',
+  hero: '#231A13',
+  warm: '#35261B',
 };
 
 export const light: Theme = {
-  bg: '#F7F2FF',
+  bg: '#FFF9ED',
   surface: '#FFFFFF',
-  surfaceRaised: '#EFE5FA',
-  text: '#241642',
-  textMuted: '#625170',
-  accent: '#64408C',
-  onAccent: '#F7F2FF',
+  surfaceRaised: '#F7EDDA',
+  text: '#281C10',
+  textMuted: '#69553F',
+  accent: '#754400',
+  onAccent: '#FFF5DF',
   success: '#356123',
   warning: '#A8321F',
-  border: '#D8C5EE',
-  hero: '#EFE5FA',
-  warm: '#E4C5FF',
+  border: '#DECEB3',
+  hero: '#F8EACD',
+  warm: '#FFE8B0',
 };
 
 /** 4-pt spacing scale. */

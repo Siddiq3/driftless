@@ -7,7 +7,7 @@ export function BrandMark({ size = 34 }: { size?: number }) {
       source={require('../../assets/branding/app-icon.png')}
       accessible={false}
       resizeMode="contain"
-      style={{ width: size, height: size, borderRadius: size * 0.27, backgroundColor: '#10102B' }}
+      style={{ width: size, height: size, borderRadius: size * 0.27, backgroundColor: '#FFE6AD' }}
     />
   );
 }

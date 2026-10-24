@@ -161,7 +161,7 @@ export function FriendInviteSheet({
                 </Text>
               ) : (
                 <View style={styles.loading}>
-                  <ActivityIndicator color="#C4A0FF" />
+                  <ActivityIndicator color="#FFD09D" />
                   <Text style={styles.loadingText}>
                     {error ? 'Invite unavailable' : 'Creating your invite…'}
                   </Text>
@@ -206,7 +206,7 @@ export function FriendInviteSheet({
                 onPress={() => void share('more')}
                 style={[styles.option, { opacity: url ? 1 : 0.4 }]}
               >
-                <View style={[styles.circle, { backgroundColor: '#29282F' }]}>
+                <View style={[styles.circle, { backgroundColor: '#29271F' }]}>
                   <SvgXml xml={shareIcon} width={30} height={30} color="#FFFFFF" />
                 </View>
                 <Text style={styles.optionLabel}>More</Text>
@@ -241,7 +241,7 @@ export function FriendInviteSheet({
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: '#000000CC', justifyContent: 'flex-end' },
   sheet: {
-    backgroundColor: '#17132E',
+    backgroundColor: '#15140F',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     maxHeight: '90%',
@@ -261,15 +261,15 @@ const styles = StyleSheet.create({
   linkPill: {
     minHeight: 66,
     borderRadius: 40,
-    backgroundColor: '#29243D',
+    backgroundColor: '#29271F',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     paddingHorizontal: 24,
   },
-  link: { flex: 1, color: '#B9AFCB', fontSize: 17, fontWeight: '600' },
+  link: { flex: 1, color: '#B4B3AA', fontSize: 17, fontWeight: '600' },
   loading: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  loadingText: { color: '#B9AFCB', fontSize: 15 },
+  loadingText: { color: '#B4B3AA', fontSize: 15 },
   options: {
     flexDirection: 'row',
     justifyContent: 'space-evenly',
@@ -286,9 +286,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   whatsapp: { width: 48, height: 48, resizeMode: 'contain' },
-  optionLabel: { color: '#D4CDDF', fontSize: 12 },
-  note: { color: '#D4CDDF', textAlign: 'center', marginTop: 16, lineHeight: 20 },
+  optionLabel: { color: '#C4B69D', fontSize: 12 },
+  note: { color: '#C4B69D', textAlign: 'center', marginTop: 16, lineHeight: 20 },
   error: { color: '#FFC19C', textAlign: 'center', marginTop: 16, lineHeight: 20 },
   retry: { minHeight: 48, justifyContent: 'center', alignItems: 'center' },
-  retryText: { color: '#C4A0FF', fontWeight: '700', fontSize: 16 },
+  retryText: { color: '#FFD09D', fontWeight: '700', fontSize: 16 },
 });

@@ -46,7 +46,7 @@ const paths: Partial<Record<IconName, string>> = {
 export function Icon({
   name,
   size = 24,
-  color = '#E4C5FF',
+  color = '#FFE8B0',
 }: {
   name: IconName;
   size?: number;
@@ -116,7 +116,7 @@ export function AppIcon({ name, size = 40 }: { name: string; size?: number }) {
         width: size,
         height: size,
         borderRadius: size * 0.3,
-        backgroundColor: youtube ? '#DB2222' : instagram ? '#B73287' : '#30214B',
+        backgroundColor: youtube ? '#DB2222' : instagram ? '#B73287' : '#3A2915',
         alignItems: 'center',
         justifyContent: 'center',
       }}

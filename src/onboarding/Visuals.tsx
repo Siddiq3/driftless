@@ -6,13 +6,13 @@ import { T } from '@/ui/kit';
 import { useIdleMotion } from '@/ui/motion';
 
 export const SETUP_COLORS = {
-  bg: '#10102B',
-  surface: '#29213F',
-  text: '#F7F2FF',
-  muted: '#B9AFCB',
-  accent: '#C4A0FF',
-  brown: '#241642',
-  teal: '#60418C',
+  bg: '#0B0B08',
+  surface: '#29271F',
+  text: '#FFFFF8',
+  muted: '#B4B3AA',
+  accent: '#FFD18E',
+  brown: '#4B2C0C',
+  teal: '#126D70',
 };
 export function SetupButton({
   label,
@@ -64,8 +64,8 @@ export function SetupButton({
         >
           <Defs>
             <LinearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor="#E4C5FF" />
-              <Stop offset="1" stopColor="#C4A0FF" />
+              <Stop offset="0" stopColor="#FFE8AD" />
+              <Stop offset="1" stopColor="#FFB763" />
             </LinearGradient>
           </Defs>
           <Rect width={100} height={100} fill={`url(#${gradientId})`} />
@@ -121,8 +121,8 @@ export function WidgetPreview() {
       <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
         <Defs>
           <LinearGradient id="widget" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor="#382455" />
-            <Stop offset="1" stopColor="#64418B" />
+            <Stop offset="0" stopColor="#104E56" />
+            <Stop offset="1" stopColor="#2E9486" />
           </LinearGradient>
         </Defs>
         <Rect width="100%" height="100%" fill="url(#widget)" />
@@ -134,8 +134,8 @@ export function WidgetPreview() {
         >
           12
         </T>
-        <T style={{ fontSize: 18, color: '#F1E4FF' }}>short videos today</T>
-        <T v="caption" style={{ color: '#F1E4FF' }}>
+        <T style={{ fontSize: 18, color: '#DDF4EE' }}>short videos today</T>
+        <T v="caption" style={{ color: '#DDF4EE' }}>
           Widget preview
         </T>
       </View>
@@ -172,7 +172,7 @@ export function PrivacyArtwork() {
         borderTopRightRadius: 40,
         borderWidth: 6,
         borderBottomWidth: 0,
-        borderColor: '#211C3D',
+        borderColor: '#191915',
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',

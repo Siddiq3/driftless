@@ -19,11 +19,11 @@ import { Button, Notice, Screen, T } from '@/ui/kit';
 import { Icon } from '@/ui/Icon';
 import { shuffledInvitePrompts, type InvitePrompt } from './invitePrompts';
 const colors = {
-  bg: '#10102B',
-  header: '#21183B',
-  row: '#29213F',
-  muted: '#B9AFCB',
-  accent: '#C4A0FF',
+  bg: '#0B0B08',
+  header: '#301A06',
+  row: '#2C2116',
+  muted: '#B1A58F',
+  accent: '#FFD09D',
 };
 
 export function CircleBoard({
@@ -243,7 +243,7 @@ export function CircleBoard({
             }}
             style={styles.friendsButton}
           >
-            <Icon name="friends" size={18} color="#F7F2FF" />
+            <Icon name="friends" size={18} color="#FFF9ED" />
             <T style={styles.friendsLabel}>Friends{requests ? ` (${requests})` : ''}</T>
           </Pressable>
         </View>
@@ -412,13 +412,13 @@ const styles = StyleSheet.create({
     lineHeight: 25,
     fontWeight: '900',
     letterSpacing: -0.7,
-    color: '#E4C5FF',
+    color: '#FFE4AB',
   },
   friendsButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#332449',
+    backgroundColor: '#402B13',
     borderRadius: 32,
     paddingHorizontal: 16,
     minHeight: 48,
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 24,
-    backgroundColor: '#3B2D51',
+    backgroundColor: '#483C23',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     minHeight: 68,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#30264E',
+    borderBottomColor: '#28241B',
   },
   position: { width: 38, fontSize: 16 },
   inviteText: { flex: 1, color: colors.muted, fontSize: 15, lineHeight: 21 },
@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
     justifyContent: 'center',
   },
-  inviteLabel: { fontSize: 15, fontWeight: '600', color: '#241642' },
+  inviteLabel: { fontSize: 15, fontWeight: '600', color: '#51320F' },
   friendRow: {
     marginHorizontal: 26,
     gap: 16,
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minHeight: 68,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#30264E',
+    borderBottomColor: '#28241B',
   },
   friendName: { color: colors.muted, fontSize: 15 },
   actions: { paddingHorizontal: 26, paddingTop: 16, paddingBottom: 20, gap: 12 },

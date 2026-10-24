@@ -14,8 +14,8 @@ export function ActivityChart({ data, period }: { data: ActivityData; period: Ac
     <View style={[styles.card, !known && styles.emptyCard]}>
       {!known ? (
         <View style={styles.empty}>
-          <Icon name="chart" size={32} color="#C4A0FF" />
-          <T v="label" style={{ color: '#B9AFCB', textAlign: 'center' }}>
+          <Icon name="chart" size={32} color="#FFE1A4" />
+          <T v="label" style={{ color: '#B0ACA0', textAlign: 'center' }}>
             {period === 'daily' ? 'Hourly detail unavailable' : 'No confirmed counts yet'}
           </T>
         </View>
@@ -24,7 +24,7 @@ export function ActivityChart({ data, period }: { data: ActivityData; period: Ac
           <View style={styles.plot}>
             <View style={styles.yAxis}>
               {[ceiling, ceiling / 2, 0].map((v) => (
-                <T key={v} v="caption" style={{ color: '#B9AFCB' }}>
+                <T key={v} v="caption" style={{ color: '#AAA69A' }}>
                   {v}
                 </T>
               ))}
@@ -60,7 +60,7 @@ export function ActivityChart({ data, period }: { data: ActivityData; period: Ac
                             position: 'absolute',
                             top: -21,
                             alignSelf: 'center',
-                            color: '#F7F2FF',
+                            color: '#FFF9ED',
                             fontSize: 11,
                           }}
                         >
@@ -70,8 +70,8 @@ export function ActivityChart({ data, period }: { data: ActivityData; period: Ac
                       <Svg width="100%" height="100%">
                         <Defs>
                           <LinearGradient id="activityBar" x1="0" y1="0" x2="0" y2="1">
-                            <Stop offset="0" stopColor="#C4A0FF" />
-                            <Stop offset="1" stopColor="#C4A0FF" />
+                            <Stop offset="0" stopColor="#FFE9AD" />
+                            <Stop offset="1" stopColor="#FFB763" />
                           </LinearGradient>
                         </Defs>
                         <Rect width="100%" height="100%" rx={5} fill="url(#activityBar)" />
@@ -87,7 +87,7 @@ export function ActivityChart({ data, period }: { data: ActivityData; period: Ac
               ? ['12am', '6am', '12pm', '6pm', '12am']
               : data.bars.map((b) => b.label)
             ).map((text, i) => (
-              <T key={i} v="caption" style={{ color: '#B9AFCB', fontSize: 11 }}>
+              <T key={i} v="caption" style={{ color: '#AAA69A', fontSize: 11 }}>
                 {text}
               </T>
             ))}
@@ -99,7 +99,7 @@ export function ActivityChart({ data, period }: { data: ActivityData; period: Ac
 }
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#17132E',
+    backgroundColor: '#15140F',
     borderRadius: 22,
     padding: 18,
     paddingTop: 30,

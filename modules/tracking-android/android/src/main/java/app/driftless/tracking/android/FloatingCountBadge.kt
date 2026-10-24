@@ -231,7 +231,7 @@ class FloatingCountBadge(private val service: AccessibilityService) {
             }
             val image = BlinkingBrainView(service).apply {
                 setImageResource(R.drawable.scrollsnooze_fresh); scaleType = ImageView.ScaleType.FIT_CENTER
-                background = shape("#493078", 32); setPadding(dp(6),dp(6),dp(6),dp(6))
+                background = shape("#572421", 32); setPadding(dp(6),dp(6),dp(6),dp(6))
             }
             face = image
             iconSize = prefs.floatingCountSize
@@ -240,7 +240,7 @@ class FloatingCountBadge(private val service: AccessibilityService) {
                 textSize = 20f; setTextColor(Color.WHITE); typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.CENTER; minWidth = dp(56)
                 setPadding(dp(8),0,dp(8),0)
-                background = shape("#F33446",24).apply { setStroke(dp(2), Color.parseColor("#493078")) }
+                background = shape("#F33446",24).apply { setStroke(dp(2), Color.parseColor("#572421")) }
             }
             column.addView(count, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,LinearLayout.LayoutParams.WRAP_CONTENT).apply {topMargin=-dp(7)})
             val params = WindowManager.LayoutParams(

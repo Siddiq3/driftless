@@ -429,7 +429,7 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
                 >
                   <T
                     v="heading"
-                    style={{ color: '#211C3D', fontWeight: '700', fontSize: 17, lineHeight: 23 }}
+                    style={{ color: '#191915', fontWeight: '700', fontSize: 17, lineHeight: 23 }}
                   >
                     {question.title}
                   </T>

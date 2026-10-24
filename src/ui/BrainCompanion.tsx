@@ -1,5 +1,5 @@
 import { useRef, useState, type ComponentProps } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, Vibration, View } from 'react-native';
 import { BrainCharacter } from './BrainCharacter';
 import { T, useTheme } from './kit';
 
@@ -62,6 +62,7 @@ function BrainQuoteDeck({ initialQuote, quoteMood, ...character }: Props) {
   const deck = useRef<string[]>([]);
   const previous = useRef<string | null>(initialQuote);
   const nextQuote = () => {
+    Vibration.vibrate(15);
     if (!deck.current.length) {
       const shuffled = [...(quoteMood === 'drained' ? DRAINED_QUOTES : QUOTES)];
       for (let i = shuffled.length - 1; i > 0; i--) {

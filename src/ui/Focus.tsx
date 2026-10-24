@@ -269,11 +269,11 @@ export function Dashboard({ guest = false, account }: { guest?: boolean; account
         onPress={() => router.push('/blocking')}
         style={({ pressed }) => [
           styles.focusLink,
-          { backgroundColor: '#493078', opacity: pressed ? 0.75 : 1 },
+          { backgroundColor: '#783F00', opacity: pressed ? 0.75 : 1 },
         ]}
       >
         <View style={styles.proBadge}>
-          <Icon name="shield" size={24} color="#241642" />
+          <Icon name="shield" size={24} color="#2C1A08" />
         </View>
         <T v="label" style={{ flex: 1, fontWeight: '600' }}>
           Focus & app pauses
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
     paddingHorizontal: 14,
     borderRadius: 28,
-    backgroundColor: '#C4A0FF',
+    backgroundColor: '#FFE1A4',
     alignItems: 'center',
     justifyContent: 'center',
   },

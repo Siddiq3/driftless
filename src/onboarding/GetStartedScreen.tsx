@@ -41,7 +41,7 @@ export function GetStartedScreen({
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
           <BrandMark size={34} />
-          <T style={{ ...display, color: '#E4C5FF', fontSize: 20, letterSpacing: -0.5 }}>
+          <T style={{ ...display, color: '#FFE1A0', fontSize: 20, letterSpacing: -0.5 }}>
             SCROLLSNOOZE
           </T>
         </View>
@@ -49,7 +49,7 @@ export function GetStartedScreen({
           accessibilityLabel="App language: English"
           style={{
             borderRadius: 24,
-            backgroundColor: '#211C3D',
+            backgroundColor: '#201F1C',
             paddingHorizontal: 15,
             paddingVertical: 10,
           }}

@@ -123,7 +123,7 @@ export function InviteSignInSheet({ visible, onClose }: { visible: boolean; onCl
                 >
                   <Defs>
                     <LinearGradient id="inviteGoogle" x1="0" y1="0" x2="0" y2="1">
-                      <Stop offset="0" stopColor="#C4A0FF" />
+                      <Stop offset="0" stopColor="#FFE9AD" />
                       <Stop offset="1" stopColor="#FFB66D" />
                     </LinearGradient>
                   </Defs>
@@ -131,7 +131,7 @@ export function InviteSignInSheet({ visible, onClose }: { visible: boolean; onCl
                 </Svg>
               )}
               {busy ? (
-                <ActivityIndicator color="#241642" />
+                <ActivityIndicator color="#603600" />
               ) : (
                 <>
                   <Text style={styles.googleText}>Continue With Google</Text>
@@ -162,7 +162,7 @@ export function InviteSignInSheet({ visible, onClose }: { visible: boolean; onCl
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: '#000000D6', justifyContent: 'flex-end' },
   sheet: {
-    backgroundColor: '#17132E',
+    backgroundColor: '#15140F',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     maxHeight: '90%',
@@ -171,9 +171,9 @@ const styles = StyleSheet.create({
   handle: { width: 36, height: 5, borderRadius: 3, backgroundColor: '#C6C1CA' },
   content: { paddingHorizontal: 26, paddingBottom: 14 },
   help: { alignSelf: 'flex-end', minHeight: 48, justifyContent: 'center', marginBottom: 16 },
-  link: { color: '#B9AFCB', fontSize: 15, textDecorationLine: 'underline', fontWeight: '600' },
+  link: { color: '#A7A59C', fontSize: 15, textDecorationLine: 'underline', fontWeight: '600' },
   title: {
-    color: '#F7F2FF',
+    color: '#FFFDF5',
     fontSize: 27,
     lineHeight: 36,
     textAlign: 'center',
@@ -193,14 +193,14 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   googleText: {
-    color: '#241642',
+    color: '#603600',
     fontSize: 18,
     fontWeight: '700',
     textAlign: 'center',
     flexShrink: 1,
   },
   googleIcon: { width: 28, height: 28, resizeMode: 'contain' },
-  legal: { color: '#B9AFCB', fontSize: 15, lineHeight: 22, textAlign: 'center', marginTop: 30 },
+  legal: { color: '#A7A59C', fontSize: 15, lineHeight: 22, textAlign: 'center', marginTop: 30 },
   privacy: { minHeight: 48, alignItems: 'center', justifyContent: 'flex-start', paddingTop: 3 },
   privacyText: { fontSize: 15 },
   error: { color: '#FFC19C', fontSize: 14, lineHeight: 20, textAlign: 'center', marginTop: 16 },
