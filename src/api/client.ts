@@ -1,8 +1,17 @@
+import { AccountUsageHistory, AccountUsageResponse, AccountUsageReconcileResponse } from './accountUsage';
 import { Problem, v1 } from '@siddiq3/driftless-contracts';
 import { z } from 'zod';
 import { PersonalHistoryResponse, type PersonalDailyAggregate } from './personalUsage';
 import { entitlementGeneration } from '@/billing/cache';
 
+export const AccountState = z.object({
+  state: z.enum(['active', 'deleting', 'deleted', 'legacy_quarantined']),
+  incarnation: z.uuid().nullable(),
+});
+// Keep lifecycle additions explicit while the published base contract remains 0.4.0.
+const AccountChallenge = v1.ChallengeSummary.extend({ ownerId: z.string().nullable() });
+const AccountChallenges = z.object({ challenges: z.array(AccountChallenge) });
+const AccountMe = v1.MeResponse.extend({ incarnation: z.uuid() });
 const OkResponse = z.object({ ok: z.literal(true) });
 
 export class ApiError extends Error {
@@ -20,6 +29,7 @@ export class ApiError extends Error {
 
 export type ApiClientOptions = {
   baseUrl: string;
+  incarnation?: string;
   getAccessToken: () => Promise<string | null>;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
@@ -49,14 +59,14 @@ export function createApiClient(o: ApiClientOptions) {
     init: { body?: unknown; headers?: Record<string, string>; allowed?: () => boolean } = {},
   ): Promise<{ data: z.infer<S>; etag: string | null }> {
     // Share transport for the same credential getter/query; each caller checks its own cancellation.
-    if (init.allowed && !init.allowed())
+    if (credentialGeneration !== entitlementGeneration() || (init.allowed && !init.allowed()))
       throw new ApiError(409, 'sync_cancelled', 'Request cancelled');
     if (method !== 'GET') return send(method, path, schema, init);
-    const key = `${base}:${path}`;
+    const key = `${base}:${credentialGeneration}:${o.incarnation ?? 'unbound'}:${path}`;
     const previous = reads.get(key);
     if (previous) {
       const result = (await previous) as { data: z.infer<S>; etag: string | null };
-      if (init.allowed && !init.allowed())
+      if (credentialGeneration !== entitlementGeneration() || (init.allowed && !init.allowed()))
         throw new ApiError(409, 'sync_cancelled', 'Request cancelled');
       return result;
     }
@@ -89,6 +99,7 @@ export function createApiClient(o: ApiClientOptions) {
         signal: ctrl.signal,
         headers: {
           authorization: `Bearer ${token}`,
+          ...(o.incarnation ? { 'x-account-incarnation': o.incarnation } : {}),
           accept: 'application/json',
           ...(init.body !== undefined ? { 'content-type': 'application/json' } : {}),
           ...init.headers,
@@ -123,6 +134,25 @@ export function createApiClient(o: ApiClientOptions) {
   }
 
   return {
+    incarnation: o.incarnation,
+    accountUsageHistory: async (from:string,to:string,deviceId:string,allowed?:()=>boolean) =>
+      (await request('GET',`/v1/usage/account/history?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&deviceId=${encodeURIComponent(deviceId)}`,AccountUsageHistory,{allowed})).data,
+    getAccountUsage: async (allowed?: () => boolean) => (await request('GET','/v1/usage/account',AccountUsageResponse,{allowed})).data,
+    configureAccountUsage: async (body: {tz:string;limits:Record<string,number>;expectedRev:number},allowed?:()=>boolean) =>
+      (await request('PUT','/v1/usage/account',AccountUsageResponse,{body,allowed})).data,
+    reconcileAccountUsage: async (body: unknown,idempotencyKey:string,allowed?:()=>boolean) =>
+      (await request('POST','/v1/usage/account/reconcile',AccountUsageReconcileResponse,{body,headers:{'idempotency-key':idempotencyKey},allowed})).data,
+    reserveAccountUsage: async (body: unknown,allowed?:()=>boolean) =>
+      (await request('POST','/v1/usage/account/reserve',AccountUsageResponse,{body,allowed})).data,
+    accountState: async () => (await request('GET', '/v1/account', AccountState)).data,
+    registerAccount: async (registrationId: string, expectedIncarnation: string | null) =>
+      (
+        await request('POST', '/v1/account/register', AccountState, {
+          body: { registrationId, expectedIncarnation },
+        })
+      ).data,
+    deletionStatus: async () =>
+      (await request('GET', '/v1/account/delete', v1.DeletionStatus)).data,
     wrapped: async (period: 'daily' | 'weekly', end: string) =>
       (
         await request(
@@ -135,7 +165,7 @@ export function createApiClient(o: ApiClientOptions) {
       request(
         'GET',
         `/v1/me?platform=${o.platform}&appVersion=${encodeURIComponent(o.appVersion)}`,
-        v1.MeResponse,
+        AccountMe,
         { allowed },
       ),
     usageSync: async (
@@ -178,11 +208,11 @@ export function createApiClient(o: ApiClientOptions) {
     removeFriend: async (userId: string) =>
       void (await request('POST', '/v1/friends/remove', OkResponse, { body: { userId } })),
     challenges: async () =>
-      (await request('GET', '/v1/challenges', v1.ChallengesResponse)).data.challenges,
+      (await request('GET', '/v1/challenges', AccountChallenges)).data.challenges,
     createChallenge: async (c: z.input<typeof v1.ChallengeCreate>) =>
-      (await request('POST', '/v1/challenges', v1.ChallengeSummary, { body: c })).data,
+      (await request('POST', '/v1/challenges', AccountChallenge, { body: c })).data,
     joinChallenge: async (id: string) =>
-      (await request('POST', `/v1/challenges/${encodeURIComponent(id)}/join`, v1.ChallengeSummary))
+      (await request('POST', `/v1/challenges/${encodeURIComponent(id)}/join`, AccountChallenge))
         .data,
     leaveChallenge: async (id: string) =>
       void (await request('POST', `/v1/challenges/${encodeURIComponent(id)}/leave`, OkResponse)),
@@ -194,7 +224,7 @@ export function createApiClient(o: ApiClientOptions) {
           v1.LeaderboardResponse,
         )
       ).data,
-    registerDevice: async (deviceId: string, pushToken: string) =>
+    registerDevice: async (deviceId: string, pushToken?: string) =>
       void (await request('POST', '/v1/devices', OkResponse, {
         body: { deviceId, platform: 'android', pushToken },
       })),
@@ -228,7 +258,7 @@ export function createApiClient(o: ApiClientOptions) {
         )
       ).data,
     patchMe: (patch: v1.PatchMeRequest, rev: number, allowed?: () => boolean) =>
-      request('PATCH', '/v1/me', v1.MeResponse, {
+      request('PATCH', '/v1/me', AccountMe, {
         body: patch,
         allowed,
         headers: { 'if-match': `"${rev}"` },

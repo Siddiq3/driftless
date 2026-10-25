@@ -26,7 +26,8 @@ const Context = createContext<{
   status: BackupStatus;
   retry: () => Promise<boolean>;
   pause: () => void;
-}>({ status: LOCAL, retry: async () => false, pause: () => undefined });
+  resume: () => void;
+}>({ status: LOCAL, retry: async () => false, pause: () => undefined, resume: () => undefined });
 export const useAccountBackup = () => useContext(Context);
 
 type Worker = { api: ApiClient; run: () => Promise<boolean>; pause: () => void };
@@ -36,6 +37,7 @@ export function AccountBackupProvider({ children }: { children: ReactNode }) {
   const session = useSession();
   const displayName = session.status === 'signedIn' ? session.displayName : null;
   const worker = useRef<Worker | null>(null);
+  const [workerRevision,setWorkerRevision]=useState(0);
   const [result, setResult] = useState<{ api: ApiClient; status: BackupStatus } | null>(null);
   useEffect(() => {
     if (!api) return;
@@ -122,7 +124,8 @@ export function AccountBackupProvider({ children }: { children: ReactNode }) {
     const unsubscribe = observeStorage(() => {
       void run();
     });
-    const timer = setInterval(() => void run(), 60_000);
+    // Credit and account-day freshness also change when no tracking event is recorded.
+    const timer = setInterval(() => void run(true), 60_000);
     return () => {
       alive = false;
       subscription.remove();
@@ -130,7 +133,7 @@ export function AccountBackupProvider({ children }: { children: ReactNode }) {
       unsubscribe();
       if (worker.current === current) worker.current = null;
     };
-  }, [api, displayName]);
+  }, [api, displayName, workerRevision]);
   const retry = useCallback(async () => {
     if (worker.current?.api === api) return worker.current.run();
     return false;
@@ -138,6 +141,9 @@ export function AccountBackupProvider({ children }: { children: ReactNode }) {
   const pause = useCallback(() => {
     if (worker.current?.api === api) worker.current.pause();
   }, [api]);
+  // Start a new worker rather than reviving the captured cancellation predicate of an
+  // in-flight pre-reset request. The old worker remains permanently paused/dead.
+  const resume = useCallback(() => setWorkerRevision(r=>r+1), []);
   const status = api && result?.api === api ? result.status : LOCAL;
-  return <Context.Provider value={{ status, retry, pause }}>{children}</Context.Provider>;
+  return <Context.Provider value={{ status, retry, pause, resume }}>{children}</Context.Provider>;
 }

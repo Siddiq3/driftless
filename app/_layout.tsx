@@ -1,3 +1,4 @@
+import { AccountBoundary } from '@/auth/account';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -39,20 +40,22 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <SessionProvider env={env}>
         <PersonalSessionBoundary>
-          <OnboardingProvider>
-            <AccountBackupProvider>
-              <StatusBar style="light" />
-              <FirstLaunchRedirect />
-              {SUBSCRIPTIONS_REQUIRED && <EntitlementRecovery />}
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  animation: reduced ? 'none' : 'fade_from_bottom',
-                  contentStyle: { backgroundColor: t.bg },
-                }}
-              />
-            </AccountBackupProvider>
-          </OnboardingProvider>
+          <AccountBoundary>
+            <OnboardingProvider>
+              <AccountBackupProvider>
+                <StatusBar style="light" />
+                <FirstLaunchRedirect />
+                {SUBSCRIPTIONS_REQUIRED && <EntitlementRecovery />}
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    animation: reduced ? 'none' : 'fade_from_bottom',
+                    contentStyle: { backgroundColor: t.bg },
+                  }}
+                />
+              </AccountBackupProvider>
+            </OnboardingProvider>
+          </AccountBoundary>
         </PersonalSessionBoundary>
       </SessionProvider>
     </SafeAreaProvider>

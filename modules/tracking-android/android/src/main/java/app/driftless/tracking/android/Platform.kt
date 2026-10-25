@@ -71,7 +71,9 @@ class A11yNode(private val n: AccessibilityNodeInfo) : UiNode {
 }
 
 /** Small, non-sensitive settings: consent flag and the per-install fingerprint secret. */
-class TrackingPrefs(context: Context) {
+class TrackingPrefs(private val context: Context) {
+    private fun scoped(key:String):String = "$key|${SqliteStore.get(context).activeScope()}"
+    private fun today():String = SqliteStore.get(context).account.date()
     private val p: SharedPreferences =
         context.applicationContext.getSharedPreferences("driftless_tracking", Context.MODE_PRIVATE)
 
@@ -145,10 +147,10 @@ class TrackingPrefs(context: Context) {
 
     /** Alert keys already sent; only today's are kept. */
     fun sentAlerts(localDate: String): Set<String> =
-        p.getStringSet(KEY_SENT, emptySet())!!.filter { it.startsWith("$localDate|") }.toSet()
+        p.getStringSet(scoped(KEY_SENT), emptySet())!!.filter { it.startsWith("$localDate|") }.toSet()
 
     fun markSent(localDate: String, keys: Collection<String>) {
-        p.edit().putStringSet(KEY_SENT, sentAlerts(localDate) + keys).apply()
+        p.edit().putStringSet(scoped(KEY_SENT), sentAlerts(localDate) + keys).apply()
     }
 
     /** Blocking config from the app (Pro). Stored natively so blocking works with the app closed. */
@@ -213,32 +215,33 @@ class TrackingPrefs(context: Context) {
             }.apply()
         }
 
-    fun snoozedUntil(pkg: String): Long = p.getLong("$KEY_SNOOZE$pkg", 0)
+    fun snoozedUntil(pkg: String): Long =
+        if(p.getString(scoped(KEY_SNOOZE_DATE),null)==today()) p.getLong(scoped("$KEY_SNOOZE$pkg"),0) else 0
 
     var feedState: app.driftless.tracking.core.FeedState
         get() {
-            val o = runCatching { org.json.JSONObject(p.getString("feed_pause_state", "{}")!!) }.getOrDefault(org.json.JSONObject())
+            val o = runCatching { org.json.JSONObject(p.getString(scoped("feed_pause_state"), "{}")!!) }.getOrDefault(org.json.JSONObject())
             return app.driftless.tracking.core.FeedState(o.optString("date", ""), o.optInt("milestone", 0),
                 o.optLong("breakUntil", 0), o.optLong("bypassUntil", 0), o.optInt("bypasses", 0))
         }
 
         set(s) {
-            p.edit().putString("feed_pause_state", org.json.JSONObject().put("date", s.date)
+            p.edit().putString(scoped("feed_pause_state"), org.json.JSONObject().put("date", s.date)
                 .put("milestone", s.milestone).put("breakUntil", s.breakUntilMs)
                 .put("bypassUntil", s.bypassUntilMs).put("bypasses", s.bypasses).toString()).apply()
         }
 
-    fun clearFeedState() { p.edit().remove("feed_pause_state").apply() }
+    fun clearFeedState() { p.edit().remove(scoped("feed_pause_state")).apply() }
 
     fun snoozesToday(): Int {
-        val today = java.time.LocalDate.now().toString()
-        return if (p.getString(KEY_SNOOZE_DATE, null) == today) p.getInt(KEY_SNOOZE_COUNT, 0) else 0
+        val today = today()
+        return if (p.getString(scoped(KEY_SNOOZE_DATE), null) == today) p.getInt(scoped(KEY_SNOOZE_COUNT), 0) else 0
     }
 
     fun snooze(pkg: String, untilMs: Long) {
-        val today = java.time.LocalDate.now().toString()
-        p.edit().putLong("$KEY_SNOOZE$pkg", untilMs).putString(KEY_SNOOZE_DATE, today)
-            .putInt(KEY_SNOOZE_COUNT, snoozesToday() + 1).apply()
+        val today = today()
+        p.edit().putLong(scoped("$KEY_SNOOZE$pkg"), untilMs).putString(scoped(KEY_SNOOZE_DATE), today)
+            .putInt(scoped(KEY_SNOOZE_COUNT), snoozesToday() + 1).apply()
     }
 
     private fun String.hexToBytes(): ByteArray = ByteArray(length / 2) { substring(it * 2, it * 2 + 2).toInt(16).toByte() }

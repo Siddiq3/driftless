@@ -5,35 +5,12 @@ import { Tracking } from 'tracking-android';
 import { ApiError } from '@/api/client';
 import { useApi } from '@/api/useApi';
 import { useSession } from '@/auth/session';
-import { getDb } from '@/db';
 import { Button, Section, Notice, Screen, T, Details } from '@/ui/kit';
-import { clearSetup } from '@/onboarding/store';
+import { wipePhone } from '@/data/reset';
 import { useOnboarding } from '@/onboarding/context';
 import { VisualBanner } from '@/ui/Focus';
 import { useAccountBackup } from '@/sync/AccountBackupProvider';
 
-/** Wipes everything ScrollSnooze stored on this phone (native counts + app database). */
-async function wipePhone(): Promise<void> {
-  Tracking.wipeLocalData();
-  const db = await getDb();
-  await db.withExclusiveTransactionAsync(async (tx) => {
-    await clearSetup(tx);
-    await tx.runAsync("DELETE FROM settings WHERE key LIKE 'wrapped_seen_%'");
-    await tx.runAsync(
-      "DELETE FROM settings WHERE key IN ('goal_backup_owner', 'account_backup_owner')",
-    );
-    for (const table of [
-      'sync_days',
-      'sync_batch',
-      'goals',
-      'goal_id_aliases',
-      'goal_sync_state',
-      'daily_cache',
-      'outbox',
-    ])
-      await tx.runAsync(`DELETE FROM ${table}`);
-  });
-}
 
 export default function Privacy() {
   const api = useApi();
@@ -63,7 +40,7 @@ export default function Privacy() {
           .deleteAccount()
           .then(async () => {
             cloudDeleted = true;
-            await wipePhone();
+            await wipePhone(true);
             setup.reload();
             await s.disconnect();
             router.replace('/welcome');
@@ -169,18 +146,19 @@ export default function Privacy() {
         <T v="heading">This phone</T>
         <Button
           kind="danger"
-          label="Delete everything on this phone"
+          label="Reset local history"
           onPress={() =>
             confirm(
-              'Delete data on this phone?',
-              'Counts, minutes and goals stored on this phone will be removed.',
-              'Delete',
+              'Reset local history?',
+              'Visible counts, minutes, goals and reminders on this phone will be removed. Cloud history stays saved. Account allowance accounting and pending accounting sync remain, so this does not give extra allowance. Cleared history will not be restored automatically.',
+              'Reset',
               () => {
                 backup.pause();
                 wipePhone()
                   .then(() => {
                     setup.reload();
                     setNote({ title: 'Deleted from this phone', body: '' });
+                    backup.resume();
                   })
                   .catch((e: unknown) =>
                     setNote({

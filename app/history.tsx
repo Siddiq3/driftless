@@ -2,7 +2,7 @@ import { addDays, localDateOf } from '@siddiq3/driftless-contracts/domain';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { View } from 'react-native';
-import { currentTimeZone } from '@/sync/run';
+import { currentAccountTime, currentTimeZone } from '@/sync/run';
 import { personalDay, refreshPersonalData } from '@/data/personal';
 import { observeStorage } from '@/db/scope';
 import { Button, Section, Notice, Screen, T, useTheme, Details } from '@/ui/kit';
@@ -25,7 +25,7 @@ export default function History() {
   const read = useCallback(() => {
     try {
       refreshPersonalData(7);
-      const today = localDateOf(Date.now(), currentTimeZone());
+      const today = localDateOf(currentAccountTime(), currentTimeZone());
       setRows(
         Array.from({ length: DAYS }, (_, i) =>
           (() => {

@@ -13,6 +13,24 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk=[35])
 class FeedPauseTest {
+    @Test fun breaksBypassesAndNotificationStateCannotCrossIncarnations() {
+        val context=ApplicationProvider.getApplicationContext<Context>()
+        val store=SqliteStore.get(context);val prefs=TrackingPrefs(context)
+        store.selectScope("account:phase3-a")
+        val day=store.account.date()
+        prefs.feedState=FeedState(day,25,900000,800000,2)
+        prefs.snooze("com.instagram.android",store.account.now()+300000)
+        prefs.markSent(day,listOf("$day|views|100"))
+        store.selectScope("account:phase3-b")
+        assertEquals(FeedState(""),prefs.feedState)
+        assertEquals(0,prefs.snoozesToday());assertEquals(0L,prefs.snoozedUntil("com.instagram.android"))
+        assertTrue(prefs.sentAlerts(day).isEmpty())
+        store.selectScope("guest:phase3-fresh")
+        assertEquals(FeedState(""),prefs.feedState)
+        store.selectScope("account:phase3-a")
+        assertEquals(2,prefs.feedState.bypasses);assertEquals(1,prefs.snoozesToday())
+        assertTrue(prefs.snoozedUntil("com.instagram.android")>store.account.now())
+    }
     @Test fun settingsAndActiveBreakPersistAcrossPreferenceInstancesAndWipeClearsState() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val prefs = TrackingPrefs(context)

@@ -1,7 +1,10 @@
+jest.mock('tracking-android', () => ({ Tracking: { setEntitlement: jest.fn() } }));
 import { ApiError, createApiClient } from '../src/api/client';
+import { invalidateEntitlement } from '../src/billing/cache';
 
 const me = {
   userId: 'u1',
+  incarnation: '00000000-0000-4000-8000-000000000099',
   profile: {
     handle: null,
     displayName: null,
@@ -209,6 +212,58 @@ it('never shares a request across different authenticated account getters', asyn
   const b = client(f);
   await Promise.all([a.getMe(), b.getMe()]);
   expect(f).toHaveBeenCalledTimes(2);
+});
+
+it('keeps the incarnation on queued transports and never shares reads between incarnations', async () => {
+  const fetchImpl = jest.fn().mockResolvedValue(resp(200, { goals: [] }));
+  const getAccessToken = jest.fn().mockResolvedValue('same-google-token');
+  const options = {
+    baseUrl: 'https://api.example.test',
+    platform: 'android' as const,
+    appVersion: '0.1.0',
+    getAccessToken,
+    fetchImpl,
+  };
+  const a = createApiClient({ ...options, incarnation: 'incarnation-a' });
+  const b = createApiClient({ ...options, incarnation: 'incarnation-b' });
+  await Promise.all([a.getGoals(), b.getGoals()]);
+  expect(fetchImpl).toHaveBeenCalledTimes(2);
+  expect(fetchImpl.mock.calls.map((call) => call[1].headers['x-account-incarnation'])).toEqual([
+    'incarnation-a',
+    'incarnation-b',
+  ]);
+  fetchImpl.mockResolvedValue(
+    resp(409, {
+      status: 409,
+      code: 'account_inactive',
+      title: 'Conflict',
+      type: 'https://fixture.invalid/account_inactive',
+    }),
+  );
+  await expect(a.usageSync([], 'frozen-request-key')).rejects.toMatchObject({
+    code: 'account_inactive',
+  });
+  const last = fetchImpl.mock.calls[2][1];
+  expect(last.headers['x-account-incarnation']).toBe('incarnation-a');
+  expect(last.headers['idempotency-key']).toBe('frozen-request-key');
+  expect(last.body).toBe('{"days":[]}');
+});
+
+it('session invalidation rejects offline queued operations before requesting a new credential', async () => {
+  const getAccessToken = jest.fn().mockResolvedValue('new-account-token');
+  const fetchImpl = jest.fn();
+  const old = createApiClient({
+    baseUrl: 'https://api.example.test',
+    platform: 'android',
+    appVersion: '0.1.0',
+    incarnation: 'old-incarnation',
+    getAccessToken,
+    fetchImpl,
+  });
+  invalidateEntitlement();
+  await expect(old.usageSync([], 'original-key')).rejects.toMatchObject({ code: 'sync_cancelled' });
+  expect(getAccessToken).not.toHaveBeenCalled();
+  expect(fetchImpl).not.toHaveBeenCalled();
 });
 
 it('keeps personal recorded counts when decoding restored history', async () => {

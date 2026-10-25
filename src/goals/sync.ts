@@ -1,6 +1,7 @@
 import { v1 } from '@siddiq3/driftless-contracts';
 import { ApiError, type ApiClient } from '../api/client';
 import { getDb } from '../db';
+import { scopeOf } from '../db/scope';
 import { acknowledgeGoals, claimGoalBackup, loadGoals, mergeGoals } from './store';
 
 type GoalApi = Pick<ApiClient, 'getGoals' | 'putGoals'>;
@@ -73,17 +74,21 @@ async function synchronize(api: GoalApi, userId: string, allowed: () => boolean)
       throw new Error(
         'Goal backup needs a compatible server update. Your goals remain on this phone.',
       );
-    await mergeGoals(db, remote.goals, allowed);
+    const reset = await db.getFirstAsync<{value:string}>('SELECT value FROM settings WHERE key=?', `local_reset_goals:${scopeOf(db)}`);
+    const hidden:Record<string,number> = reset ? JSON.parse(reset.value) : {};
+    const suppressed = remote.goals.filter(g => g.rev <= (hidden[g.goalId] ?? -1));
+    await mergeGoals(db, remote.goals.filter(g => !suppressed.includes(g)), allowed);
     const local = await loadGoals(db);
-    v1.PutGoalsRequest.parse({ goals: local });
-    if (sameGoals(local, remote.goals)) {
+    const outbound = [...local, ...suppressed.filter(g=>!local.some(l=>l.goalId===g.goalId))];
+    v1.PutGoalsRequest.parse({ goals: outbound });
+    if (sameGoals(outbound, remote.goals)) {
       await acknowledgeGoals(db, local, allowed);
       if (sameGoals(local, await loadGoals(db))) return;
       continue;
     }
     try {
       check();
-      await api.putGoals(local, remote.etag, allowed);
+      await api.putGoals(outbound, remote.etag, allowed);
       check();
       await acknowledgeGoals(db, local, allowed);
       if (sameGoals(local, await loadGoals(db))) return;

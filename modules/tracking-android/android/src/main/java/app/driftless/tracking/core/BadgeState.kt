@@ -15,12 +15,14 @@ fun countBadgeMood(count: Int, dailyLimit: Int?, identityAvailable: Boolean): Co
 }
 
 /** Display local counts without a prefix; validation remains available in tracking details. */
-fun countBadgeValue(count: Int, validated: Boolean, identityAvailable: Boolean, dailyLimit: Int? = null): CountBadgeValue {
-    val mood = countBadgeMood(count, dailyLimit, identityAvailable)
+fun countBadgeValue(count: Number?, validated: Boolean, identityAvailable: Boolean, dailyLimit: Int? = null): CountBadgeValue {
+    if(count==null) return CountBadgeValue("—","Usage unavailable",CountBadgeMood.UNKNOWN)
+    val value=count.toLong().coerceIn(0,Int.MAX_VALUE.toLong()).toInt()
+    val mood = countBadgeMood(value, dailyLimit, identityAvailable)
     return when {
-    !identityAvailable -> CountBadgeValue(count.coerceAtLeast(0).toString(), "Not detected", mood)
-    !validated -> CountBadgeValue("${count.coerceAtLeast(0)}", "On this phone", mood)
-    else -> CountBadgeValue(count.coerceAtLeast(0).toString(), "Today", mood)
+    !identityAvailable -> CountBadgeValue(value.toString(), "Not detected", mood)
+    !validated -> CountBadgeValue("${value}", "On this phone", mood)
+    else -> CountBadgeValue(value.toString(), "Today", mood)
 }
 
 }

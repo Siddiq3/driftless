@@ -1,3 +1,4 @@
+import { syncAccountUsage } from './accountUsage';
 import { ensureSocialProfile } from '@/social/profile';
 import { ApiError, type ApiClient } from '@/api/client';
 import { cancelGoalSync, syncGoals } from '@/goals/sync';
@@ -35,8 +36,8 @@ async function synchronize(
     ? ensureSocialProfile(api, displayName, allowed)
     : api.getMe(allowed));
   check();
-  const db = await resolvePersonalAccount(me.userId, allowed);
-  await claimAccountBackup(db, me.userId, allowed);
+  const db = await resolvePersonalAccount(me.userId, me.incarnation, allowed);
+  await claimAccountBackup(db, me.incarnation, allowed);
   check();
   // Account backup is included in sign-in. Friend sharing is a separate choice.
   for (let attempt = 0; !me.profile.consent.cloudSync && attempt < 3; attempt++) {
@@ -69,14 +70,15 @@ async function synchronize(
   };
   let goalError: unknown;
   try {
-    await syncGoals(goalApi, me.userId, allowed);
+    await syncGoals(goalApi, me.incarnation, allowed);
   } catch (error) {
     goalError = error;
   } finally {
     cancelGoalSync(goalApi);
   }
   check();
-  const outcome = await syncNow(api, me.userId, allowed);
+  const accountStatus = await syncAccountUsage(api, allowed);
+  const outcome = await syncNow(api, me.incarnation, allowed);
   check();
   if (goalError) throw goalError;
   if (outcome.kind === 'rejected')
@@ -93,6 +95,6 @@ async function synchronize(
   await acknowledgeGuestImports(db, scopeOf(db), allowed);
   return {
     state: 'saved',
-    message: 'Your saved goals and supported daily history are backed up to your account.',
+    message: `Your saved goals and supported daily history are backed up to your account. ${accountStatus}`,
   };
 }

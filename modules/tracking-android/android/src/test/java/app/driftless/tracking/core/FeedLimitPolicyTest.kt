@@ -11,6 +11,15 @@ class FeedLimitPolicyTest {
                        validated: Boolean = true, pro: Boolean = true) =
         FeedLimitPolicy.evaluate(settings, state, date, now, count, goal, surface, validated, pro)
 
+    @Test fun repeatedExpiryAndRolloverAreIdempotent() {
+        val active=decide(10)
+        var state=active.state
+        repeat(100) { state=decide(10,state=state,now=1001L+it).state }
+        assertEquals(active.state,state)
+        repeat(10) { assertNull(decide(10,state=state,now=state.breakUntilMs).reason) }
+        state=decide(0,state=state,date="2026-10-22").state
+        repeat(10) { assertEquals(state,decide(0,state=state,date="2026-10-22").state) }
+    }
     @Test fun pausesAtTheNthVideoAndDailyCapSurvivesBreakExpiry() {
         assertNull(decide(49, settings=cfg.copy(breaksEnabled=false)).reason)
         assertEquals(FeedReason.DAILY_VIDEOS, decide(50).reason)

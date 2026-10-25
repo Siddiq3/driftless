@@ -6,6 +6,17 @@ import org.junit.Test
 class PlayerTransitionTest {
     private fun frame(container: Boolean, identity: String? = null, surface: Surface = Surface.SHORT_VIDEO) =
         Classification(surface, identity, false, 10, container)
+    @Test fun staleFrameCannotArmOrConsumeANewReplacement() {
+        val t=PlayerTransition()
+        t.observe("yt",frame(true,"a"),1000)
+        t.observe("yt",frame(true,"a"),2000)
+        assertFalse(t.observe("yt",frame(false),1500))
+        assertFalse(t.observe("yt",frame(true,"caption-edit"),2100))
+    }
+    @Test fun disconnectClearsAnUnconsumedPlayerReplacement() {
+        val t=PlayerTransition();t.observe("yt",frame(true,"a"),1000);t.observe("yt",frame(false),1100)
+        t.reset();assertFalse(t.observe("yt",frame(true,"b"),1200))
+    }
     @Test fun replacementIsOneStructuralSignalWithoutScrollEvents() {
         val t = PlayerTransition()
         assertFalse(t.observe("yt", frame(true, "a"), 0))

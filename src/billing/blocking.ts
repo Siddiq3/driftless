@@ -1,3 +1,4 @@
+import { scopeOf } from '@/db/scope';
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { Tracking, type BlockingConfig } from 'tracking-android';
 
@@ -29,11 +30,15 @@ export async function loadBlocking(db: SQLiteDatabase): Promise<BlockingConfig> 
 
 /** Saves locally and mirrors to the native service under the current feature-access policy. */
 export async function saveBlocking(db: SQLiteDatabase, c: BlockingConfig): Promise<void> {
+  const previous=await loadBlocking(db);
+  const allowance=(v:BlockingConfig)=>JSON.stringify([v.enabled,v.dailyMinutes,[...v.apps].sort()]);
   await db.runAsync(
     'INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)',
     KEY,
     JSON.stringify(c),
   );
+  const scope=scopeOf(db);
+  if(scope.startsWith('account:') && allowance(previous)!==allowance(c)) await db.runAsync('INSERT OR REPLACE INTO settings VALUES (?,?)',`account_usage:${scope}:limits_dirty`,JSON.stringify(c));
   Tracking.setBlocking(c);
 }
 

@@ -13,7 +13,14 @@ export const SYNC_DAYS = 7;
 export const BACKUP_HISTORY_DAYS = 400;
 
 export function currentTimeZone(): string {
+  try { if(Tracking.dataScope().startsWith('account:')) return Tracking.accountUsageInfo().tz; } catch { /* Guest and older native binaries keep device-local dates. */ }
   return getCalendars()[0]?.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC';
+}
+
+/** Verified monotonic server clock for account periods; wall clock remains a guest fallback. */
+export function currentAccountTime():number {
+  try { if(Tracking.dataScope().startsWith('account:')) return Tracking.accountUsageInfo().nowMs; } catch { /* Legacy/guest date display. */ }
+  return Date.now();
 }
 
 /** Local dates from `days - 1` days ago up to today, oldest first. */
@@ -30,11 +37,13 @@ export async function syncNow(
   api: Pick<ApiClient, 'usageSync'>,
   userId: string,
   allowed: () => boolean,
-  now = Date.now(),
+  now = currentAccountTime(),
 ): Promise<SyncOutcome> {
   const db = await getDb();
+  const resetGeneration=()=>{ try {return Tracking.accountUsageInfo().resetGeneration;} catch {return 0;} };
+  const generation=resetGeneration();
   const check = () => {
-    if (!allowed()) throw new ApiError(409, 'sync_cancelled', 'Backup cancelled');
+    if (!allowed() || generation!==resetGeneration()) throw new ApiError(409, 'sync_cancelled', 'Backup cancelled');
   };
   check();
   await claimAccountBackup(db, userId, allowed);
@@ -64,7 +73,7 @@ export async function syncNow(
   const values = [];
   for (const d of dates) {
     check();
-    const daily = Tracking.daily(d);
+    const daily = Tracking.backupDaily?.(d) ?? Tracking.daily(d);
     if (daily.apps.length === 0) continue; // Restored devices are never restaged as this phone's observations.
     const previous = d === today ? null : await repo.getDay(d);
     const historicalHealth =

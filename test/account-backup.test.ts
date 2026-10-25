@@ -1,3 +1,4 @@
+jest.mock('@/sync/accountUsage', () => ({ syncAccountUsage: jest.fn().mockResolvedValue('Reserved account credit') }));
 jest.mock('@/data/session', () => ({
   resolvePersonalAccount: async () => require('../src/db').getDb(),
   acknowledgeGuestImports: jest.fn().mockResolvedValue(undefined),
@@ -39,6 +40,7 @@ const makeApi = (userId = 'account-a') => {
   let remote: Awaited<ReturnType<typeof loadGoals>> = [];
   const me = () => ({
     userId,
+    incarnation: userId,
     profile: { rev: 3, consent: { cloudSync: consent, shareWithFriends: false } },
   });
   return {

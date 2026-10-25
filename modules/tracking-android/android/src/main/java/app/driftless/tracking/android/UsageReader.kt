@@ -29,9 +29,9 @@ object UsageReader {
         return mode == AppOpsManager.MODE_ALLOWED
     }
 
-    private fun transitions(context: Context, packages: Set<String>, startMs: Long, endMs: Long): List<UsageTransition> {
+    private fun transitions(context: Context, packages: Set<String>, startMs: Long, endMs: Long): List<UsageTransition>? {
         val usm = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
-        val events = usm.queryEvents(startMs, endMs) ?: return emptyList()
+        val events = usm.queryEvents(startMs, endMs) ?: return null
         val out = ArrayList<UsageTransition>()
         val e = UsageEvents.Event()
         while (events.hasNextEvent()) {
@@ -51,24 +51,40 @@ object UsageReader {
      * event-level history only for a limited time, so older days keep their last stored value.
      */
     fun refresh(context: Context, store: TrackingStore, packages: Set<String>, days: Int, zone: ZoneId = ZoneId.systemDefault()): Int = synchronized(store) {
-        refreshLocked(context, store, packages, days, zone)
+        refreshLocked(context, store, packages, days, if(store is SqliteStore) store.account.zone() else zone)
     }
 
     private fun refreshLocked(context: Context, store: TrackingStore, packages: Set<String>, days: Int, zone: ZoneId): Int {
         if (!granted(context)) return 0
-        val now = System.currentTimeMillis()
-        val today = LocalDate.now(zone)
+        val now = if(store is SqliteStore) store.account.now() else System.currentTimeMillis()
+        val today = java.time.Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+        if(store is SqliteStore && store.account.active() && kotlin.math.abs(System.currentTimeMillis()-now)>60_000) { store.account.markClockUncertain(); return 0 }
         var written = 0
         for (i in 0 until days.coerceIn(1, 7)) {
             val date = today.minusDays(i.toLong()).toString()
             val (start, end) = UsageMath.dayBounds(date, zone)
-            val intervals = if (store is SqliteStore) store.usageIntervals(start, minOf(end, now)) else listOf(start to minOf(end, now))
+            val accountStart=if(store is SqliteStore && store.account.active()) store.account.policy()?.getLong("activeFromMs") ?: start else start
+            val intervals = if (store is SqliteStore && store.account.active()) store.accountingIntervals(maxOf(start,accountStart), minOf(end, now)) else if (store is SqliteStore) store.usageIntervals(start, minOf(end, now)) else listOf(start to minOf(end, now))
             val ms = mutableMapOf<String, Long>()
+            var available=true
             for ((a,b) in intervals) {
-                val piece = UsageMath.foregroundMs(transitions(context, packages, a, b), packages, a, b, b)
+                val events=transitions(context, packages,a,b)
+                if(events==null) { available=false; break }
+                val piece = UsageMath.foregroundMs(events, packages, a, b, b)
                 for((pkg,value) in piece) ms[pkg] = (ms[pkg] ?: 0L) + value
             }
-            for ((pkg, v) in ms) {
+            if(!available) continue
+            if(store is SqliteStore) for((pkg,v) in ms) store.setAccountUsage(date,pkg,v)
+            // Visible history after reset uses only post-cutoff intervals. Accounting above
+            // keeps the full period total and cannot be replenished by the reset.
+            val cutoff=if(store is SqliteStore) store.account.cutoff() else 0L
+            val visible=if(cutoff>start) mutableMapOf<String,Long>() else ms
+            if(cutoff>start) for((a,b) in intervals) {
+                val lo=maxOf(a,cutoff); if(lo>=b) continue
+                val events=transitions(context,packages,lo,b) ?: continue
+                for((pkg,v) in UsageMath.foregroundMs(events,packages,lo,b,b)) visible[pkg]=(visible[pkg] ?: 0L)+v
+            }
+            for ((pkg, v) in visible) {
                 store.setUsage(date, pkg, v)
                 written++
             }

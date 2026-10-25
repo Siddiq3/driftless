@@ -49,15 +49,16 @@ function serializedBilling<T>(generation: number, run: () => Promise<T>): Promis
 
 /** Purchase → server verification → cached entitlement. The app never decides Pro itself. */
 export async function buyPro(
-  api: Pick<ApiClient, 'playVerify'>,
-  userId: string,
+  api: Pick<ApiClient, 'playVerify'> & { incarnation?: string },
+  _userId: string,
   offer: Offer,
 ): Promise<v1.Entitlement> {
   if (!SUBSCRIPTIONS_REQUIRED)
     throw new Error('All features are included. Subscriptions are not on sale.');
   const generation = entitlementGeneration();
   return serializedBilling(generation, async () => {
-    const accountId = await accountIdFor(userId);
+    if (!api.incarnation) throw new Error('A registered account incarnation is required');
+    const accountId = await accountIdFor(api.incarnation);
     if (generation !== entitlementGeneration())
       throw new Error('Account changed. Please try again.');
     const purchase = await Billing.purchase(PRO_PRODUCT, offer.offerToken, accountId);

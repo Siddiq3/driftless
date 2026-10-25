@@ -69,9 +69,9 @@ class TrackingModule : Module() {
         Function("getHealth") {
             val ctx = context
             val rules = RulesLoader.load(ctx)
-            val running = DriftlessAccessibilityService.current != null
+            val running = DriftlessAccessibilityService.current?.isOperational == true
             val store = SqliteStore.get(ctx)
-            val today = Recorder.localDate(System.currentTimeMillis(), ZoneId.systemDefault())
+            val today = store.account.date()
             mapOf(
                 "engineVersion" to ENGINE_VERSION,
                 "implemented" to true,
@@ -130,6 +130,29 @@ class TrackingModule : Module() {
         Function("getLocalActivityDetails") { from: String, to: String -> WrappedDetails.readLocalActivity(context, from, to) }
         Function("getWrappedDetails") { from: String, to: String -> WrappedDetails.read(context, from, to) }
 
+        Function("installAccountHistory") { json:String,scope:String -> SqliteStore.get(context).account.installHistory(json,scope) }
+        Function("accountUsageInfo") { SqliteStore.get(context).account.info() }
+        Function("installAccountUsage") { json: String, scope: String ->
+            val store=SqliteStore.get(context)
+            val changingClock=!store.account.trustedClock()
+            store.account.install(json,scope)
+            // First verification/reboot can change the clock domain. Do not keep a recorder's
+            // wall-clock high-water timestamp against the newly verified server clock.
+            if(changingClock) DriftlessAccessibilityService.current?.refreshAccountClock(scope)
+        }
+        Function("accountUsageContributions") { device: String -> SqliteStore.get(context).account.contributions(device) }
+        Function("ackAccountUsage") { date: String, rev: Double -> SqliteStore.get(context).account.acknowledge(date,rev.toLong()) }
+        Function("resetAccountHistory") {
+            DriftlessAccessibilityService.current?.changeDataScope(SqliteStore.get(context).activeScope())
+            SqliteStore.get(context).account.resetHistory()
+            TrackingPrefs(context).floatingCountEnabled = false
+            TrackingPrefs(context).clearMemeHistory()
+            TrackingPrefs(context).clearFeedState()
+            DriftlessAccessibilityService.current?.changeDataScope(SqliteStore.get(context).activeScope())
+            CountWidget.update(context)
+        }
+        Function("forgetAccountUsage") { SqliteStore.get(context).account.forget() }
+
         Function("getDataRevision") { SqliteStore.get(context).dataRevision().toDouble() }
         Function("getDataScope") { SqliteStore.get(context).activeScope() }
         Function("selectDataScope") { scope: String ->
@@ -145,8 +168,8 @@ class TrackingModule : Module() {
 
         Function("getDaily") { localDate: String? ->
             val ctx = context
-            val zone = ZoneId.systemDefault()
-            val now = System.currentTimeMillis()
+            val zone = SqliteStore.get(context).account.zone()
+            val now = SqliteStore.get(context).account.now()
             val d = localDate ?: Recorder.localDate(now, zone)
             val store = SqliteStore.get(ctx)
             val beats = store.heartbeatMinutes(d)
@@ -158,6 +181,33 @@ class TrackingModule : Module() {
                 "heartbeatMinutes" to beats,
                 "coverage" to UsageMath.coverage(beats, d, zone, now),
                 "apps" to store.daily(d).map {
+                    mapOf(
+                        "package" to it.pkg,
+                        "views" to it.views,
+                        "adViews" to it.adViews,
+                        "surfaceMs" to it.surfaceMs.toDouble(),
+                        "unknownMs" to it.unknownMs.toDouble(),
+                        "usageMs" to it.usageMs.toDouble(),
+                    )
+                },
+            )
+        }
+        Function("getBackupDaily") { localDate: String? ->
+            val ctx = context
+            val zone = SqliteStore.get(context).account.zone()
+            val now = SqliteStore.get(context).account.now()
+            val d = localDate ?: Recorder.localDate(now, zone)
+            val store = SqliteStore.get(ctx)
+            val baseline=store.account.meta("backup:$d")
+            val beats = store.heartbeatMinutes(d)+(baseline?.optInt("beats") ?: 0)
+            mapOf(
+                "localDate" to d,
+                "recordedTz" to (baseline?.optJSONObject("metadata")?.optString("recordedTz") ?: store.localMetadata(d)["recordedTz"]),
+                "measurementStatus" to if(baseline!=null) "experimental" else store.localMetadata(d)["measurementStatus"],
+                "usageObserved" to (store.localMetadata(d)["usageObserved"] == true || baseline?.optJSONObject("metadata")?.optBoolean("usageObserved") == true),
+                "heartbeatMinutes" to beats,
+                "coverage" to UsageMath.coverage(beats, d, zone, now),
+                "apps" to store.backupDaily(d).map {
                     mapOf(
                         "package" to it.pkg,
                         "views" to it.views,
@@ -215,6 +265,7 @@ class TrackingModule : Module() {
         }
 
         /** Mirrors enabled goals into native storage so alerts work while the app is closed. */
+        Function("enableGoalAlerts") { SqliteStore.get(context).account.save("mute_alerts",org.json.JSONObject().put("muted",false)) }
         Function("setLimits") { limits: List<Map<String, Any>> ->
             TrackingPrefs(context).limits = limits.mapNotNull { m ->
                 val metric = m["metric"] as? String ?: return@mapNotNull null

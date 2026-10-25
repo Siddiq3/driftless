@@ -1,3 +1,5 @@
+import { AccountAllowanceNotice } from '@/sync/AccountAllowanceNotice';
+import { storageScope } from '@/db/scope';
 import { router } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import { AppIcon, Icon } from '@/ui/Icon';
@@ -24,12 +26,13 @@ export default function AppPauses() {
   const other = apps.filter((app) => !app.installed);
   return (
     <FocusPage title="App Pauses" settings={settings}>
+      <AccountAllowanceNotice />
       {cfg && (
         <>
           <ProtectionStatus settings={settings} />
           <SettingRow
             label="Pause apps"
-            subtitle="Use your saved allowance, schedules and feed rules."
+            subtitle={storageScope().startsWith('account:') ? "Account allowance changes apply next account day after synchronization. Schedules and feed breaks remain on this phone." : "Use your saved allowance, schedules and feed rules."}
             value={cfg.enabled}
             onChange={(enabled) => update({ enabled })}
           />

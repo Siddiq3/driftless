@@ -1,9 +1,11 @@
+import { AccountAllowanceNotice } from '@/sync/AccountAllowanceNotice';
 import type { v1 } from '@siddiq3/driftless-contracts';
 import { randomUUID } from 'expo-crypto';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { getDb } from '@/db';
+import { storageScope } from '@/db/scope';
 import { ProtectionNotice } from '@/billing/ProtectionNotice';
 import { canUseViewGoals } from '@/goals/progress';
 import {
@@ -56,13 +58,14 @@ function GoalEditor({
         enabled: next.enabled ?? enabled,
       });
       lastSaved.current = { limit: g.dailyLimit, enabled: g.enabled };
-      const savedMessage = `Saved (${g.dailyLimit} ${metric === 'minutes' ? 'min' : 'videos'} a day)`;
+      const savedMessage = `Saved (${g.dailyLimit} ${metric === 'minutes' ? 'min' : 'videos'} a day)${storageScope().startsWith('account:') ? '; account allowance changes apply next account day after synchronization' : ''}`;
       setSaved(savedMessage);
       try {
         const all = await loadGoals(db);
         Tracking.setLimits(
           all.filter((x) => x.enabled).map((x) => ({ metric: x.metric, dailyLimit: x.dailyLimit })),
         );
+        if (g.enabled) Tracking.enableGoalAlerts?.();
         if (g.enabled)
           void ensureNotificationPermission().catch(() =>
             setSaved(`${savedMessage}; notifications unavailable`),
@@ -206,6 +209,7 @@ export default function Goals() {
   return (
     <Screen>
       <ProtectionNotice />
+      <AccountAllowanceNotice />
       <GoalEditor metric="minutes" existing={find('minutes')} enabledAllowed />
       <GoalEditor metric="views" existing={find('views')} enabledAllowed />
       {!canUseViewGoals(s.health) && (

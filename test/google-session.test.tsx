@@ -197,11 +197,11 @@ test('an older native binary keeps guest mode usable without loading the Google 
   expect(GoogleSignin.configure).not.toHaveBeenCalled();
 });
 
-test('a restored account preserves bounded offline access only for the same recorded owner', async () => {
+test('a restored stable identity clears entitlement until its incarnation is verified', async () => {
   mockMarkers.set('driftless.google.enabled.v1', 'true');
   mockMarkers.set('driftless.google.cache-owner.v1', '100000000000000000001');
   await mount();
-  expect(invalidateEntitlement).not.toHaveBeenCalled();
+  expect(invalidateEntitlement).toHaveBeenCalledTimes(1);
 });
 test('a restored different account clears the previous native entitlement', async () => {
   mockMarkers.set('driftless.google.enabled.v1', 'true');

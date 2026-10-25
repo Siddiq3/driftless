@@ -9,6 +9,7 @@ jest.mock('tracking-android', () => ({
     setLimits: jest.fn(),
     setSourceDevice: jest.fn(),
     mergeSyncedDays: jest.fn(),
+    installAccountHistory: jest.fn(),
     daily: jest.fn(),
     health: jest.fn(),
     refreshUsage: jest.fn(),
@@ -23,11 +24,7 @@ import { sqliteSyncRepo } from '@/sync/sqliteRepo';
 import { getStorageDb } from '@/db';
 import { migrate, MIGRATIONS } from '@/db/migrations';
 import { selectStorageScope, scopedDatabase } from '@/db/scope';
-import {
-  selectPersonalSession,
-  resolvePersonalAccount,
-  acknowledgeGuestImports,
-} from '@/data/session';
+import { selectPersonalSession, resolvePersonalAccount } from '@/data/session';
 import { hydratePersonalHistory } from '@/data/hydration';
 import {
   personalDay,
@@ -81,35 +78,42 @@ afterEach(() => {
   selectStorageScope('legacy');
 });
 const id = '00000000-0000-4000-8000-000000000009';
-it('guest writes no network and migration is resumed once into its resolved account only', async () => {
-  await db.runAsync('INSERT INTO data_scopes(scope) VALUES (?)', 'guest:first');
+const firstIncarnation = '00000000-0000-4000-8000-000000000001';
+const secondIncarnation = '00000000-0000-4000-8000-000000000002';
+it('sign-in quarantines legacy and guest data; only the verified incarnation selects its dataset', async () => {
   await saveGoal(scopedDatabase(db, 'guest:first'), {
     goalId: id,
     metric: 'views',
     dailyLimit: 50,
     enabled: true,
   });
+  await db.runAsync('UPDATE data_scopes SET backend_owner=? WHERE scope=?', 'a', 'legacy');
+  await db.runAsync(
+    'INSERT INTO goals(scope,goal_id,metric,daily_limit,enabled,rev) VALUES (?,?,?,?,?,?)',
+    'legacy',
+    id,
+    'views',
+    80,
+    1,
+    3,
+  );
   await selectPersonalSession('google-a');
-  const account = await resolvePersonalAccount('a', () => true);
-  expect(await loadGoals(account)).toHaveLength(1);
-  await resolvePersonalAccount('a', () => true);
-  expect(await loadGoals(account)).toHaveLength(1);
-  await acknowledgeGuestImports(account, 'account:a', () => true);
-  expect(
-    (await db.getAllAsync<{ state: string }>('SELECT state FROM guest_imports')).every(
-      (r) => r.state === 'complete',
-    ),
-  ).toBe(true);
+  expect(nativeScope).toMatch(/^pending:/);
+  const account = await resolvePersonalAccount('a', firstIncarnation, () => true);
+  expect(await loadGoals(account)).toEqual([]);
+  await saveGoal(account, { goalId: id, metric: 'views', dailyLimit: 10, enabled: true });
   await selectPersonalSession(null);
-  expect(await loadGoals(scopedDatabase(db, nativeScope))).toEqual([]);
-  await selectPersonalSession('google-b');
-  const b = await resolvePersonalAccount('b', () => true);
-  expect(await loadGoals(b)).toEqual([]);
-  expect(await db.getAllAsync('SELECT * FROM goals WHERE scope=?', 'account:a')).toHaveLength(1);
   await selectPersonalSession('google-a');
-  expect(nativeScope).toBe('account:a');
-  expect(await loadGoals(scopedDatabase(db, nativeScope))).toHaveLength(1);
+  expect(nativeScope).toMatch(/^pending:/);
+  const same = await resolvePersonalAccount('a', firstIncarnation, () => true);
+  expect(await loadGoals(same)).toHaveLength(1);
+  const fresh = await resolvePersonalAccount('a', secondIncarnation, () => true);
+  expect(await loadGoals(fresh)).toEqual([]);
+  expect(await db.getAllAsync('SELECT * FROM goals WHERE scope=?', 'legacy')).toHaveLength(1);
+  expect(await db.getAllAsync('SELECT * FROM goals WHERE scope=?', 'guest:first')).toHaveLength(1);
+  expect(Tracking.importGuestScope).not.toHaveBeenCalled();
 });
+
 it('old scoped handles cannot read or mutate another account after switching', async () => {
   const old = scopedDatabase(db, 'guest:first');
   selectStorageScope('account:b');
@@ -201,49 +205,37 @@ it('forward-only v4 upgrade preserves every legacy record without declaring it g
   }
 });
 
-it('a later guest period can join the same account without reimporting the previous guest period', async () => {
-  await selectPersonalSession('google-a');
-  await resolvePersonalAccount('a', () => true);
+it('a later guest period cannot be adopted by the same stable account', async () => {
+  await resolvePersonalAccount('a', firstIncarnation, () => true);
   await selectPersonalSession(null);
-  const laterGuest = nativeScope;
-  await saveGoal(scopedDatabase(db, laterGuest), {
+  const guest = nativeScope;
+  await saveGoal(scopedDatabase(db, guest), {
     goalId: id,
     metric: 'views',
     dailyLimit: 55,
     enabled: true,
   });
   await selectPersonalSession('google-a');
-  const account = await resolvePersonalAccount('a', () => true);
-  expect(await loadGoals(account)).toHaveLength(1);
-  await resolvePersonalAccount('a', () => true);
-  expect(await loadGoals(account)).toHaveLength(1);
-  expect(
-    await db.getFirstAsync(
-      'SELECT target_scope FROM guest_imports WHERE source_scope=?',
-      laterGuest,
-    ),
-  ).toEqual({ target_scope: 'account:a' });
+  const account = await resolvePersonalAccount('a', firstIncarnation, () => true);
+  expect(await loadGoals(account)).toEqual([]);
+  expect(await db.getAllAsync('SELECT * FROM goals WHERE scope=?', guest)).toHaveLength(1);
+  expect(await db.getAllAsync('SELECT * FROM guest_imports')).toEqual([]);
 });
-it('a failure between native import and the JS copy resumes the journal without duplicate goals', async () => {
-  await db.runAsync('INSERT INTO data_scopes(scope) VALUES (?)', 'guest:first');
-  await saveGoal(scopedDatabase(db, 'guest:first'), {
-    goalId: id,
-    metric: 'views',
-    dailyLimit: 55,
-    enabled: true,
-  });
-  await selectPersonalSession('google-a');
-  await db.execAsync(
-    "CREATE TRIGGER fail_import BEFORE INSERT ON goals WHEN NEW.scope='account:a' BEGIN SELECT RAISE(ABORT,'disk full'); END;",
+
+it('an interrupted binding retries safely without exposing a different owner dataset', async () => {
+  let allowed = false;
+  await expect(resolvePersonalAccount('a', firstIncarnation, () => allowed)).rejects.toThrow(
+    'cancelled',
   );
-  await expect(resolvePersonalAccount('a', () => true)).rejects.toThrow('disk full');
-  expect(await db.getAllAsync('SELECT * FROM goals WHERE scope=?', 'guest:first')).toHaveLength(1);
-  await db.execAsync('DROP TRIGGER fail_import');
-  const account = await resolvePersonalAccount('a', () => true);
-  expect(await loadGoals(account)).toHaveLength(1);
-  await resolvePersonalAccount('a', () => true);
+  allowed = true;
+  const account = await resolvePersonalAccount('a', firstIncarnation, () => allowed);
+  await saveGoal(account, { goalId: id, metric: 'views', dailyLimit: 55, enabled: true });
+  await expect(resolvePersonalAccount('b', firstIncarnation, () => true)).rejects.toThrow(
+    'quarantined',
+  );
   expect(await loadGoals(account)).toHaveLength(1);
 });
+
 it('hydration requests exactly the retained 400 local dates and excludes older server responses', async () => {
   nativeScope = 'account:a';
   selectStorageScope(nativeScope);
@@ -275,41 +267,37 @@ it('hydration requests exactly the retained 400 local dates and excludes older s
   expect(Tracking.mergeSyncedDays).not.toHaveBeenCalled();
 });
 
-it('merges a stable goal identity once and preserves unrelated existing cloud goals', async () => {
-  await db.runAsync(
-    'INSERT INTO data_scopes(scope,identity_key,backend_owner) VALUES (?,?,?)',
-    'account:a',
-    'google-a',
-    'a',
+it('fresh incarnation cannot adopt old frozen batches, pending operations or import journals', async () => {
+  const old = await resolvePersonalAccount('a', firstIncarnation, () => true);
+  const repo = sqliteSyncRepo(old);
+  const day = aggregateDay(Tracking.daily('2026-10-24'), Tracking.health(), id, 'UTC');
+  await stage(repo, [day]);
+  const offline = { usageSync: jest.fn().mockRejectedValue(new Error('offline')) };
+  await flush(repo, offline, { uuid: () => id }, Date.now());
+  const frozen = await db.getAllAsync(
+    'SELECT * FROM sync_batch WHERE scope=?',
+    `account:${firstIncarnation}`,
   );
-  selectStorageScope('account:a');
-  nativeScope = 'account:a';
-  await saveGoal(scopedDatabase(db, 'account:a'), {
-    goalId: id,
-    metric: 'views',
-    dailyLimit: 30,
-    enabled: true,
-  });
-  await saveGoal(scopedDatabase(db, 'account:a'), {
-    goalId: '00000000-0000-4000-8000-000000000010',
-    metric: 'minutes',
-    dailyLimit: 20,
-    enabled: true,
-  });
-  await selectPersonalSession(null);
-  await saveGoal(scopedDatabase(db, nativeScope), {
-    goalId: id,
-    metric: 'views',
-    dailyLimit: 70,
-    enabled: true,
-  });
+  expect(frozen).toHaveLength(1);
+  await db.runAsync(
+    'INSERT INTO guest_imports(source_scope,target_scope) VALUES (?,?)',
+    'legacy',
+    `account:${firstIncarnation}`,
+  );
   await selectPersonalSession('google-a');
-  const a = await resolvePersonalAccount('a', () => true);
-  const goals = await loadGoals(a);
-  expect(goals).toHaveLength(2);
-  expect(goals.find((g) => g.goalId === id)).toMatchObject({ dailyLimit: 70, rev: 2 });
-  await resolvePersonalAccount('a', () => true);
-  expect(await loadGoals(a)).toEqual(goals);
+  const fresh = await resolvePersonalAccount('a', secondIncarnation, () => true);
+  expect(
+    await db.getAllAsync('SELECT * FROM sync_batch WHERE scope=?', `account:${secondIncarnation}`),
+  ).toEqual([]);
+  expect(
+    await db.getAllAsync('SELECT * FROM sync_days WHERE scope=?', `account:${secondIncarnation}`),
+  ).toEqual([]);
+  expect(
+    await db.getAllAsync('SELECT * FROM sync_batch WHERE scope=?', `account:${firstIncarnation}`),
+  ).toEqual(frozen);
+  await expect(loadGoals(old)).rejects.toThrow();
+  expect(await loadGoals(fresh)).toEqual([]);
+  expect(Tracking.importGuestScope).not.toHaveBeenCalled();
 });
 
 it('incremental foreground hydration reads recent dates instead of downloading all history again', async () => {
@@ -342,6 +330,9 @@ it('restores personal counts into a fresh install without uploading them as comp
   expect(value).toMatchObject({ personalViews: 42, views: null, minutes: 1 });
   let backedUp: unknown[] = [];
   const fetchImpl = jest.fn(async (_url, options) => {
+    if(String(_url).includes('/usage/account/history')) return {
+      ok:true,status:200,text:async()=>JSON.stringify({days:[],serverTimeMs:Date.now()}),headers:{get:()=>null}
+    } as unknown as Response;
     if (options?.method === 'POST') {
       backedUp = JSON.parse(options.body as string).days;
       return {

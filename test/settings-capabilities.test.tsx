@@ -1,3 +1,6 @@
+jest.mock('@/auth/account', () => ({
+  useAccountIncarnation: () => '00000000-0000-4000-8000-000000000099',
+}));
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { AppState, Platform, Text } from 'react-native';
@@ -51,6 +54,7 @@ jest.mock('@/ui/kit', () => {
 });
 const me: v1.MeResponse = {
   userId: 'user-a',
+  incarnation: '00000000-0000-4000-8000-000000000099',
   profile: {
     handle: null,
     displayName: null,

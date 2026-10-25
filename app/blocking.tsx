@@ -1,3 +1,5 @@
+import { AccountAllowanceNotice } from '@/sync/AccountAllowanceNotice';
+import { storageScope } from '@/db/scope';
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -162,6 +164,7 @@ export default function Blocking() {
 
   return (
     <Screen hideHeader contentStyle={styles.screen}>
+      <AccountAllowanceNotice />
       <View style={styles.header}>
         <Pressable
           accessibilityRole="button"
@@ -544,7 +547,7 @@ export default function Blocking() {
         onPress={() => router.push('/tracking')}
       />
       <T v="caption" muted style={{ textAlign: 'center', paddingBottom: 8 }}>
-        All features are included. Your focus settings are saved on this phone.
+        {storageScope().startsWith('account:') ? 'Account allowance changes apply next account day after synchronization. Schedules and feed breaks stay on this phone.' : 'All features are included. Your focus settings are saved on this phone.'}
       </T>
     </Screen>
   );

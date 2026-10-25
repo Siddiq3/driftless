@@ -103,7 +103,7 @@ test('a verification completing after sign-out cannot restore old-account access
   expect(Tracking.setEntitlement).not.toHaveBeenCalled();
 });
 test('pending and unspecified purchases never verify or grant Pro', async () => {
-  const api = { playVerify: jest.fn() };
+  const api = { playVerify: jest.fn(), incarnation: 'fixture-incarnation' };
   for (const state of ['pending', 'unspecified'] as const) {
     jest.mocked(Billing.purchase).mockResolvedValue({
       products: ['driftless_pro'],
@@ -153,7 +153,7 @@ test('foreground restore is serialized behind purchase verification', async () =
     acknowledged: false,
   });
   jest.mocked(Billing.active).mockResolvedValue([]);
-  const purchase = buyPro({ playVerify }, 'user', offer);
+  const purchase = buyPro({ playVerify, incarnation: 'fixture-incarnation' }, 'user', offer);
   for (let i = 0; i < 8; i++) await Promise.resolve();
   const restore = restorePro({ playVerify });
   expect(Billing.active).not.toHaveBeenCalled();

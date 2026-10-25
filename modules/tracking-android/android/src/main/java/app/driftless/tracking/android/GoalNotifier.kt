@@ -20,21 +20,22 @@ object GoalNotifier {
     private const val CHANNEL = "goal_alerts"
 
     fun check(context: Context, store: SqliteStore, prefs: TrackingPrefs, nowMs: Long = System.currentTimeMillis()) {
-        val limits = prefs.limits
+        val accounting=store.account.active()
+        val limits = if(accounting) store.account.goalLimits() else prefs.limits
         // Minute protection must stay fresh even with no goals or notification permission.
-        val zone = ZoneId.systemDefault()
+        val zone = store.account.zone()
         val rules = RulesLoader.load(context)
         val block = prefs.blockConfig
-        if ((limits.isNotEmpty() || (block.enabled && block.dailyMinutes != null && block.apps.isNotEmpty())) && UsageReader.granted(context)) {
+        if ((accounting || limits.isNotEmpty() || (block.enabled && block.dailyMinutes != null && block.apps.isNotEmpty())) && UsageReader.granted(context)) {
             UsageReader.refresh(context, store, rules.apps.keys, 1, zone)
         }
-        if (limits.isEmpty()) return
+        if (limits.isEmpty() || store.account.meta("mute_alerts")?.optBoolean("muted")==true) return
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (!nm.areNotificationsEnabled()) return
 
-        val today = Recorder.localDate(nowMs, zone)
+        val today = Recorder.localDate(if(accounting) store.account.now() else nowMs, zone)
         val rows = store.daily(today)
-        val minutes = if (UsageReader.granted(context)) {
+        val minutes = if(accounting) store.account.effectiveUsage("minutes")?.div(60000)?.toInt() else if (UsageReader.granted(context)) {
             (rows.sumOf { it.usageMs } / 60_000L).toInt()
         } else if (store.heartbeatMinutes(today) > 0) {
             (rows.sumOf { it.surfaceMs + it.unknownMs } / 60_000L).toInt()
@@ -42,7 +43,7 @@ object GoalNotifier {
             null
         }
         val validated = rules.apps.values.filter { isValidatedVersion(it, Health.appVersion(context, it.pkg)) }.map { it.pkg }.toSet()
-        val views = if (validated.isEmpty()) null else rows.filter { it.pkg in validated }.sumOf { it.views }
+        val views = if(accounting) store.account.effectiveUsage("views")?.toInt() else if (validated.isEmpty()) null else rows.filter { it.pkg in validated }.sumOf { it.views }
 
         val due = LimitAlerts.due(limits, minutes, views, prefs.sentAlerts(today), today)
         if (due.isEmpty()) return

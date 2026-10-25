@@ -23,6 +23,7 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
     TrackingStore {
 
     private val appContext = context.applicationContext
+    val account by lazy { AccountUsage(this, appContext) }
     private val capturedScope = ThreadLocal<String?>()
 
     override fun onConfigure(db: SQLiteDatabase) {
@@ -62,16 +63,18 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
             "CREATE TABLE heartbeats (local_date TEXT NOT NULL, minute INTEGER NOT NULL, PRIMARY KEY (local_date, minute))",
         )
         migrateScopes(db, fresh = true)
+        AccountUsage.create(db)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         // Forward-only migrations. Never drop user aggregates.
         if (oldVersion < 2) db.execSQL("ALTER TABLE daily ADD COLUMN usage_ms INTEGER NOT NULL DEFAULT 0")
         if (oldVersion < 3) migrateScopes(db, fresh = false)
+        if (oldVersion < 4) AccountUsage.create(db)
     }
 
     private fun ensureDaily(db: SQLiteDatabase, date: String, pkg: String) {
-        db.execSQL("INSERT OR IGNORE INTO daily (scope, local_date, pkg, tz) VALUES (?, ?, ?, ?)", arrayOf(activeScope(), date, pkg, ZoneId.systemDefault().id))
+        db.execSQL("INSERT OR IGNORE INTO daily (scope, local_date, pkg, tz) VALUES (?, ?, ?, ?)", arrayOf(activeScope(), date, pkg, account.zone().id))
     }
 
     @Synchronized
@@ -95,6 +98,13 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
             }
             val row = db.insertWithOnConflict("events", null, v, SQLiteDatabase.CONFLICT_IGNORE)
             if (row == -1L) return false // duplicate event_id or (session_id, seq): already counted
+            if(e.kind == ViewKind.VIEW && !account.view(e.eventId,e.localDate,e.pkg,e.countedAtMs)) {
+                db.delete("events","scope=? AND event_id=?",arrayOf(activeScope(),e.eventId)); db.setTransactionSuccessful(); return false
+            }
+            if(e.countedAtMs < account.cutoff()) {
+                db.delete("events","scope=? AND event_id=?",arrayOf(activeScope(),e.eventId))
+                db.setTransactionSuccessful(); return true
+            }
             ensureDaily(db, e.localDate, e.pkg)
             val col = if (e.kind == ViewKind.VIEW) "views" else "ad_views"
             db.execSQL("UPDATE daily SET $col = $col + 1, tz = ?, status = CASE WHEN status = 'experimental' OR ? = 0 THEN 'experimental' ELSE 'validated' END WHERE scope = ? AND local_date = ? AND pkg = ?", arrayOf(e.tz, if (RulesLoader.load(appContext).apps[e.pkg]?.let { app.driftless.tracking.core.isValidatedVersion(it, e.appVersion) } == true) 1 else 0, activeScope(), e.localDate, e.pkg))
@@ -120,6 +130,12 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
         } finally {
             db.endTransaction()
         }
+    }
+
+    @Synchronized
+    fun setAccountUsage(date: String, pkg: String, ms: Long) {
+        val db=writableDatabase; db.beginTransaction()
+        try { account.usage(date,pkg,ms); db.setTransactionSuccessful() } finally { db.endTransaction() }
     }
 
     @Synchronized
@@ -152,10 +168,12 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
 
     @Synchronized
     override fun heartbeat(localDate: String, minuteOfDay: Int) {
-        writableDatabase.execSQL(
-            "INSERT OR IGNORE INTO heartbeats (scope, local_date, minute) VALUES (?, ?, ?)",
-            arrayOf<Any>(activeScope(), localDate, minuteOfDay),
-        )
+        val db=writableDatabase; db.beginTransaction()
+        try {
+            db.execSQL("INSERT OR IGNORE INTO heartbeats (scope, local_date, minute) VALUES (?, ?, ?)", arrayOf<Any>(activeScope(),localDate,minuteOfDay))
+            account.observeViews(localDate,RulesLoader.load(appContext).apps.keys)
+            db.setTransactionSuccessful()
+        } finally { db.endTransaction() }
     }
 
     @Synchronized
@@ -175,6 +193,24 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
                 while (c.moveToNext()) add(DailyRow(c.getString(0), c.getString(1), c.getInt(2), c.getInt(3), c.getLong(4), c.getLong(5), c.getLong(6)))
             }
         }
+
+    /** Hidden reset baseline is used only for backup and pre-cutover enforcement. */
+    @Synchronized
+    fun backupDaily(date: String): List<DailyRow> {
+        val current=daily(date).associateBy { it.pkg }.toMutableMap()
+        val baseline=account.meta("backup:$date")?.optJSONArray("rows") ?: return current.values.toList()
+        for(i in 0 until baseline.length()) {
+            val b=baseline.getJSONObject(i); val pkg=b.getString("pkg")
+            val r=current[pkg] ?: DailyRow(date,pkg,0,0,0,0,0)
+            current[pkg]=r.copy(views=r.views+b.getInt("views"),adViews=r.adViews+b.getInt("adViews"),surfaceMs=r.surfaceMs+b.getLong("surfaceMs"),unknownMs=r.unknownMs+b.getLong("unknownMs"),usageMs=r.usageMs+b.getLong("usageMs"))
+        }
+        return current.values.toList()
+    }
+    @Synchronized
+    fun <T> inScope(scope: String, fn: () -> T): T {
+        val previous=capturedScope.get(); capturedScope.set(scope)
+        try { return fn() } finally { capturedScope.set(previous) }
+    }
 
     /** Enumerate retained aggregate dates without replaying or recomputing historical events. */
     @Synchronized
@@ -249,9 +285,16 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
     @Synchronized
     fun activeScope(): String = capturedScope.get() ?: readableDatabase.rawQuery("SELECT value FROM tracking_meta WHERE key = 'active_scope'", null).use { it.moveToFirst(); it.getString(0) }
 
+    /** A delayed recorder resolves the timezone of its captured incarnation, too. */
+    fun capturedZone(): () -> ZoneId {
+        val owner=activeScope()
+        return { inScope(owner) { account.zone() } }
+    }
+
     /** A recorder retains its write owner even if an old callback finishes after logout. */
     fun capturedStore(): TrackingStore {
         val scope = activeScope()
+        val generation=account.resetGeneration()
         fun <T> bound(fn: () -> T): T = synchronized(this) {
             val previous = capturedScope.get()
             val resolved = readableDatabase.rawQuery("SELECT target FROM scope_bindings WHERE source=?", arrayOf(scope)).use { if(it.moveToFirst()) it.getString(0) else scope }
@@ -260,11 +303,11 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
         }
         return object : TrackingStore {
             override fun recordView(e: ViewEvent) = bound { this@SqliteStore.recordView(e) }
-            override fun addTime(d: String, p: String, s: Long, u: Long) = bound { this@SqliteStore.addTime(d, p, s, u) }
-            override fun setUsage(d: String, p: String, u: Long) = bound { this@SqliteStore.setUsage(d, p, u) }
-            override fun saveRing(p: String, r: List<String>, t: Long) = bound { this@SqliteStore.saveRing(p, r, t) }
+            override fun addTime(d: String, p: String, s: Long, u: Long) = bound { if(account.resetGeneration()==generation) this@SqliteStore.addTime(d, p, s, u) }
+            override fun setUsage(d: String, p: String, u: Long) = bound { if(account.resetGeneration()==generation) this@SqliteStore.setUsage(d, p, u) }
+            override fun saveRing(p: String, r: List<String>, t: Long) = bound { if(account.resetGeneration()==generation) this@SqliteStore.saveRing(p, r, t) }
             override fun loadRing(p: String, n: Long, a: Long) = bound { this@SqliteStore.loadRing(p, n, a) }
-            override fun heartbeat(d: String, m: Int) = bound { this@SqliteStore.heartbeat(d, m) }
+            override fun heartbeat(d: String, m: Int) = bound { if(account.resetGeneration()==generation) this@SqliteStore.heartbeat(d, m) }
             override fun heartbeatMinutes(d: String) = bound { this@SqliteStore.heartbeatMinutes(d) }
             override fun daily(d: String) = bound { this@SqliteStore.daily(d) }
             override fun events(t: Long) = bound { this@SqliteStore.events(t) }
@@ -281,6 +324,8 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
         try {
             val now = System.currentTimeMillis()
             db.execSQL("UPDATE scope_intervals SET end_ms = ? WHERE scope = ? AND end_ms IS NULL", arrayOf(now, previous))
+            db.execSQL("UPDATE account_intervals SET end_ms=? WHERE scope=? AND end_ms IS NULL",arrayOf(now,previous))
+            if(next.startsWith("account:")) db.execSQL("INSERT INTO account_intervals(scope,start_ms) VALUES (?,?)",arrayOf(next,now))
             db.execSQL("INSERT INTO scope_intervals(scope, start_ms) VALUES (?, ?)", arrayOf(next, now))
             db.execSQL("UPDATE tracking_meta SET value = ? WHERE key = 'active_scope'", arrayOf(next))
             db.setTransactionSuccessful()
@@ -317,6 +362,12 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
     ).use { c -> buildList { while(c.moveToNext()) add(c.getLong(0) to c.getLong(1)) } }
 
     @Synchronized
+    fun accountingIntervals(start: Long,end: Long): List<Pair<Long,Long>> = readableDatabase.rawQuery(
+        "SELECT MAX(start_ms,?),MIN(COALESCE(end_ms,?),?) FROM account_intervals WHERE scope=? AND start_ms<? AND COALESCE(end_ms,?)>?",
+        arrayOf(start.toString(),end.toString(),end.toString(),activeScope(),end.toString(),end.toString(),start.toString())
+    ).use { c -> buildList { while(c.moveToNext()) add(c.getLong(0) to c.getLong(1)) } }
+
+    @Synchronized
     fun setSourceDevice(id: String) { writableDatabase.execSQL("INSERT OR REPLACE INTO tracking_meta VALUES ('device_id', ?)", arrayOf(id)) }
 
     @Synchronized
@@ -329,6 +380,7 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
         try {
             for (i in 0 until rows.length()) {
                 val d = rows.getJSONObject(i)
+                if(account.cutoff()>0 && d.getString("localDate")<=app.driftless.tracking.core.Recorder.localDate(account.cutoff(),account.zone())) continue
                 val v = ContentValues().apply {
                     put("scope", expectedScope); put("local_date", d.getString("localDate")); put("device_id", d.getString("deviceId")); put("tz", d.getString("tz")); put("rev", d.getLong("rev")); put("coverage", d.getDouble("coverage"))
                     if (d.isNull("views")) putNull("views") else put("views", d.getInt("views"))
@@ -337,7 +389,7 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
                 val rev = db.rawQuery("SELECT rev FROM synced_daily WHERE scope=? AND local_date=? AND device_id=?", arrayOf(expectedScope, d.getString("localDate"), d.getString("deviceId"))).use { if(it.moveToFirst()) it.getLong(0) else -1L }
                 if(d.getLong("rev") >= rev) db.insertWithOnConflict("synced_daily", null, v, SQLiteDatabase.CONFLICT_REPLACE)
             }
-            db.execSQL("DELETE FROM synced_daily WHERE local_date < ?", arrayOf(java.time.LocalDate.now().minusDays(399).toString()))
+            db.execSQL("DELETE FROM synced_daily WHERE local_date < ?", arrayOf(java.time.Instant.ofEpochMilli(account.now()).atZone(account.zone()).toLocalDate().minusDays(399).toString()))
             db.setTransactionSuccessful()
         } finally { db.endTransaction() }
     }
@@ -351,6 +403,7 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
 
     @Synchronized
     fun personalMeasurement(date: String, packages: Set<String>): Map<String, Any?> {
+        account.measurement(date)?.let { return it }
         val own = daily(date).filter { it.pkg in packages }
         val localViews = own.sumOf { it.views }
         val knownLocal = own.isNotEmpty() && (heartbeatMinutes(date)>0 || localViews>0)
@@ -381,7 +434,7 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
 
     companion object {
         const val DB_NAME = "driftless_tracking.db"
-        const val SCHEMA_VERSION = 3
+        const val SCHEMA_VERSION = 4
 
         @Volatile private var instance: SqliteStore? = null
 

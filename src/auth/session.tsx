@@ -88,10 +88,9 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
       await SecureStore.deleteItemAsync(LEGACY_KEY);
       const staySignedIn = await SecureStore.getItemAsync(ENABLED_KEY);
       const token = staySignedIn === 'true' ? await googleIdentity(GoogleSignin, false) : null;
-      const previousOwner = await SecureStore.getItemAsync(OWNER_KEY);
       const owner = token ? GoogleSignin.getCurrentUser()?.user.id : null;
       if (active) {
-        if (!owner || owner !== previousOwner) invalidateEntitlement();
+        invalidateEntitlement();
         if (owner) await SecureStore.setItemAsync(OWNER_KEY, owner);
         if (!active) return;
         accountOwner.current = owner ?? null;

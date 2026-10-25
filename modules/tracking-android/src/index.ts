@@ -126,12 +126,21 @@ type NativeTracking = {
   openAccessibilitySettings(): void;
   openAccessibilityGuide(): void;
   openUsageAccessSettings(): void;
+  accountUsageInfo(): string;
+  installAccountUsage(json:string,scope:string): void;
+  accountUsageContributions(device:string):string;
+  ackAccountUsage(date:string,rev:number):void;
+  resetAccountHistory():void;
+  forgetAccountUsage():void;
   refreshUsage(days: number): number;
   getDaily(localDate: string | null): Daily;
+  installAccountHistory?(json:string,scope:string): void;
+  getBackupDaily?(localDate: string | null): Daily;
   getStoredDates?(from: string, to: string): string[];
   exportSessionLog(days: number): { uri: string; count: number };
   scheduleStructureCapture(delayMs: number): void;
   lastStructureCapture(): string;
+  enableGoalAlerts?():void;
   setLimits(limits: { metric: 'views' | 'minutes'; dailyLimit: number }[]): void;
   checkGoals(): void;
   setBlocking(config: BlockingConfig): void;
@@ -202,6 +211,15 @@ export const Tracking = {
       ? native.openAccessibilityGuide()
       : native.openAccessibilitySettings(),
   openUsageAccessSettings: () => native.openUsageAccessSettings(),
+  accountUsageInfo: (): {tz:string;active:boolean;status:string;cutoffMs:number;resetGeneration:number;nowMs:number;accountTz?:string;limits?:Record<string,number>;used?:Record<string,number|null>;remaining?:Record<string,number|null>} => {
+    if(typeof native.accountUsageInfo !== 'function') throw new Error('Rebuild the Android app to enable account usage protection.');
+    return JSON.parse(native.accountUsageInfo());
+  },
+  installAccountUsage: (json:string,scope:string) => native.installAccountUsage(json,scope),
+  accountUsageContributions: (device:string):unknown[] => JSON.parse(native.accountUsageContributions(device)),
+  ackAccountUsage: (date:string,rev:number) => native.ackAccountUsage(date,rev),
+  resetAccountHistory: () => native.resetAccountHistory(),
+  forgetAccountUsage: () => native.forgetAccountUsage(),
   refreshUsage: (days = 7) => native.refreshUsage(days),
   storedDates: (from: string, to: string) => {
     if (!native.getStoredDates)
@@ -211,9 +229,15 @@ export const Tracking = {
     return native.getStoredDates(from, to);
   },
   daily: (localDate: string | null = null) => native.getDaily(localDate),
+  installAccountHistory: (json:string,scope:string) => {
+    if(!native.installAccountHistory) throw new Error('Rebuild Android for account history support');
+    native.installAccountHistory(json,scope);
+  },
+  backupDaily: (localDate: string | null = null) => native.getBackupDaily?.(localDate) ?? native.getDaily(localDate),
   exportSessionLog: (days = 7) => native.exportSessionLog(days),
   scheduleStructureCapture: (delayMs = 8000) => native.scheduleStructureCapture(delayMs),
   lastStructureCapture: () => native.lastStructureCapture(),
+  enableGoalAlerts: () => native.enableGoalAlerts?.(),
   setLimits: (limits: { metric: 'views' | 'minutes'; dailyLimit: number }[]) =>
     native.setLimits(limits),
   checkGoals: () => native.checkGoals(),

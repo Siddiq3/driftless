@@ -42,6 +42,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     // Completion is durable even if mirroring to Android needs a retry on home focus.
     try {
       const goals = await loadGoals(db);
+      Tracking.enableGoalAlerts?.();
       Tracking.setLimits(
         goals.filter((g) => g.enabled).map((g) => ({ metric: g.metric, dailyLimit: g.dailyLimit })),
       );

@@ -5,7 +5,7 @@ import { useCallback, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { Tracking, type Daily, type TrackingHealth } from 'tracking-android';
 import { getDb } from '../db';
-import { currentTimeZone } from '../sync/run';
+import { currentAccountTime, currentTimeZone } from '../sync/run';
 import { progress, type Progress } from './progress';
 import { loadGoals } from './store';
 import { personalDay, personalRawDay, refreshPersonalData } from '@/data/personal';
@@ -39,7 +39,7 @@ export function useProgress(window = 60, live = false): [ProgressState, () => vo
       Tracking.setLimits(
         goals.filter((g) => g.enabled).map((g) => ({ metric: g.metric, dailyLimit: g.dailyLimit })),
       );
-      const today = localDateOf(Date.now(), currentTimeZone());
+      const today = localDateOf(currentAccountTime(), currentTimeZone());
       const fullRead = !live || history.current.today !== today || history.current.days.size === 0;
       refreshPersonalData(fullRead ? 7 : 1);
       Tracking.refreshCountWidget();

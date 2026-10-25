@@ -9,7 +9,12 @@ class PlayerTransition {
     private var hadContainer = false
     private var missingSince: Long? = null
 
+    private var lastTime: Long? = null
+    fun reset() { packageName=null; hadContainer=false; missingSince=null; lastTime=null }
+
     fun observe(pkg: String, c: Classification, now: Long): Boolean {
+        if(lastTime?.let { now<it }==true) return false
+        lastTime=now
         if (pkg != packageName || c.surface != Surface.SHORT_VIDEO) {
             packageName = pkg
             hadContainer = false

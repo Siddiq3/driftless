@@ -15,6 +15,26 @@ import org.robolectric.annotation.Config
 class AccountScopeTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
     private fun event(id:String, date:String="2026-10-24") = ViewEvent(id,id,1,"com.instagram.android",ViewKind.VIEW,1,1000,date,"Asia/Kolkata",1,"unapproved")
+    @Test fun freshIncarnationDoesNotAdoptLegacyBindingsOrDelayedRecorderWrites() {
+        val store = SqliteStore(context, null)
+        val old = "account:00000000-0000-4000-8000-000000000001"
+        val fresh = "account:00000000-0000-4000-8000-000000000002"
+        store.selectScope("guest:old")
+        store.recordView(event("old-guest"))
+        // Simulate an existing installation's historical import binding. Phase 1 must not
+        // rebind this source or use it to choose a freshly registered incarnation.
+        store.importGuest("guest:old", old)
+        store.selectScope(old)
+        val recorder = store.capturedStore()
+        store.selectScope("pending:signin")
+        store.selectScope(fresh)
+        recorder.recordView(event("delayed-old-incarnation"))
+        assertTrue(store.daily("2026-10-24").isEmpty())
+        assertNull(store.personalMeasurement("2026-10-24", setOf("com.instagram.android"))["views"])
+        store.selectScope(old)
+        assertEquals(2, store.daily("2026-10-24").sumOf { it.views })
+        store.close()
+    }
     @Test fun scopesSeparateRecordedDataAndOldRecorderCallbacks() {
         val store=SqliteStore(context,null)
         store.selectScope("account:a")

@@ -9,8 +9,6 @@ import android.content.Intent
 import android.os.Build
 import android.widget.RemoteViews
 import app.driftless.tracking.R
-import app.driftless.tracking.core.isValidatedVersion
-import java.time.LocalDate
 
 /** Same validation/unknown rules as the app; no login or network required. */
 class CountWidget : AppWidgetProvider() {
@@ -30,14 +28,14 @@ class CountWidget : AppWidgetProvider() {
             val ids = manager.getAppWidgetIds(ComponentName(context, CountWidget::class.java))
             if (ids.isEmpty()) return
             val store = SqliteStore.get(context)
-            val date = LocalDate.now().toString()
+            val date = store.account.date()
             val personal = store.personalMeasurement(date, RulesLoader.load(context).apps.keys)
             val known = personal["views"] != null
             val count = personal["views"]?.toString() ?: "—"
-            val active = TrackingPrefs(context).disclosureAccepted && Health.serviceEnabled(context) && DriftlessAccessibilityService.current != null
+            val active = TrackingPrefs(context).disclosureAccepted && Health.serviceEnabled(context) && DriftlessAccessibilityService.current?.isOperational == true
             val view = RemoteViews(context.packageName, R.layout.driftless_count_widget).apply {
                 setTextViewText(R.id.count_widget_value, count)
-                setTextViewText(R.id.count_widget_status, if (!active) "Counting is off · tap to set up" else if (!known) "Count not confirmed · tap for details" else "Updated ${java.time.LocalTime.now().withSecond(0).withNano(0)}")
+                setTextViewText(R.id.count_widget_status, if (!active) "Counting is off · tap to set up" else if (!known) "Count not confirmed · tap for details" else "Updated ${java.time.Instant.ofEpochMilli(store.account.now()).atZone(store.account.zone()).toLocalTime().withSecond(0).withNano(0)}")
                 context.packageManager.getLaunchIntentForPackage(context.packageName)?.let { launch ->
                     setOnClickPendingIntent(R.id.count_widget_root, PendingIntent.getActivity(context, 1701, launch, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
                 }

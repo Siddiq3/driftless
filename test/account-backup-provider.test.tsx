@@ -110,3 +110,22 @@ it('pauses all automatic retries before explicit deletion', async () => {
   expect(backupAccount).toHaveBeenCalledTimes(1);
   expect(state.status.state).toBe('paused');
 });
+it('resumes after reset with a fresh worker without reviving a pre-reset request',async()=>{
+  mockApi={} as ApiClient;
+  let oldAllowed!:()=>boolean;
+  let finish!:(value:{state:'saved';message:string})=>void;
+  jest.mocked(backupAccount).mockImplementationOnce((_api,allowed)=>{
+    oldAllowed=allowed;return new Promise(resolve=>{finish=resolve;});
+  });
+  await mount();expect(oldAllowed()).toBe(true);
+  await act(async()=>state.pause());expect(oldAllowed()).toBe(false);
+  await act(async()=>state.resume());expect(oldAllowed()).toBe(false);
+  expect(backupAccount).toHaveBeenCalledTimes(2);expect(state.status.message).toBe('Saved');
+  await act(async()=>finish({state:'saved',message:'PRE RESET'}));
+  expect(state.status.message).toBe('Saved');
+});
+it('refreshes account-day credit each foreground minute even with unchanged local records',async()=>{
+  mockApi={} as ApiClient;await mount();
+  await act(async()=>{jest.advanceTimersByTime(60000);});
+  expect(backupAccount).toHaveBeenCalledTimes(2);
+});

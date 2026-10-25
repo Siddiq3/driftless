@@ -27,6 +27,7 @@ const health: TrackingHealth = {
 };
 const me: v1.MeResponse = {
   userId: 'user',
+  incarnation: '00000000-0000-4000-8000-000000000099',
   profile: {
     handle: null,
     displayName: null,

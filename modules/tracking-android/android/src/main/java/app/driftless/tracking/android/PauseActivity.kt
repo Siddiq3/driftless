@@ -27,10 +27,35 @@ import app.driftless.tracking.core.CountBadgeMood
  */
 class PauseActivity : Activity() {
     private var floatAnimation: ValueAnimator? = null
+    private var ownerScope=""
+    private var ownerDate=""
+    private val main=android.os.Handler(android.os.Looper.getMainLooper())
+    private val refresh=object:Runnable {
+        override fun run() {
+            val store=SqliteStore.get(this@PauseActivity)
+            if(store.activeScope()!=ownerScope || store.account.date()!=ownerDate) {finish();return}
+            val pkg=intent.getStringExtra(EXTRA_PKG).orEmpty()
+            val reason=intent.getStringExtra(EXTRA_REASON)
+            if(reason=="ACCOUNT_CREDIT") {
+                if(!store.account.active() || !store.account.blocked(pkg)) {finish();return}
+            } else {
+                val prefs=TrackingPrefs(this@PauseActivity)
+                val saved=prefs.blockConfig
+                val cfg=if(store.account.active()) saved.copy(dailyMinutes=null) else saved
+                val at=java.time.Instant.ofEpochMilli(store.account.now()).atZone(store.account.zone())
+                val row=store.backupDaily(ownerDate).firstOrNull {it.pkg==pkg}
+                val minutes=row?.let {(maxOf(it.usageMs,it.surfaceMs+it.unknownMs)/60000).toInt()}
+                if(!BlockPolicy.decide(pkg,cfg,prefs.entitlement,minutes,at.dayOfWeek.value,at.hour*60+at.minute,prefs.snoozedUntil(pkg),store.account.now()).block) {finish();return}
+            }
+            main.postDelayed(this,DriftlessAccessibilityService.TICK_MS)
+        }
+    }
     private var mascot: BlinkingBrainView? = null
 
     override fun onResume() {
         super.onResume()
+        if(SqliteStore.get(this).activeScope()!=ownerScope) {finish();return}
+        main.removeCallbacks(refresh);main.postDelayed(refresh,DriftlessAccessibilityService.TICK_MS)
         if (Build.VERSION.SDK_INT < 26 || ValueAnimator.areAnimatorsEnabled()) {
             floatAnimation = ValueAnimator.ofFloat(0f, -6f * resources.displayMetrics.density, 0f).apply {
                 duration = 3200L
@@ -43,6 +68,7 @@ class PauseActivity : Activity() {
     }
 
     override fun onPause() {
+        main.removeCallbacks(refresh)
         floatAnimation?.cancel()
         floatAnimation = null
         mascot?.translationY = 0f
@@ -51,9 +77,27 @@ class PauseActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        renderPause()
+    }
+
+    override fun onNewIntent(next: Intent) {
+        super.onNewIntent(next)
+        setIntent(next)
+        floatAnimation?.cancel();floatAnimation=null
+        main.removeCallbacks(refresh)
+        renderPause()
+    }
+
+    private fun renderPause() {
         val pkg = intent.getStringExtra(EXTRA_PKG).orEmpty()
         val reason = intent.getStringExtra(EXTRA_REASON).orEmpty()
         val prefs = TrackingPrefs(this)
+        val store=SqliteStore.get(this)
+        ownerScope=intent.getStringExtra(EXTRA_SCOPE) ?: store.activeScope()
+        ownerDate=store.account.date()
+        if(ownerScope!=store.activeScope()) {finish();return}
+        val renderScope=ownerScope
+        val renderDate=ownerDate
         val label = RulesLoader.load(this).apps[pkg]?.label ?: "this app"
 
         fun dp(v: Int) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v.toFloat(), resources.displayMetrics).toInt()
@@ -84,7 +128,9 @@ class PauseActivity : Activity() {
         }
 
         val title = if (reason == "SCHEDULE") "Your offline era starts now." else "Plot twist: we log off."
-        val body = if (reason == "SCHEDULE") {
+        val body = if(reason == "ACCOUNT_CREDIT") {
+            "Account credit is exhausted or cannot be verified. Open ScrollSnooze to reconnect and refresh your reserved allowance. Usage continues to be recorded. Other offline devices may hold reserved credit."
+        } else if (reason == "SCHEDULE") {
             "You made room for life beyond $label.\nLet’s keep that promise to yourself."
         } else {
             "Today’s video allowance is used.\nYour next side quest is off-screen."
@@ -131,7 +177,7 @@ class PauseActivity : Activity() {
                     addView(mascot)
                     addView(text(title, 30f, Color.parseColor("#FFF9ED")).apply { setTypeface(typeface, Typeface.BOLD) })
                     addView(text(body, 16f, Color.parseColor("#C4B69D")))
-                    addView(text(if (reason == "SCHEDULE") "Your focus schedule is active for $label." else "Reels & Shorts reset on the next local day.", 13f, Color.parseColor("#E8D8BA")).apply {
+                    addView(text(if(reason == "ACCOUNT_CREDIT") "Credit follows your fixed account timezone: ${SqliteStore.get(this@PauseActivity).account.zone().id}. Reconnect after the account day changes." else if (reason == "SCHEDULE") "Your focus schedule is active for $label." else "Reels & Shorts reset on the next local day.", 13f, Color.parseColor("#E8D8BA")).apply {
                         background = GradientDrawable().apply {
                             setColor(Color.parseColor("#201B16"))
                             cornerRadius = dp(18).toFloat()
@@ -140,11 +186,13 @@ class PauseActivity : Activity() {
                         layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(14); bottomMargin = dp(6) }
                 })
                 addView(button("Leave feed · take a breather", primary = true) { goHome() })
-                if (snoozesLeft > 0) {
+                if (snoozesLeft > 0 && reason != "ACCOUNT_CREDIT") {
                     addView(
                         button("5 more minutes · $snoozesLeft bypasses left today", primary = false) {
-                            prefs.snooze(pkg, System.currentTimeMillis() + BlockPolicy.SNOOZE_MS)
-                            finish()
+                            if(!isFinishing && store.activeScope()==renderScope && store.account.date()==renderDate && prefs.snoozesToday()<BlockPolicy.MAX_SNOOZES_PER_DAY) {
+                                prefs.snooze(pkg,store.account.now()+BlockPolicy.SNOOZE_MS)
+                                finish()
+                            }
                         },
                     )
                 }
@@ -171,6 +219,7 @@ class PauseActivity : Activity() {
     }
 
     companion object {
+        const val EXTRA_SCOPE = "scope"
         const val EXTRA_PKG = "pkg"
         const val EXTRA_REASON = "reason"
     }

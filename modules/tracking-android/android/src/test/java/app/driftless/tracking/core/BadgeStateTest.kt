@@ -4,6 +4,12 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class BadgeStateTest {
+    @Test fun accountLongTotalsAndUnavailableMeasurementsAreNotDisplayedAsZero() {
+        assertEquals("42",countBadgeValue(42L,false,true,50).text)
+        assertEquals(CountBadgeMood.DRAINED,countBadgeValue(50L,false,true,50).mood)
+        assertEquals(CountBadgeValue("—","Usage unavailable",CountBadgeMood.UNKNOWN),countBadgeValue(null,false,true,50))
+        assertEquals("0",countBadgeValue(0L,false,true,50).text)
+    }
     @Test fun visibleOnlyForAnEnabledConsentedUnlockedShortVideo() {
         assertTrue(showCountBadge(true,true,true,false,true,Surface.SHORT_VIDEO))
         assertFalse(showCountBadge(false,true,true,false,true,Surface.SHORT_VIDEO))

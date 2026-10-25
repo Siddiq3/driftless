@@ -21,6 +21,57 @@ class EngineTest {
 
     private fun video(fp: String) = Classification(Surface.SHORT_VIDEO, fp, isAd = false, nodesVisited = 3)
 
+    @Test fun delayedLeaveCannotDropTheActiveSessionOrCreateANewCount() {
+        val store=MemoryStore();val e=Engine(store,rules,zone={kolkata})
+        val t=at(10,0)
+        e.onObservation(ig,null,video("a"),false,t);e.onTick(t+2000)
+        e.onLeave(t+1000)
+        assertEquals(ig,e.activePackage)
+        e.onTick(t+3000)
+        assertEquals(3000L,store.daily("2026-10-18").single().surfaceMs)
+        assertEquals(1,store.eventsById.size)
+    }
+
+    @Test fun staleCrossAppCallbackCannotReplaceCurrentSessionOrCreditTimeTwice() {
+        val yt="com.google.android.youtube"
+        val both=rules.copy(apps=rules.apps + (yt to rules.apps.getValue(ig).copy(pkg=yt)))
+        val store=MemoryStore();val e=Engine(store,both,zone={kolkata});val t=at(10,0)
+        e.onObservation(ig,null,video("a"),false,t);e.onTick(t+2000)
+        e.onObservation(yt,null,video("late"),true,t+500)
+        assertEquals(ig,e.activePackage)
+        e.onTick(t+3000);e.onTick(t+3000)
+        assertEquals(3000L,store.daily("2026-10-18").single().surfaceMs)
+        assertEquals(1,store.eventsById.size)
+    }
+
+    @Test fun backwardsTickCannotCreateAHeartbeatInThePreviousDay() {
+        val store=MemoryStore();val e=Engine(store,rules,zone={kolkata})
+        e.onTick(at(0,0,1,day=19));e.onTick(at(23,59,59));e.onTick(at(0,0,1,day=19))
+        assertEquals(0,store.heartbeatMinutes("2026-10-18"))
+        assertEquals(1,store.heartbeatMinutes("2026-10-19"))
+    }
+
+    @Test fun screenOffInterruptAndReconnectDoNotCreditTheUnobservedGap() {
+        val store=MemoryStore();val t=at(10,0)
+        val first=Engine(store,rules,zone={kolkata})
+        first.onObservation(ig,null,video("a"),false,t);first.onTick(t+2000);first.onLeave(t+2500)
+        first.onLeave(t+2500);first.onTick(t+120000)
+        val restarted=Engine(store,rules,zone={kolkata})
+        restarted.onObservation(ig,null,video("a"),false,t+121000);restarted.onTick(t+123000)
+        assertEquals(1,store.eventsById.size)
+        assertEquals(4500L,store.daily("2026-10-18").single().surfaceMs)
+    }
+
+    @Test fun appVersionChangeStartsANewRecorderWithoutRecountingTheSameItem() {
+        val store=MemoryStore();val e=Engine(store,rules,zone={kolkata});val t=at(10,0)
+        e.onObservation(ig,"old",video("a"),false,t);e.onTick(t+2000)
+        e.onObservation(ig,"new",video("a"),false,t+3000);e.onTick(t+5000)
+        e.onObservation(ig,"new",video("b"),true,t+6000);e.onTick(t+8000)
+        val events=store.eventsById.values.toList()
+        assertEquals(listOf("old","new"),events.map {it.appVersion})
+        assertEquals(2,events.map {it.sessionId}.toSet().size)
+    }
+
     @Test fun recordsEventsWithUniqueIdsAndMonotonicSequence() {
         val store = MemoryStore()
         val e = Engine(store, rules, zone = { kolkata })
