@@ -1,7 +1,8 @@
 package app.driftless.tracking.core
 
-/** New crossings only: never replay old milestones after reconnect, date change or a correction. */
+/** First count once per day, then new 50-count crossings. Never replay recorded milestones. */
 fun nextMemeMilestone(previousDate: String?, previousCount: Int?, date: String, count: Int, shown: Int): Int? {
+    if (count == 1 && shown == 0 && (previousDate != date || previousCount == null || previousCount < 1)) return 1
     if (previousDate != date || previousCount == null || count <= previousCount || count < 50) return null
     val milestone = count / 50 * 50
     return milestone.takeIf { previousCount / 50 < count / 50 && it > shown }

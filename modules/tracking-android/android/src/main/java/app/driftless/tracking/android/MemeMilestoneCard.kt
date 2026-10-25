@@ -20,19 +20,28 @@ import app.driftless.tracking.R
 import app.driftless.tracking.core.CountBadgeValue
 import app.driftless.tracking.core.CountBadgeMood
 import app.driftless.tracking.core.memeCopy
+import app.driftless.tracking.core.MemeCollection
 
 /** Dismissible, local-only break card over the recognized player. Never touches the player itself. */
 class MemeMilestoneCard(private val service: AccessibilityService) {
     private val wm = service.getSystemService(WindowManager::class.java)
     private var root: FrameLayout? = null
+    private val prefs = TrackingPrefs(service)
+    private val availableMemes by lazy {
+        val assets = service.assets.list("memes")?.toSet().orEmpty()
+        MemeCollection.all.filter { "${it.id}.gif" in assets }
+    }
     val isShowing get() = root != null
     private fun dp(n: Int) = (n * service.resources.displayMetrics.density).toInt()
     private fun rounded(top: String, bottom: String = top, radius: Int = 28) = GradientDrawable(
         GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(Color.parseColor(top), Color.parseColor(bottom))
     ).apply { cornerRadius = dp(radius).toFloat() }
 
-    fun show(value: CountBadgeValue, milestone: Int, language: String, onBreak: () -> Unit): Boolean {
+    fun show(value: CountBadgeValue, milestone: Int, language: String, shorts: Boolean = false, onBreak: () -> Unit): Boolean {
         if (isShowing) return false
+        val reaction = MemeCollection.choose(availableMemes, prefs.usedMemeReactions(), prefs.lastMemeReaction())
+            ?: return false
+        val captionIndex = MemeCollection.captionIndex(reaction, prefs.previousMemeCaption(reaction.id))
         val copy = memeCopy(language, milestone)
         val backdrop = FrameLayout(service).apply {
             setBackgroundColor(Color.parseColor("#B5000000"))
@@ -65,16 +74,19 @@ class MemeMilestoneCard(private val service: AccessibilityService) {
             setOnClickListener { hide() }
         },LinearLayout.LayoutParams(dp(48),dp(48)).apply { leftMargin=dp(12) })
         column.addView(header,LinearLayout.LayoutParams(-1,-2))
-        val artwork=ImageView(service).apply {
-            setImageResource(if(language == "te") R.drawable.meme_telugu else R.drawable.meme_global)
-            scaleType=ImageView.ScaleType.CENTER_CROP; background=rounded("#28241E",radius=20)
-            clipToOutline=true; importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        val artwork=MemeGifView(service, "memes/${reaction.id}.gif").apply {
+            background=rounded("#28241E",radius=20)
+            clipToOutline=true; contentDescription=reaction.description
         }
         val heightDp=service.resources.displayMetrics.heightPixels/service.resources.displayMetrics.density
         column.addView(artwork,LinearLayout.LayoutParams(-1,dp(if(heightDp < 650) 140 else 210)).apply {topMargin=dp(12)})
         column.addView(TextView(service).apply {
-            text=copy.caption; textSize=20f; gravity=Gravity.CENTER; typeface=Typeface.DEFAULT_BOLD
+            text=reaction.caption(captionIndex, milestone, shorts); textSize=20f; gravity=Gravity.CENTER; typeface=Typeface.DEFAULT_BOLD
             setTextColor(Color.parseColor("#FFFAED")); setPadding(dp(4),dp(20),dp(4),dp(12))
+        },LinearLayout.LayoutParams(-1,-2))
+        column.addView(TextView(service).apply {
+            text="GIF via Tenor"; textSize=11f; gravity=Gravity.CENTER
+            setTextColor(Color.parseColor("#C7BDAA"))
         },LinearLayout.LayoutParams(-1,-2))
         fun action(label: String, primary: Boolean, click: () -> Unit) = Button(service).apply {
             text=label; textSize=16f; isAllCaps=false; typeface=Typeface.DEFAULT_BOLD
@@ -95,6 +107,7 @@ class MemeMilestoneCard(private val service: AccessibilityService) {
         }
         return try {
             wm.addView(backdrop,params); root=backdrop
+            prefs.rememberMemeReaction(reaction.id, captionIndex, availableMemes.map { it.id }.toSet())
             if(Build.VERSION.SDK_INT < 26 || ValueAnimator.areAnimatorsEnabled()) {
                 column.alpha=0f; column.translationY=dp(20).toFloat(); column.scaleX=0.94f; column.scaleY=0.94f
                 column.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f).setDuration(280).start()

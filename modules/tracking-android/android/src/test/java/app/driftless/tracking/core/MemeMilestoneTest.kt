@@ -3,6 +3,19 @@ import org.junit.Assert.*
 import org.junit.Test
 class MemeMilestoneTest {
     private val date="2026-10-19"
+    @Test fun firstCountShowsOnceIncludingFirstObservationAndNewDay() {
+        assertNull(nextMemeMilestone(date,0,date,0,0))
+        assertEquals(1,nextMemeMilestone(date,0,date,1,0))
+        assertEquals(1,nextMemeMilestone(null,null,date,1,0))
+        assertEquals(1,nextMemeMilestone("2026-10-18",150,date,1,0))
+        assertNull(nextMemeMilestone(date,1,date,1,1))
+        assertNull(nextMemeMilestone(null,null,date,1,1))
+        assertNull(nextMemeMilestone(date,1,date,2,1))
+        assertNull(nextMemeMilestone(date,2,date,1,50))
+        assertNull(nextMemeMilestone(date,2,date,1,0))
+        assertEquals(50,nextMemeMilestone(date,49,date,50,1))
+        assertNull(nextMemeMilestone(null,null,date,2,0))
+    }
     @Test fun newFiftyCrossingsOnly() {
         assertNull(nextMemeMilestone(date,48,date,49,0))
         assertEquals(50,nextMemeMilestone(date,49,date,50,0))

@@ -20,6 +20,61 @@ class MemeTestService : AccessibilityService() {
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk=[35])
 class MemeCardTest {
+    @Test fun rotationDoesNotCrossAccountIncarnations() {
+        val context=ApplicationProvider.getApplicationContext<Context>()
+        val store=SqliteStore.get(context)
+        val original=store.activeScope()
+        val prefs=TrackingPrefs(context)
+        try {
+            prefs.clearMemeHistory()
+            store.selectScope("account:meme-old")
+            prefs.rememberMemeReaction("a", 1, setOf("a", "b"))
+            store.selectScope("account:meme-fresh")
+            assertTrue(prefs.usedMemeReactions().isEmpty())
+            assertNull(prefs.lastMemeReaction())
+            assertEquals(-1, prefs.previousMemeCaption("a"))
+            store.selectScope("account:meme-old")
+            assertEquals(setOf("a"), prefs.usedMemeReactions())
+            assertEquals(1, prefs.previousMemeCaption("a"))
+        } finally {
+            prefs.clearMemeHistory()
+            store.selectScope(original)
+        }
+    }
+
+    @Test fun everyBundledMemeHasACatalogEntryAndValidGifHeader() {
+        val context=ApplicationProvider.getApplicationContext<Context>()
+        val assets=context.assets.list("memes")!!.toList()
+        assertTrue(assets.size >= 19)
+        val ids=app.driftless.tracking.core.MemeCollection.all.map { "${it.id}.gif" }.toSet()
+        assets.forEach { file ->
+            assertTrue(file in ids)
+            context.assets.open("memes/$file").use {
+                val header=ByteArray(6)
+                assertEquals(6, it.read(header))
+                assertTrue(String(header) in setOf("GIF87a", "GIF89a"))
+            }
+        }
+    }
+
+    @Test fun rotationSurvivesRecreationAndWipeClearsCaptionHistory() {
+        val context=ApplicationProvider.getApplicationContext<Context>()
+        val prefs=TrackingPrefs(context)
+        prefs.clearMemeHistory()
+        prefs.rememberMemeReaction("a", 1, setOf("a", "b"))
+        val reread=TrackingPrefs(context)
+        assertEquals(setOf("a"), reread.usedMemeReactions())
+        assertEquals("a", reread.lastMemeReaction())
+        assertEquals(1, reread.previousMemeCaption("a"))
+        reread.rememberMemeReaction("b", 0, setOf("a", "b"))
+        reread.rememberMemeReaction("a", 2, setOf("a", "b"))
+        assertEquals(setOf("a"), reread.usedMemeReactions())
+        reread.clearMemeHistory()
+        assertTrue(reread.usedMemeReactions().isEmpty())
+        assertNull(reread.lastMemeReaction())
+        assertEquals(-1, reread.previousMemeCaption("a"))
+    }
+
     @Test fun persistsDeduplicationWithoutLoginAndClearsOnWipe() {
         val context=ApplicationProvider.getApplicationContext<Context>()
         val prefs=TrackingPrefs(context)
