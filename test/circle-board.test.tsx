@@ -247,7 +247,7 @@ it('replaces old cloud counts with a clearly local count when requests fail or s
   await tap('Next day');
   expect(labelText('Your daily count')).toBe('12');
   expect(JSON.stringify(tree.toJSON())).not.toContain('Your saved count');
-  expect(JSON.stringify(tree.toJSON())).toContain('Choose to share your progress');
+  expect(JSON.stringify(tree.toJSON())).not.toContain('Choose to share your progress');
 });
 it('updates comparisons automatically without a manual sync control', async () => {
   mockStatus = 'signedIn';
@@ -256,17 +256,17 @@ it('updates comparisons automatically without a manual sync control', async () =
   expect(JSON.stringify(tree.toJSON())).not.toContain('Sync and refresh counts');
   expect(mockSync).not.toHaveBeenCalled();
 });
-it('treats sharing consent as an optional setting and opens the existing Friends controls', async () => {
+it('keeps sharing prompts out of the battle screen when sharing is off', async () => {
   mockStatus = 'signedIn';
   mockApi.friendsDaily.mockRejectedValueOnce(
     new ApiError(403, 'consent_required', 'Turn on cloud backup and share progress'),
   );
   await mount();
   expect(JSON.stringify(tree.toJSON())).not.toContain('Turn on cloud backup');
-  expect(JSON.stringify(tree.toJSON())).toContain('Choose to share your progress');
+  expect(JSON.stringify(tree.toJSON())).not.toContain('Choose to share your progress');
   expect(labelText('Your daily count')).toBe('12');
-  await tap('Manage sharing');
-  expect(JSON.stringify(tree.toJSON())).toContain('Your friends');
+  expect(JSON.stringify(tree.toJSON())).not.toContain('Manage sharing');
+  expect(JSON.stringify(tree.toJSON())).not.toContain('Compare with friends');
   expect(mockApi.patchMe).not.toHaveBeenCalled();
 });
 it('ignores a delayed response from the previously selected date', async () => {

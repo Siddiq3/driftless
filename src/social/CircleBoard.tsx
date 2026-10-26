@@ -285,7 +285,7 @@ export function CircleBoard({
             onPress={() => void battle()}
             style={styles.invite}
           >
-            <T style={styles.inviteLabel}>Battle</T>
+            <T style={styles.inviteLabel}>Start battle</T>
           </Pressable>
         </View>
       ))}
@@ -310,15 +310,6 @@ export function CircleBoard({
         ))}
       </View>
       <View style={styles.actions}>
-        {comparisonIssue === 'sharing' && (
-          <>
-            <Notice
-              title="Compare with friends"
-              body="Choose to share your progress to compare daily counts with friends."
-            />
-            <Button label="Manage sharing" kind="secondary" onPress={() => setManagerOpen(true)} />
-          </>
-        )}
         {comparisonIssue === 'connection' && (
           <T v="caption" muted>
             Friend counts are temporarily unavailable. We’ll check again automatically.
