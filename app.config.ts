@@ -1,7 +1,7 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
 /**
- * Android-first (D-015). Custom dev client, never Expo Go.
+ * Shared Android and iOS app. Custom dev client, never Expo Go.
  * Public runtime config comes from EXPO_PUBLIC_* env vars at build time — no secrets here.
  */
 export default ({ config }: ConfigContext): ExpoConfig => ({
@@ -13,7 +13,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   icon: './assets/branding/app-icon.png',
   orientation: 'portrait',
   userInterfaceStyle: 'dark',
-  platforms: ['android'],
+  platforms: ['android', 'ios'],
+  ios: {
+    bundleIdentifier: 'com.siddiqkolimi.scrollsnooze',
+    supportsTablet: false,
+    entitlements: { 'com.apple.developer.family-controls': true },
+    infoPlist: { ITSAppUsesNonExemptEncryption: false },
+  },
   android: {
     package: 'com.siddiqkolimi.scrollsnooze',
     adaptiveIcon: {
@@ -33,6 +39,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   plugins: [
     'expo-router',
+    ...(process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID
+      ? [
+          [
+            '@react-native-google-signin/google-signin',
+            {
+              iosUrlScheme: `com.googleusercontent.apps.${process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID.replace('.apps.googleusercontent.com', '')}`,
+            },
+          ] as [string, { iosUrlScheme: string }],
+        ]
+      : []),
     'expo-sqlite',
     'expo-secure-store',
     'expo-localization',
@@ -44,6 +60,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   experiments: { typedRoutes: true },
   extra: {
     apiUrl: process.env.EXPO_PUBLIC_API_URL ?? null,
+    googleIosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? null,
     googleWebClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? null,
   },
 });

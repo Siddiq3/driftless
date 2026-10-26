@@ -1,3 +1,4 @@
+import { Platform , AppState, Text, TextInput } from 'react-native';
 import {
   createContext,
   useContext,
@@ -7,7 +8,6 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { AppState, Text, TextInput } from 'react-native';
 import { randomUUID } from 'expo-crypto';
 import { z } from 'zod';
 import { accountReady, markAccountReady } from '@/data/accountReady';
@@ -42,7 +42,7 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
         ? createApiClient({
             baseUrl: apiUrl!,
             getAccessToken: token,
-            platform: 'android',
+            platform: Platform.OS === 'ios' ? 'ios' : 'android',
             appVersion: APP_VERSION,
           })
         : null,
@@ -84,7 +84,7 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
         const bound = createApiClient({
           baseUrl: apiUrl!,
           getAccessToken: token,
-          platform: 'android',
+          platform: Platform.OS === 'ios' ? 'ios' : 'android',
           appVersion: APP_VERSION,
           incarnation: state.incarnation,
         });
@@ -165,7 +165,7 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
         await createApiClient({
           baseUrl: apiUrl!,
           getAccessToken: token,
-          platform: 'android',
+          platform: Platform.OS === 'ios' ? 'ios' : 'android',
           appVersion: APP_VERSION,
           incarnation: current.incarnation,
         }).deleteAccount();
@@ -179,7 +179,7 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
         const bound = createApiClient({
           baseUrl: apiUrl!,
           getAccessToken: token,
-          platform: 'android',
+          platform: Platform.OS === 'ios' ? 'ios' : 'android',
           appVersion: APP_VERSION,
           incarnation: state.incarnation,
         });

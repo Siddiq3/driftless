@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { withDeadline } from '@/api/deadline';
 
 /** Only Google ID tokens identify a user to our API. Google API access tokens are not used. */
@@ -9,7 +10,11 @@ export interface GoogleIdentityClient {
 }
 
 export async function googleIdentity(client: GoogleIdentityClient, interactive: boolean) {
-  if (interactive && !(await client.hasPlayServices({ showPlayServicesUpdateDialog: true })))
+  if (
+    interactive &&
+    Platform.OS === 'android' &&
+    !(await client.hasPlayServices({ showPlayServicesUpdateDialog: true }))
+  )
     throw new Error('Google Play Services are unavailable.');
   const response = interactive
     ? await client.signIn()

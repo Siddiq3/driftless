@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { router } from 'expo-router';
@@ -47,6 +48,7 @@ const control = (label: string) =>
       node.props.accessibilityLabel === label && (node.props.onPress || node.props.onValueChange),
   )[0]!;
 beforeEach(async () => {
+  Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });
   jest.clearAllMocks();
   jest.mocked(loadBlocking).mockResolvedValue(config);
   jest.mocked(Tracking.health).mockReturnValue({

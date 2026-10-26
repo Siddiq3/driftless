@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { router } from 'expo-router';
@@ -37,6 +38,7 @@ async function tap(label: string) {
   });
 }
 beforeEach(async () => {
+  Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });
   jest.clearAllMocks();
   (Tracking.openAccessibilityGuide as jest.Mock).mockImplementation(() => undefined);
   await act(async () => {

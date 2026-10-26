@@ -3,6 +3,10 @@ import { z } from 'zod';
 
 const EnvSchema = z.object({
   apiUrl: z.url().startsWith('https://'),
+  googleIosClientId: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/)
+    .nullish(),
   googleWebClientId: z.string().regex(/^[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/),
 });
 export type Env = z.infer<typeof EnvSchema>;

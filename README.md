@@ -1,7 +1,7 @@
 # Driftless (working name) — app
 
 Original digital-wellbeing app that helps people understand and reduce short-video scrolling.
-Android first (D-015). Expo SDK 57 custom dev client + Kotlin native module.
+Android + initial iPhone port. Expo SDK 57 custom dev client with Kotlin tracking and Swift Screen Time controls.
 Backend and shared contracts: [Siddiq3/driftless-backend](https://github.com/Siddiq3/driftless-backend) (D-016).
 
 **Status: Phase 1 (foundations) in progress.** See [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
@@ -23,7 +23,8 @@ The shared contracts package comes from GitHub Packages, so you need a GitHub to
 export NODE_AUTH_TOKEN=<github token with read:packages>
 pnpm install
 pnpm typecheck && pnpm lint && pnpm test
-pnpm android        # builds and runs the dev client on a device/emulator
+pnpm android        # builds and runs the Android dev client
+pnpm ios            # builds and runs the iOS dev client (requires Xcode)
 ```
 
 CI publishes step logs for each push to `main` to the `ci-results` branch.
@@ -39,3 +40,5 @@ Daily friend counts, consent, eligibility and release requirements:
 
 Counting and feed-limit implementation, emulator findings and outstanding release gates:
 [Feed limit milestones](docs/tracking/FEED_LIMIT_MILESTONES.md).
+
+For iPhone setup, implemented features and remaining release work, see [iOS](docs/IOS.md).

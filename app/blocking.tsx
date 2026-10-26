@@ -1,8 +1,9 @@
+import { Platform , Pressable, StyleSheet, View } from 'react-native';
+import { ScreenTimeScreen } from '@/ios/ScreenTimeScreen';
 import { AccountAllowanceNotice } from '@/sync/AccountAllowanceNotice';
 import { storageScope } from '@/db/scope';
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
 import { useFonts } from 'expo-font';
 import type { BlockingConfig } from 'tracking-android';
 import { PRESETS } from '@/billing/blocking';
@@ -134,7 +135,7 @@ function Choices({
   );
 }
 
-export default function Blocking() {
+function AndroidBlocking() {
   const settings = useFocusSettings();
   const { cfg, health, error } = settings;
   const [fonts] = useFonts({ LilitaOne: require('../assets/fonts/LilitaOne-Regular.ttf') });
@@ -547,7 +548,9 @@ export default function Blocking() {
         onPress={() => router.push('/tracking')}
       />
       <T v="caption" muted style={{ textAlign: 'center', paddingBottom: 8 }}>
-        {storageScope().startsWith('account:') ? 'Account allowance changes apply next account day after synchronization. Schedules and feed breaks stay on this phone.' : 'All features are included. Your focus settings are saved on this phone.'}
+        {storageScope().startsWith('account:')
+          ? 'Account allowance changes apply next account day after synchronization. Schedules and feed breaks stay on this phone.'
+          : 'All features are included. Your focus settings are saved on this phone.'}
       </T>
     </Screen>
   );
@@ -675,3 +678,7 @@ const styles = StyleSheet.create({
   },
   nested: { backgroundColor: '#100F0C', borderRadius: 16, padding: 14, gap: 18 },
 });
+
+export default function Blocking() {
+  return Platform.OS === 'ios' ? <ScreenTimeScreen /> : <AndroidBlocking />;
+}

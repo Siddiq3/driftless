@@ -12,7 +12,9 @@
     "test": "jest --ci",
     "doctor": "expo-doctor",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "ios": "expo run:ios",
+    "prebuild:ios": "expo prebuild --platform ios --no-install"
   },
   "dependencies": {
     "@siddiq3/driftless-contracts": "0.4.0",
@@ -64,7 +66,7 @@
     ],
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/src/$1",
-      "^tracking-android$": "<rootDir>/modules/tracking-android/src",
+      "^tracking-android$": "<rootDir>/modules/tracking-android/src/index.ts",
       "^billing-android$": "<rootDir>/modules/billing-android/src"
     }
   },

@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { useAccountIncarnation } from '@/auth/account';
 import { useMemo } from 'react';
 import { useSession } from '../auth/session';
@@ -17,7 +18,7 @@ export function useApi(): ApiClient | null {
             baseUrl: env.apiUrl,
             incarnation,
             getAccessToken: getToken,
-            platform: 'android',
+            platform: Platform.OS === 'ios' ? 'ios' : 'android',
             appVersion: APP_VERSION,
           })
         : null,

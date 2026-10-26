@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { randomUUID } from 'expo-crypto';
 import { Tracking } from 'tracking-android';
 import { getDb } from '@/db';
@@ -65,6 +66,10 @@ export async function syncAccountUsage(api: ApiClient, allowed: () => boolean): 
   check();
   if (!response.policy)
     throw new Error('Confirm your fixed account timezone before backing up account usage');
+  // Screen Time data stays on iPhone. Do not reserve Android accounting credit or
+  // rewrite an account's shared limits from this device's Screen Time preferences.
+  if (Platform.OS === 'ios')
+    return 'iPhone Screen Time activity stays on this device; Android account limits do not apply here.';
   const registered = Number(await read('registered_at'));
   if (
     !registered ||

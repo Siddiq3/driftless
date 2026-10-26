@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 jest.mock('expo-notifications', () => ({
   getPermissionsAsync: jest.fn().mockResolvedValue({ granted: true }),
   getDevicePushTokenAsync: jest.fn().mockResolvedValue({ data: 'disposable-test-push-token' }),
@@ -67,7 +68,12 @@ const read = async (name: string) =>
       `account_usage:${scope}:${name}`,
     )
   )?.value;
+const originalPlatform = Platform.OS;
+afterEach(() => {
+  Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform });
+});
 beforeEach(async () => {
+  Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });
   jest.clearAllMocks();
   fixture = sqlite();
   await migrate(fixture.db);
@@ -185,4 +191,19 @@ it('caches unchanged push registrations per incarnation rather than consuming th
   const freshApi = client();
   await registerPush(freshApi as unknown as ApiClient);
   expect(freshApi.registerDevice).toHaveBeenCalledTimes(1);
+});
+
+test('iPhone does not rewrite Android account limits or reserve accounting credit', async () => {
+  Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' });
+  expect(await sync()).toContain('Screen Time activity stays on this device');
+  expect(api.configureAccountUsage).not.toHaveBeenCalled();
+  expect(api.reserveAccountUsage).not.toHaveBeenCalled();
+  expect(api.registerDevice).not.toHaveBeenCalled();
+  expect(Tracking.accountUsageContributions).not.toHaveBeenCalled();
+});
+
+test('an APNs token is never registered with the Android FCM delivery service', async () => {
+  Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' });
+  expect(await registerPush(api as unknown as ApiClient)).toBe(false);
+  expect(api.registerDevice).not.toHaveBeenCalled();
 });

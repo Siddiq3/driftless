@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { googleIdentity, type GoogleIdentityClient } from '../src/auth/google';
 
 const client = (): GoogleIdentityClient => ({
@@ -53,4 +54,20 @@ test('a stalled silent session times out and a later attempt can recover', async
   } finally {
     jest.useRealTimers();
   }
+});
+
+const originalPlatform = Platform.OS;
+beforeEach(() => {
+  Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });
+});
+afterEach(() => {
+  Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform });
+});
+
+test('iPhone login does not depend on Google Play Services', async () => {
+  Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' });
+  const sdk = client();
+  jest.mocked(sdk.hasPlayServices).mockRejectedValue(new Error('Android only'));
+  expect(await googleIdentity(sdk, true)).toBe('google-identity');
+  expect(sdk.hasPlayServices).not.toHaveBeenCalled();
 });

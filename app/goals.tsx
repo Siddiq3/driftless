@@ -1,9 +1,9 @@
+import { Platform , View } from 'react-native';
 import { AccountAllowanceNotice } from '@/sync/AccountAllowanceNotice';
 import type { v1 } from '@siddiq3/driftless-contracts';
 import { randomUUID } from 'expo-crypto';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { View } from 'react-native';
 import { getDb } from '@/db';
 import { storageScope } from '@/db/scope';
 import { ProtectionNotice } from '@/billing/ProtectionNotice';
@@ -208,11 +208,19 @@ export default function Goals() {
   const find = (m: v1.Goal['metric']) => s.goals.find((g) => g.metric === m);
   return (
     <Screen>
-      <ProtectionNotice />
-      <AccountAllowanceNotice />
+      {Platform.OS === 'ios' && (
+        <Notice
+          title="Your daily intention"
+          body="Automatic iPhone minute measurement and goal enforcement are not available yet. Saved goals also sync to your account and may apply on your Android devices."
+        />
+      )}
+      {Platform.OS !== 'ios' && <ProtectionNotice />}
+      {Platform.OS !== 'ios' && <AccountAllowanceNotice />}
       <GoalEditor metric="minutes" existing={find('minutes')} enabledAllowed />
-      <GoalEditor metric="views" existing={find('views')} enabledAllowed />
-      {!canUseViewGoals(s.health) && (
+      {Platform.OS !== 'ios' && (
+        <GoalEditor metric="views" existing={find('views')} enabledAllowed />
+      )}
+      {Platform.OS !== 'ios' && !canUseViewGoals(s.health) && (
         <Details title="About video goals">
           <T v="caption" muted>
             Save a target for this phone. Goal results and cloud scores depend on app-version

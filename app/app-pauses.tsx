@@ -1,7 +1,8 @@
+import { Platform , Pressable, View } from 'react-native';
+import { ScreenTimeScreen } from '@/ios/ScreenTimeScreen';
 import { AccountAllowanceNotice } from '@/sync/AccountAllowanceNotice';
 import { storageScope } from '@/db/scope';
 import { router } from 'expo-router';
-import { Pressable, View } from 'react-native';
 import { AppIcon, Icon } from '@/ui/Icon';
 import { Details, T, useTheme } from '@/ui/kit';
 import {
@@ -17,7 +18,7 @@ import {
 import { useFocusSettings } from '@/focus/useFocusSettings';
 
 const LIMITS = [15, 20, 30, 45, 60, 90, 120];
-export default function AppPauses() {
+function AndroidAppPauses() {
   const settings = useFocusSettings();
   const { cfg, health, update } = settings;
   const t = useTheme();
@@ -32,7 +33,11 @@ export default function AppPauses() {
           <ProtectionStatus settings={settings} />
           <SettingRow
             label="Pause apps"
-            subtitle={storageScope().startsWith('account:') ? "Account allowance changes apply next account day after synchronization. Schedules and feed breaks remain on this phone." : "Use your saved allowance, schedules and feed rules."}
+            subtitle={
+              storageScope().startsWith('account:')
+                ? 'Account allowance changes apply next account day after synchronization. Schedules and feed breaks remain on this phone.'
+                : 'Use your saved allowance, schedules and feed rules.'
+            }
             value={cfg.enabled}
             onChange={(enabled) => update({ enabled })}
           />
@@ -342,4 +347,8 @@ export default function AppPauses() {
       )}
     </FocusPage>
   );
+}
+
+export default function AppPauses() {
+  return Platform.OS === 'ios' ? <ScreenTimeScreen /> : <AndroidAppPauses />;
 }

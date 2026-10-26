@@ -1,7 +1,7 @@
+import { Notice , Button, Details, Screen, T, useTheme } from '@/ui/kit';
+import { Platform , Animated, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
-import { Animated, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import type { ReactNode } from 'react';
-import { Button, Details, Screen, T, useTheme } from './kit';
 import { BrainCompanion } from './BrainCompanion';
 import { BrandMark } from './BrandMark';
 import { AppIcon, Icon, iconForMark, type IconName } from './Icon';
@@ -254,6 +254,12 @@ export function Dashboard({ guest = false, account }: { guest?: boolean; account
           <Icon name={guest ? 'shield' : 'settings'} size={23} color={t.textMuted} />
         </Pressable>
       </View>
+      {Platform.OS === 'ios' && (
+        <Notice
+          title="Screen Time on iPhone"
+          body="iPhone activity is not counted as Reels or Shorts. Open app pauses to choose apps privately and start or resume a pause."
+        />
+      )}
       {account && <View style={{ paddingTop: 8 }}>{account}</View>}
       <View style={styles.homeActivity}>
         <FocusHero state={state} refresh={refresh} />

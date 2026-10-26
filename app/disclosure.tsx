@@ -1,6 +1,7 @@
+import { Platform , Pressable, ScrollView, View } from 'react-native';
+import { ScreenTimeScreen } from '@/ios/ScreenTimeScreen';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Tracking } from 'tracking-android';
 import { Notice, T } from '@/ui/kit';
@@ -8,7 +9,7 @@ import { SetupButton, SETUP_COLORS as C } from '@/onboarding/Visuals';
 import { AccessibilityWalkthrough } from '@/permissions/AccessibilityWalkthrough';
 
 /** Prominent consent remains visible before opening Android's real permission screen. */
-export default function Disclosure() {
+function AndroidDisclosure() {
   const [error, setError] = useState<string | null>(null);
   const [alreadyAgreed] = useState(() => {
     try {
@@ -70,4 +71,8 @@ export default function Disclosure() {
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+export default function Disclosure() {
+  return Platform.OS === 'ios' ? <ScreenTimeScreen /> : <AndroidDisclosure />;
 }

@@ -1,7 +1,8 @@
+import { Platform , Alert, AppState, View } from 'react-native';
+import { ScreenTimeScreen } from '@/ios/ScreenTimeScreen';
 import { useFocusEffect } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, AppState, View } from 'react-native';
 import { Tracking, type Daily, type TrackingHealth, type MemePreferences } from 'tracking-android';
 import { STATE_COPY, trackingState } from '@/tracking/state';
 import { Button, Section, Notice, Screen, T, EmptyState, Details, Toggle } from '@/ui/kit';
@@ -13,7 +14,7 @@ import { CountingPermissionBanner } from '@/permissions/CountingPermissionBanner
 
 const minutes = (ms: number) => Math.round(ms / 60_000);
 
-export default function TrackingScreen() {
+function AndroidTrackingScreen() {
   const [now, setNow] = useState(() => Date.now());
   const [health, setHealth] = useState<TrackingHealth | null>(null);
   const [daily, setDaily] = useState<Daily | null>(null);
@@ -322,4 +323,8 @@ export default function TrackingScreen() {
       </Details>
     </Screen>
   );
+}
+
+export default function TrackingScreen() {
+  return Platform.OS === 'ios' ? <ScreenTimeScreen /> : <AndroidTrackingScreen />;
 }

@@ -1,4 +1,4 @@
-import { Pressable, Text, View, TurboModuleRegistry } from 'react-native';
+import { Pressable, Text, View, TurboModuleRegistry, Platform } from 'react-native';
 import type { GoogleSignin as GoogleSDK } from '@react-native-google-signin/google-signin';
 import * as SecureStore from 'expo-secure-store';
 import {
@@ -72,7 +72,11 @@ function UnconfiguredSession({ children }: { children: ReactNode }) {
 }
 
 export function SessionProvider({ env, children }: { env: Env | null; children: ReactNode }) {
-  if (!env || !TurboModuleRegistry.get('RNGoogleSignin'))
+  if (
+    !env ||
+    (Platform.OS === 'ios' && !env.googleIosClientId) ||
+    !TurboModuleRegistry.get('RNGoogleSignin')
+  )
     return <UnconfiguredSession>{children}</UnconfiguredSession>;
   return <GoogleSession env={env}>{children}</GoogleSession>;
 }
@@ -112,7 +116,11 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
   useEffect(() => {
     let active = true;
     const lifetime = generation.current;
-    GoogleSignin.configure({ webClientId: env.googleWebClientId, offlineAccess: false });
+    GoogleSignin.configure({
+      webClientId: env.googleWebClientId,
+      iosClientId: env.googleIosClientId ?? undefined,
+      offlineAccess: false,
+    });
     (async () => {
       // Existing Cognito sessions must never be reused as Google credentials.
       await SecureStore.deleteItemAsync(LEGACY_KEY);
@@ -141,7 +149,7 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
       active = false;
       lifetime.value++;
     };
-  }, [env.googleWebClientId, GoogleSignin, attempt]);
+  }, [env.googleWebClientId, env.googleIosClientId, GoogleSignin, attempt]);
 
   const signIn = useCallback(async () => {
     if (signingIn.current) return;

@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 jest.mock('@/data/session', () => ({
   selectPersonalSession: jest.fn().mockResolvedValue(undefined),
 }));
@@ -56,14 +57,17 @@ function Probe() {
   }, [session]);
   return null;
 }
-const mount = async () => {
+const mount = async (ios = false) => {
   await act(async () => {
     renderer = create(
       createElement(SessionProvider, {
         env: {
           apiUrl: 'https://api.example.test',
           googleWebClientId: 'web.apps.googleusercontent.com',
+          ...(ios ? { googleIosClientId: 'ios.apps.googleusercontent.com' } : {}),
         },
+        // React's createElement typing requires this prop for a required children field.
+        // eslint-disable-next-line react/no-children-prop
         children: createElement(Probe),
       }),
     );
@@ -81,7 +85,12 @@ const signedIn = () => {
   if (s.status !== 'signedIn') throw new Error('Expected signed in');
   return s;
 };
+const originalPlatform = Platform.OS;
+afterEach(() => {
+  Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform });
+});
 beforeEach(() => {
+  Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   mockMarkers.clear();
   jest.clearAllMocks();
@@ -348,4 +357,24 @@ test('a cold-reopen Google timeout remains recoverable instead of selecting gues
   } finally {
     jest.useRealTimers();
   }
+});
+
+test('iPhone login configures the iOS client and never checks Play Services', async () => {
+  Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' });
+  await mount(true);
+  await login();
+  expect(latest.status).toBe('signedIn');
+  expect(GoogleSignin.configure).toHaveBeenCalledWith({
+    webClientId: 'web.apps.googleusercontent.com',
+    iosClientId: 'ios.apps.googleusercontent.com',
+    offlineAccess: false,
+  });
+  expect(GoogleSignin.hasPlayServices).not.toHaveBeenCalled();
+});
+
+test('missing iOS OAuth configuration leaves guest mode available', async () => {
+  Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' });
+  await mount();
+  expect(latest.status).toBe('unconfigured');
+  expect(GoogleSignin.configure).not.toHaveBeenCalled();
 });
