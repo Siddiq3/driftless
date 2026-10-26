@@ -1,14 +1,16 @@
 import type { ReactNode } from 'react';
 import { useFonts } from 'expo-font';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import { addDays, localDateOf } from '@siddiq3/driftless-contracts/domain';
 import type { v1 } from '@siddiq3/driftless-contracts';
-import { AppState, Image, Modal, Pressable, Share, StyleSheet, View } from 'react-native';
+import { AppState, Image, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApi } from '@/api/useApi';
 import { ApiError, type ApiClient } from '@/api/client';
 import { useSession } from '@/auth/session';
+import { BattleInbox } from './BattleInbox';
+import { createBattle } from './battleRequests';
 import { FriendInviteSheet } from './FriendInviteSheet';
 import { InviteSignInSheet } from '@/auth/InviteSignInSheet';
 import { personalDay, refreshPersonalData } from '@/data/personal';
@@ -25,15 +27,19 @@ const colors = {
   accent: '#FFD09D',
 };
 
-export function CircleBoard({
+type CircleProps = { friendsPanel: ReactNode; openFriends?: boolean };
+export function CircleBoard(props: CircleProps) {
+  const api = useApi();
+  return (
+    <CircleBoardContent key={api ? (api.incarnation ?? 'account') : 'guest'} {...props} api={api} />
+  );
+}
+function CircleBoardContent({
   friendsPanel,
   openFriends = false,
-}: {
-  friendsPanel: ReactNode;
-  openFriends?: boolean;
-}) {
+  api,
+}: CircleProps & { api: ApiClient | null }) {
   const [fonts] = useFonts({ LilitaOne: require('../../assets/fonts/LilitaOne-Regular.ttf') });
-  const api = useApi();
   const session = useSession();
   const [invitations, setInvitations] = useState<InvitePrompt[]>([]);
   useFocusEffect(
@@ -49,6 +55,22 @@ export function CircleBoard({
   const [inviteApi, setInviteApi] = useState<ApiClient | null>(null);
   const [inviteSignInOpen, setInviteSignInOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [opponent, setOpponent] = useState<v1.Friend | null>(null);
+  const live = useRef(api);
+  useEffect(() => {
+    live.current = api;
+    return () => {
+      live.current = null;
+    };
+  }, [api]);
+  const mounted = useRef(true);
+  const creating = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const [error, setError] = useState<string | null>(null);
   const [comparison, setComparison] = useState<{
     api: ApiClient;
@@ -131,27 +153,35 @@ export function CircleBoard({
     setInviteApi(api);
   };
   const battle = async () => {
-    if (!requireLogin() || !api || busy) return;
+    if (!requireLogin() || !api || !opponent || creating.current) return;
+    creating.current = true;
+    const allowed = () => mounted.current && live.current === api;
     setBusy(true);
     setError(null);
     try {
-      const start = localDateOf(Date.now(), currentTimeZone());
-      const challenge = await api.createChallenge({
-        title: 'Scroll battle',
-        metric: 'fewest_views',
-        startDate: start,
-        endDate: addDays(start, 6),
-        tz: currentTimeZone(),
-        maxMembers: 2,
-      });
-      await Share.share({
-        message: `Let’s battle on ScrollSnooze: fewer short videos for 7 days. Join with code: ${challenge.challengeId}`,
-      });
-      router.push('/challenges');
+      const start = today;
+      const challenge = await createBattle(
+        api,
+        {
+          title: 'Scroll battle',
+          metric: 'fewest_views',
+          startDate: start,
+          endDate: addDays(start, 6),
+          tz: currentTimeZone(),
+          maxMembers: 2,
+          targetUserId: opponent.userId,
+          scoreConsent: true,
+        },
+        allowed,
+      );
+      if (!allowed()) return;
+      setOpponent(null);
+      router.push(`/challenges?battle=${challenge.challengeId}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not start the battle.');
+      if (allowed()) setError(e instanceof Error ? e.message : 'Could not start the battle.');
     } finally {
-      setBusy(false);
+      creating.current = false;
+      if (allowed()) setBusy(false);
     }
   };
   const accepted =
@@ -238,7 +268,7 @@ export function CircleBoard({
 
       <View style={styles.youRow}>
         <View style={styles.rank}>
-          <Icon name="trophy" size={27} color="#FFD36D" />
+          <Icon name="friends" size={27} color={colors.muted} />
         </View>
         <View style={styles.avatar}>
           <Image
@@ -282,7 +312,10 @@ export function CircleBoard({
             accessibilityRole="button"
             accessibilityLabel={`Start a battle with ${friend.handle}`}
             disabled={busy}
-            onPress={() => void battle()}
+            onPress={() => {
+              setError(null);
+              setOpponent(friend);
+            }}
             style={styles.invite}
           >
             <T style={styles.inviteLabel}>Start battle</T>
@@ -290,9 +323,9 @@ export function CircleBoard({
         </View>
       ))}
       <View style={styles.invites}>
-        {visibleInvitations.map(({ label, emoji }, index) => (
+        {visibleInvitations.map(({ label, emoji }) => (
           <View key={label} style={styles.inviteRow}>
-            <T style={styles.position}>{visibleFriends.length + index + 2}</T>
+            <Icon name="friends" color={colors.muted} size={23} />
             <T style={styles.inviteText}>
               {label} {emoji}
             </T>
@@ -310,6 +343,7 @@ export function CircleBoard({
         ))}
       </View>
       <View style={styles.actions}>
+        <BattleInbox api={api} />
         {comparisonIssue === 'connection' && (
           <T v="caption" muted>
             Friend counts are temporarily unavailable. We’ll check again automatically.
@@ -328,6 +362,40 @@ export function CircleBoard({
           <Icon name="chevron" size={16} color={colors.muted} />
         </Pressable>
       </View>
+      {opponent && api && (
+        <Modal
+          visible
+          transparent
+          animationType="fade"
+          onRequestClose={() => {
+            if (!busy) setOpponent(null);
+          }}
+        >
+          <SafeAreaView
+            style={{ flex: 1, backgroundColor: '#000000CC', justifyContent: 'center', padding: 24 }}
+          >
+            <View style={{ backgroundColor: '#201B16', borderRadius: 30, padding: 24, gap: 16 }}>
+              <T v="title">Battle with {opponent.displayName ?? `@${opponent.handle}`}</T>
+              <T>A seven-day battle: fewer short videos wins.</T>
+              <T v="caption" muted>
+                Starting this battle shares only your battle score with participants through{' '}
+                {addDays(today, 6)} ({currentTimeZone()}). Your other history stays private. You can
+                stop sharing in Your battles. Global sharing settings won’t change.
+              </T>
+              {error && <Notice title="Battle not started" body={error} tone="warn" />}
+              <Button label="Start battle" busy={busy} onPress={() => void battle()} />
+              <Button
+                label="Cancel"
+                kind="secondary"
+                busy={busy}
+                onPress={() => {
+                  if (!busy) setOpponent(null);
+                }}
+              />
+            </View>
+          </SafeAreaView>
+        </Modal>
+      )}
       {managerOpen && (
         <Modal visible animationType="slide" onRequestClose={() => setManagerOpen(false)}>
           <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>

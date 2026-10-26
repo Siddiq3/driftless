@@ -1,3 +1,4 @@
+import { BattleCreate, BattleSummary, BattleList, BattleLeaderboard } from './challenges';
 import { withDeadline } from './deadline';
 import {
   AccountUsageHistory,
@@ -19,8 +20,8 @@ export const AccountState = z
     'An active or deleting account requires an incarnation',
   );
 // Keep lifecycle additions explicit while the published base contract remains 0.4.0.
-const AccountChallenge = v1.ChallengeSummary.extend({ ownerId: z.string().nullable() });
-const AccountChallenges = z.object({ challenges: z.array(AccountChallenge) });
+const AccountChallenge = BattleSummary;
+const AccountChallenges = BattleList;
 const AccountMe = v1.MeResponse.extend({ incarnation: z.uuid() });
 const OkResponse = z.object({ ok: z.literal(true) });
 
@@ -264,19 +265,49 @@ export function createApiClient(o: ApiClientOptions) {
       void (await request('POST', '/v1/friends/remove', OkResponse, { body: { userId } })),
     challenges: async () =>
       (await request('GET', '/v1/challenges', AccountChallenges)).data.challenges,
-    createChallenge: async (c: z.input<typeof v1.ChallengeCreate>) =>
-      (await request('POST', '/v1/challenges', AccountChallenge, { body: c })).data,
-    joinChallenge: async (id: string) =>
-      (await request('POST', `/v1/challenges/${encodeURIComponent(id)}/join`, AccountChallenge))
-        .data,
+    battleInbox: async (allowed?: () => boolean) =>
+      (await request('GET', '/v1/challenges', BattleList, { allowed })).data,
+    respondBattle: async (id: string, action: 'decline' | 'cancel', allowed?: () => boolean) =>
+      (
+        await request(
+          'POST',
+          `/v1/challenges/${encodeURIComponent(id)}/invitation`,
+          BattleSummary,
+          { body: { action }, allowed },
+        )
+      ).data,
+    battleScoreConsent: async (id: string, share: boolean, allowed?: () => boolean) =>
+      (
+        await request(
+          'PUT',
+          `/v1/challenges/${encodeURIComponent(id)}/score-consent`,
+          BattleSummary,
+          { body: { share }, allowed },
+        )
+      ).data,
+    createChallenge: async (c: z.input<typeof BattleCreate>, allowed?: () => boolean) =>
+      (
+        await request('POST', '/v1/challenges', AccountChallenge, {
+          body: BattleCreate.parse(c),
+          allowed,
+        })
+      ).data,
+    joinChallenge: async (id: string, scoreConsent?: true, allowed?: () => boolean) =>
+      (
+        await request('POST', `/v1/challenges/${encodeURIComponent(id)}/join`, AccountChallenge, {
+          body: scoreConsent ? { scoreConsent } : {},
+          allowed,
+        })
+      ).data,
     leaveChallenge: async (id: string) =>
       void (await request('POST', `/v1/challenges/${encodeURIComponent(id)}/leave`, OkResponse)),
-    leaderboard: async (id: string) =>
+    leaderboard: async (id: string, allowed?: () => boolean) =>
       (
         await request(
           'GET',
           `/v1/challenges/${encodeURIComponent(id)}/leaderboard`,
-          v1.LeaderboardResponse,
+          BattleLeaderboard,
+          { allowed },
         )
       ).data,
     registerDevice: async (deviceId: string, pushToken?: string) =>

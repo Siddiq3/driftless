@@ -1,3 +1,5 @@
+jest.mock('@/social/battleRequests', () => ({ createBattle: jest.fn() }));
+import { createBattle } from '@/social/battleRequests';
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { AppState, Clipboard, Linking, Share } from 'react-native';
@@ -15,6 +17,9 @@ const mockApi = {
   getMe: jest.fn(),
   createInvite: jest.fn(),
   createChallenge: jest.fn(),
+  battleInbox: jest.fn(),
+  joinChallenge: jest.fn(),
+  respondBattle: jest.fn(),
 };
 jest.mock('@/api/useApi', () => ({ useApi: () => (mockStatus === 'signedIn' ? mockApi : null) }));
 jest.mock('@/auth/session', () => ({
@@ -66,6 +71,7 @@ jest.mock('@/ui/kit', () => {
   const { View, Text, Pressable } = require('react-native');
   return {
     Screen: View,
+    Card: View,
     Details: View,
     T: Text,
     Notice: ({ body }: { body: string }) => require('react').createElement(Text, null, body),
@@ -108,6 +114,10 @@ beforeEach(() => {
   mockApi.createInvite.mockResolvedValue({ code: 'FRIENDCODE' });
   mockApi.createChallenge.mockResolvedValue({ challengeId: 'battle-123' });
   mockApi.friends.mockResolvedValue([]);
+  mockApi.battleInbox.mockResolvedValue({ challenges: [], invitations: [] });
+  mockApi.joinChallenge.mockResolvedValue({ challengeId: 'battle-123' });
+  mockApi.respondBattle.mockResolvedValue({ invitationState: 'declined' });
+  jest.mocked(createBattle).mockResolvedValue({ challengeId: 'battle-123' } as never);
   mockApi.friendsDaily.mockImplementation(async (date: string) => ({
     localDate: date,
     self: { status: 'eligible', views: 7, updatedAt: '2026-10-21T00:00:00Z' },
@@ -391,4 +401,127 @@ it('checks friend counts again automatically after a connection failure', async 
     AppState.currentState = previousState;
     jest.useRealTimers();
   }
+});
+
+it('Start battle targets the selected stable friend ID after battle-only consent disclosure', async () => {
+  mockStatus = 'signedIn';
+  mockApi.friends.mockResolvedValue([
+    {
+      userId: 'friend-a',
+      handle: 'bestie',
+      displayName: 'Bestie',
+      status: 'accepted',
+      since: '2026-10-26T00:00:00Z',
+    },
+  ] as never);
+  mockApi.friendsDaily.mockRejectedValueOnce(new ApiError(403, 'consent_required', 'sharing off'));
+  await mount();
+  await tap('Start a battle with bestie');
+  expect(createBattle).not.toHaveBeenCalled();
+  expect(JSON.stringify(tree.toJSON())).toContain('Global sharing settings won’t change');
+  await tap('Start battle');
+  expect(createBattle).toHaveBeenCalledWith(
+    mockApi,
+    expect.objectContaining({
+      targetUserId: 'friend-a',
+      maxMembers: 2,
+      metric: 'fewest_views',
+      scoreConsent: true,
+    }),
+    expect.any(Function),
+  );
+  expect(mockApi.patchMe).not.toHaveBeenCalled();
+  expect(Share.share).not.toHaveBeenCalled();
+  expect(router.push).toHaveBeenCalledWith('/challenges?battle=battle-123');
+});
+it('targeted in-app invitation accepts and refreshes without external sharing', async () => {
+  mockStatus = 'signedIn';
+  mockApi.battleInbox.mockResolvedValueOnce({
+    challenges: [],
+    invitations: [
+      {
+        challengeId: 'battle-123',
+        title: 'Scroll battle',
+        ownerName: 'Bestie',
+        startDate: '2026-10-26',
+        endDate: '2026-11-01',
+        tz: 'UTC',
+        invitationState: 'pending',
+      },
+    ],
+  });
+  await mount();
+  expect(JSON.stringify(tree.toJSON())).toContain('Bestie');
+  expect(JSON.stringify(tree.toJSON())).toContain(
+    'Your battle score is shared only with participants',
+  );
+  await tap('Accept battle');
+  expect(mockApi.joinChallenge).toHaveBeenCalledWith('battle-123', true, expect.any(Function));
+  expect(mockApi.battleInbox).toHaveBeenCalledTimes(2);
+  expect(router.push).toHaveBeenCalledWith('/challenges?battle=battle-123');
+  expect(mockApi.patchMe).not.toHaveBeenCalled();
+});
+it('shows declined/expired invitation states without an accept action', async () => {
+  mockStatus = 'signedIn';
+  mockApi.battleInbox.mockResolvedValue({
+    challenges: [],
+    invitations: [
+      { challengeId: 'declined', ownerName: 'Bestie', invitationState: 'declined' },
+      { challengeId: 'expired', ownerName: 'Another', invitationState: 'expired' },
+    ],
+  });
+  await mount();
+  expect(JSON.stringify(tree.toJSON())).toContain('Invitation declined');
+  expect(JSON.stringify(tree.toJSON())).toContain('Battle ended');
+  expect(tree.root.findAllByProps({ accessibilityLabel: 'Accept battle' })).toHaveLength(0);
+});
+it('declining an invitation updates the inbox without joining', async () => {
+  mockStatus = 'signedIn';
+  mockApi.battleInbox.mockResolvedValueOnce({
+    challenges: [],
+    invitations: [
+      {
+        challengeId: 'battle-123',
+        title: 'Scroll battle',
+        ownerName: 'Bestie',
+        startDate: '2026-10-26',
+        endDate: '2026-11-01',
+        tz: 'UTC',
+        invitationState: 'pending',
+      },
+    ],
+  });
+  await mount();
+  await tap('Decline');
+  expect(mockApi.respondBattle).toHaveBeenCalledWith('battle-123', 'decline', expect.any(Function));
+  expect(mockApi.joinChallenge).not.toHaveBeenCalled();
+});
+
+it('a late direct-battle response after sign-out cannot navigate or expose the previous account invitation', async () => {
+  mockStatus = 'signedIn';
+  mockApi.friends.mockResolvedValue([
+    {
+      userId: 'friend-a',
+      handle: 'bestie',
+      displayName: 'Bestie',
+      status: 'accepted',
+      since: '2026-10-26T00:00:00Z',
+    },
+  ] as never);
+  mockApi.friendsDaily.mockRejectedValueOnce(new ApiError(403, 'consent_required', 'off'));
+  let finish!: (value: any) => void;
+  jest.mocked(createBattle).mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  await mount();
+  await tap('Start a battle with bestie');
+  await tap('Start battle');
+  mockStatus = 'signedOut';
+  await act(async () => tree.update(<CircleBoard friendsPanel={null} />));
+  await act(async () => finish({ challengeId: 'old-account-battle' }));
+  expect(router.push).not.toHaveBeenCalledWith('/challenges?battle=old-account-battle');
+  expect(JSON.stringify(tree.toJSON())).not.toContain('Battle with');
 });

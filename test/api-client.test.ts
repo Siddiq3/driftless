@@ -381,3 +381,49 @@ it('reports Google SDK failure as recoverable credential unavailability', async 
     status: null,
   });
 });
+
+it('transmits the direct target and explicit battle consent without patching the global profile', async () => {
+  const id = me.incarnation;
+  const f = jest
+    .fn()
+    .mockResolvedValue(
+      resp(200, {
+        challengeId: id,
+        ownerId: 'owner',
+        title: 'Scroll battle',
+        metric: 'fewest_views',
+        startDate: '2026-10-26',
+        endDate: '2026-11-01',
+        tz: 'UTC',
+        maxMembers: 2,
+        memberCount: 1,
+        targetUserId: id,
+        invitationState: 'pending',
+      }),
+    );
+  const api = client(f);
+  await api.createChallenge({
+    title: 'Scroll battle',
+    metric: 'fewest_views',
+    startDate: '2026-10-26',
+    endDate: '2026-11-01',
+    tz: 'UTC',
+    maxMembers: 2,
+    targetUserId: id,
+    operationId: id,
+    scoreConsent: true,
+  });
+  expect(JSON.parse(f.mock.calls[0][1].body)).toMatchObject({
+    targetUserId: id,
+    operationId: id,
+    scoreConsent: true,
+  });
+  await api.joinChallenge(id, true);
+  expect(JSON.parse(f.mock.calls[1][1].body)).toEqual({ scoreConsent: true });
+  await api.respondBattle(id, 'decline');
+  expect(f.mock.calls[2][0]).toContain(`/challenges/${id}/invitation`);
+  expect(JSON.parse(f.mock.calls[2][1].body)).toEqual({ action: 'decline' });
+  await api.battleScoreConsent(id, false);
+  expect(JSON.parse(f.mock.calls[3][1].body)).toEqual({ share: false });
+  expect(f.mock.calls.some(([url]) => String(url).includes('/v1/me'))).toBe(false);
+});
