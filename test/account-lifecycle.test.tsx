@@ -1,7 +1,14 @@
-jest.mock('@/sync/accountUsage', () => ({ installAccountUsage: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('@/sync/accountBackup', () => ({
+  backupAccount: jest.fn().mockResolvedValue({ state: 'saved', message: 'Saved' }),
+}));
+jest.mock('@/sync/accountUsage', () => ({
+  installAccountUsage: jest.fn().mockResolvedValue(undefined),
+}));
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { Text } from 'react-native';
+import { backupAccount } from '@/sync/accountBackup';
+import { ApiError } from '@/api/client';
 import { AccountBoundary } from '@/auth/account';
 import { createApiClient } from '@/api/client';
 import { resolvePersonalAccount, selectPersonalSession } from '@/data/session';
@@ -40,7 +47,12 @@ const incarnation = '00000000-0000-4000-8000-000000000001';
 let state: { state: string; incarnation: string | null };
 let root: ReactTestRenderer;
 const discovery = { accountState: jest.fn(), registerAccount: jest.fn() };
-const bound = { getMe: jest.fn(), deleteAccount: jest.fn(),getAccountUsage:jest.fn(),configureAccountUsage:jest.fn() };
+const bound = {
+  getMe: jest.fn(),
+  deleteAccount: jest.fn(),
+  getAccountUsage: jest.fn(),
+  configureAccountUsage: jest.fn(),
+};
 beforeEach(() => {
   jest.clearAllMocks();
   mockStatus = 'signedIn';
@@ -50,8 +62,16 @@ beforeEach(() => {
     state = { state: 'active', incarnation };
     return state;
   });
-  bound.getAccountUsage.mockResolvedValue({policy:{incarnation,tz:'UTC',activeFromMs:Date.now()+86400000,rev:1,policies:[]},snapshot:null,serverTimeMs:Date.now()});
-  bound.configureAccountUsage.mockResolvedValue({policy:{incarnation,tz:'UTC',activeFromMs:Date.now()+86400000,rev:1,policies:[]},snapshot:null,serverTimeMs:Date.now()});
+  bound.getAccountUsage.mockResolvedValue({
+    policy: { incarnation, tz: 'UTC', activeFromMs: Date.now() + 86400000, rev: 1, policies: [] },
+    snapshot: null,
+    serverTimeMs: Date.now(),
+  });
+  bound.configureAccountUsage.mockResolvedValue({
+    policy: { incarnation, tz: 'UTC', activeFromMs: Date.now() + 86400000, rev: 1, policies: [] },
+    snapshot: null,
+    serverTimeMs: Date.now(),
+  });
   bound.getMe.mockResolvedValue({ data: { userId: 'stable-user', incarnation } });
   bound.deleteAccount.mockImplementation(async () => {
     state = { state: 'deleted', incarnation };
@@ -80,13 +100,18 @@ const press = async (label: string) => {
   await act(async () => root.root.findByProps({ accessibilityLabel: label }).props.onPress());
 };
 
-it('requires explicit timezone confirmation for an existing Phase 1 incarnation without registering it again',async()=>{
-  state={state:'active',incarnation};
-  bound.getAccountUsage.mockResolvedValueOnce({policy:null,snapshot:null,serverTimeMs:Date.now()}).mockResolvedValueOnce({policy:null,snapshot:null,serverTimeMs:Date.now()});
-  await mount();expect(visible()).not.toContain('private screens');
+it('requires explicit timezone confirmation for an existing Phase 1 incarnation without registering it again', async () => {
+  state = { state: 'active', incarnation };
+  bound.getAccountUsage
+    .mockResolvedValueOnce({ policy: null, snapshot: null, serverTimeMs: Date.now() })
+    .mockResolvedValueOnce({ policy: null, snapshot: null, serverTimeMs: Date.now() });
+  await mount();
+  expect(visible()).not.toContain('private screens');
   await press('Confirm fixed timezone');
   expect(discovery.registerAccount).not.toHaveBeenCalled();
-  expect(bound.configureAccountUsage).toHaveBeenCalledWith(expect.objectContaining({expectedRev:0,limits:{},tz:expect.any(String)}));
+  expect(bound.configureAccountUsage).toHaveBeenCalledWith(
+    expect.objectContaining({ expectedRev: 0, limits: {}, tz: expect.any(String) }),
+  );
   expect(visible()).toContain('private screens');
 });
 
@@ -95,7 +120,7 @@ test('Google sign-in leaves legacy data quarantined until explicit empty registr
   expect(visible()).not.toContain('private screens');
   expect(discovery.registerAccount).not.toHaveBeenCalled();
   expect(resolvePersonalAccount).not.toHaveBeenCalled();
-  await press('Create empty account');
+  await press('Create account');
   expect(discovery.registerAccount).toHaveBeenCalledWith(
     '00000000-0000-4000-8000-000000000009',
     null,
@@ -104,6 +129,7 @@ test('Google sign-in leaves legacy data quarantined until explicit empty registr
     'stable-user',
     incarnation,
     expect.any(Function),
+    true,
   );
   expect(visible()).toContain('private screens');
 });
@@ -133,14 +159,14 @@ test('interrupted deletion resumes against its old incarnation before fresh regi
   expect(createApiClient).toHaveBeenCalledWith(expect.objectContaining({ incarnation }));
   expect(discovery.registerAccount).not.toHaveBeenCalled();
   expect(resolvePersonalAccount).not.toHaveBeenCalled();
-  await press('Create empty account');
+  await press('Create account');
   expect(discovery.registerAccount).toHaveBeenCalledWith(expect.any(String), incarnation);
 });
 
 test('failed lifecycle discovery exposes no account dataset or registration side effect', async () => {
   discovery.accountState.mockRejectedValueOnce(new Error('offline'));
   await mount();
-  expect(visible()).toContain('offline');
+  expect(visible()).toContain('phone data is retained');
   expect(visible()).not.toContain('private screens');
   expect(resolvePersonalAccount).not.toHaveBeenCalled();
   expect(discovery.registerAccount).not.toHaveBeenCalled();
@@ -149,11 +175,11 @@ test('failed lifecycle discovery exposes no account dataset or registration side
 test('registration failure exposes no private screens and retries the same operation', async () => {
   discovery.registerAccount.mockRejectedValueOnce(new Error('response unavailable'));
   await mount();
-  await press('Create empty account');
+  await press('Create account');
   expect(visible()).toContain('response unavailable');
   expect(visible()).not.toContain('private screens');
   expect(resolvePersonalAccount).not.toHaveBeenCalled();
-  await press('Create empty account');
+  await press('Create account');
   expect(discovery.registerAccount.mock.calls[1]).toEqual(discovery.registerAccount.mock.calls[0]);
   expect(visible()).toContain('private screens');
 });
@@ -180,4 +206,52 @@ test('a late lifecycle result after session expiry cannot bind or mount the old 
   expect(resolvePersonalAccount).not.toHaveBeenCalled();
   expect(visible()).not.toContain('private screens');
   expect(visible()).toContain('guest screens');
+});
+
+test('existing account discovery outage recovers with Retry without registration', async () => {
+  state = { state: 'active', incarnation };
+  discovery.accountState.mockRejectedValueOnce(new ApiError(null, 'network', 'offline'));
+  await mount();
+  expect(visible()).not.toContain('private screens');
+  await press('Retry');
+  expect(visible()).toContain('private screens');
+  expect(discovery.registerAccount).not.toHaveBeenCalled();
+});
+
+test.each(['profile', 'storage', 'usage', 'restore'])(
+  'retries a failed %s bootstrap step without account creation',
+  async (stage) => {
+    state = { state: 'active', incarnation };
+    const operation =
+      stage === 'profile'
+        ? bound.getMe
+        : stage === 'storage'
+          ? jest.mocked(resolvePersonalAccount)
+          : stage === 'usage'
+            ? bound.getAccountUsage
+            : jest.mocked(backupAccount);
+    operation.mockRejectedValueOnce(new ApiError(503, 'unavailable', 'fixture failure'));
+    await mount();
+    expect(visible()).not.toContain('private screens');
+    await press('Retry');
+    expect(visible()).toContain('private screens');
+    expect(discovery.registerAccount).not.toHaveBeenCalled();
+  },
+);
+
+test('does not mount empty screens while a partial restore is pending', async () => {
+  state = { state: 'active', incarnation };
+  jest.mocked(backupAccount).mockResolvedValueOnce({ state: 'pending', message: 'More history' });
+  await mount();
+  expect(visible()).not.toContain('private screens');
+  await press('Retry');
+  expect(visible()).toContain('private screens');
+});
+
+test('incompatible bootstrap response asks for an update without endless Retry', async () => {
+  discovery.accountState.mockRejectedValueOnce(new ApiError(200, 'contract_mismatch', 'bad shape'));
+  await mount();
+  expect(visible()).toContain('incompatible');
+  expect(root.root.findAllByProps({ accessibilityLabel: 'Retry' })).toHaveLength(0);
+  expect(discovery.registerAccount).not.toHaveBeenCalled();
 });

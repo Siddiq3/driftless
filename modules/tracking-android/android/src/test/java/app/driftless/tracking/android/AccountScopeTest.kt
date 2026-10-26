@@ -114,4 +114,21 @@ class AccountScopeTest {
         store.close()
     }
 
+    @Test fun fiftyGuestEventsRetainStableRecoveryRecordsAndImportOnce() {
+        val store=SqliteStore(context,null)
+        store.selectScope("guest:fifty")
+        for(i in 1..50) store.recordView(event("guest-$i"))
+        store.selectScope("account:a")
+        store.importGuest("guest:fifty","account:a")
+        store.importGuest("guest:fifty","account:a")
+        assertEquals(50,store.daily("2026-10-24").sumOf {it.views})
+        assertEquals(50,store.events(0).size)
+        store.readableDatabase.rawQuery("SELECT COUNT(*) FROM guest_event_archive WHERE scope='guest:fifty'",null).use {it.moveToFirst();assertEquals(50,it.getInt(0))}
+        store.inScope("guest:fifty") { assertEquals(50,store.daily("2026-10-24").sumOf {it.views}) }
+        try {store.importGuest("legacy","account:a",true);fail("legacy must remain quarantined")} catch(_:IllegalArgumentException) {}
+        store.wipeAll()
+        store.readableDatabase.rawQuery("SELECT COUNT(*) FROM guest_event_archive",null).use {it.moveToFirst();assertEquals(0,it.getInt(0))}
+        store.close()
+    }
+
 }

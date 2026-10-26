@@ -184,10 +184,15 @@ describe('api client', () => {
 it('deduplicates simultaneous identical GETs across clients for one authenticated getter', async () => {
   const getAccessToken = jest.fn().mockResolvedValue('token');
   let finish!: (r: Response) => void;
+  let markStarted!: () => void;
+  const started = new Promise<void>((resolve) => {
+    markStarted = resolve;
+  });
   const fetchImpl = jest.fn(
     () =>
       new Promise<Response>((resolve) => {
         finish = resolve;
+        markStarted();
       }),
   );
   const options = {
@@ -201,7 +206,7 @@ it('deduplicates simultaneous identical GETs across clients for one authenticate
   const b = createApiClient(options);
   const first = a.getMe();
   const second = b.getMe();
-  await Promise.resolve();
+  await started;
   expect(fetchImpl).toHaveBeenCalledTimes(1);
   finish(resp(200, me));
   expect(await first).toEqual(await second);
@@ -281,4 +286,97 @@ it('keeps personal recorded counts when decoding restored history', async () => 
   };
   const api = client(jest.fn().mockResolvedValue(resp(200, { days: [row] })));
   expect((await api.usageHistory('2026-10-24', '2026-10-24')).days).toEqual([row]);
+});
+
+it('refreshes a rejected credential once through the existing session getter', async () => {
+  const getAccessToken = jest
+    .fn()
+    .mockResolvedValueOnce('expired')
+    .mockResolvedValueOnce('renewed');
+  const f = jest.fn().mockResolvedValueOnce(resp(401, {})).mockResolvedValueOnce(resp(200, me));
+  const api = createApiClient({
+    baseUrl: 'https://fixture.invalid',
+    getAccessToken,
+    fetchImpl: f,
+    platform: 'android',
+    appVersion: 'test',
+  });
+  expect((await api.getMe()).data.userId).toBe(me.userId);
+  expect(getAccessToken).toHaveBeenCalledTimes(2);
+  expect(f.mock.calls.map(([, init]) => init.headers.authorization)).toEqual([
+    'Bearer expired',
+    'Bearer renewed',
+  ]);
+});
+it('does not loop on a permanently rejected credential', async () => {
+  const f = jest.fn().mockResolvedValue(resp(401, {}));
+  await expect(client(f).getMe()).rejects.toMatchObject({ status: 401 });
+  expect(f).toHaveBeenCalledTimes(2);
+});
+it('classifies interrupted response downloads as recoverable network errors', async () => {
+  const f = jest.fn().mockResolvedValue({
+    ...resp(200, me),
+    text: async () => {
+      throw new Error('body interrupted');
+    },
+  });
+  await expect(client(f).getMe()).rejects.toMatchObject({ code: 'network', status: null });
+});
+it('rejects an active lifecycle with no incarnation', async () => {
+  const f = jest.fn().mockResolvedValue(resp(200, { state: 'active', incarnation: null }));
+  await expect(client(f).accountState()).rejects.toMatchObject({ code: 'contract_mismatch' });
+});
+
+it('bounds credential acquisition before fetch and ignores a late credential', async () => {
+  jest.useFakeTimers();
+  try {
+    let finish!: (value: string) => void;
+    const getAccessToken = jest
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise<string>((resolve) => {
+            finish = resolve;
+          }),
+      )
+      .mockResolvedValue('renewed');
+    const f = jest
+      .fn()
+      .mockResolvedValue(resp(200, { state: 'active', incarnation: me.incarnation }));
+    const api = createApiClient({
+      baseUrl: 'https://fixture.invalid',
+      getAccessToken,
+      fetchImpl: f,
+      timeoutMs: 100,
+      platform: 'android',
+      appVersion: 'test',
+    });
+    const rejected = expect(api.accountState()).rejects.toMatchObject({
+      code: 'credential_timeout',
+    });
+    await jest.advanceTimersByTimeAsync(100);
+    await rejected;
+    finish('late-token');
+    await Promise.resolve();
+    expect(f).not.toHaveBeenCalled();
+    expect((await api.accountState()).state).toBe('active');
+    expect(f).toHaveBeenCalledTimes(1);
+  } finally {
+    jest.useRealTimers();
+  }
+});
+it('reports Google SDK failure as recoverable credential unavailability', async () => {
+  const api = createApiClient({
+    baseUrl: 'https://fixture.invalid',
+    getAccessToken: async () => {
+      throw new Error('sdk offline');
+    },
+    fetchImpl: jest.fn(),
+    platform: 'android',
+    appVersion: 'test',
+  });
+  await expect(api.accountState()).rejects.toMatchObject({
+    code: 'credential_unavailable',
+    status: null,
+  });
 });

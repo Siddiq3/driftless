@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { Clipboard, Linking, Share } from 'react-native';
+import { AppState, Clipboard, Linking, Share } from 'react-native';
 import { router } from 'expo-router';
 import { CircleBoard } from '../src/social/CircleBoard';
 import { ApiError } from '../src/api/client';
@@ -247,20 +247,27 @@ it('replaces old cloud counts with a clearly local count when requests fail or s
   await tap('Next day');
   expect(labelText('Your daily count')).toBe('12');
   expect(JSON.stringify(tree.toJSON())).toContain('Your saved count');
-  expect(JSON.stringify(tree.toJSON())).toContain('Sharing is off');
+  expect(JSON.stringify(tree.toJSON())).toContain('Choose to share your progress');
 });
-it('checks consent before uploading and refreshes only after successful sync', async () => {
+it('updates comparisons automatically without a manual sync control', async () => {
   mockStatus = 'signedIn';
   await mount();
-  mockApi.getMe.mockResolvedValueOnce({
-    data: { profile: { consent: { cloudSync: false, shareWithFriends: false } } },
-  });
-  await tap('Sync and refresh counts');
+  expect(mockApi.friendsDaily).toHaveBeenCalledTimes(1);
+  expect(JSON.stringify(tree.toJSON())).not.toContain('Sync and refresh counts');
   expect(mockSync).not.toHaveBeenCalled();
-  const reads = mockApi.friendsDaily.mock.calls.length;
-  await tap('Sync and refresh counts');
-  expect(mockSync).toHaveBeenCalledTimes(1);
-  expect(mockApi.friendsDaily.mock.calls.length).toBeGreaterThan(reads);
+});
+it('treats sharing consent as an optional setting and opens the existing Friends controls', async () => {
+  mockStatus = 'signedIn';
+  mockApi.friendsDaily.mockRejectedValueOnce(
+    new ApiError(403, 'consent_required', 'Turn on cloud backup and share progress'),
+  );
+  await mount();
+  expect(JSON.stringify(tree.toJSON())).not.toContain('Turn on cloud backup');
+  expect(JSON.stringify(tree.toJSON())).toContain('Choose to share your progress');
+  expect(labelText('Your daily count')).toBe('12');
+  await tap('Manage sharing');
+  expect(JSON.stringify(tree.toJSON())).toContain('Your friends');
+  expect(mockApi.patchMe).not.toHaveBeenCalled();
 });
 it('ignores a delayed response from the previously selected date', async () => {
   mockStatus = 'signedIn';
@@ -280,35 +287,6 @@ it('ignores a delayed response from the previously selected date', async () => {
   );
   expect(labelText('Your daily count')).toBe('12');
 });
-it('does not start an upload when sign-out happens during the consent check', async () => {
-  mockStatus = 'signedIn';
-  let resolveMe!: (value: unknown) => void;
-  mockApi.getMe.mockImplementationOnce(
-    () =>
-      new Promise((resolve) => {
-        resolveMe = resolve;
-      }),
-  );
-  await mount();
-  let pending!: Promise<void>;
-  await act(async () => {
-    pending = tree.root
-      .findAll(
-        (node) =>
-          node.props.accessibilityLabel === 'Sync and refresh counts' &&
-          typeof node.props.onPress === 'function',
-      )[0]!
-      .props.onPress();
-  });
-  mockStatus = 'signedOut';
-  await act(async () => tree.update(<CircleBoard friendsPanel={null} />));
-  await act(async () => {
-    resolveMe({ data: { profile: { consent: { cloudSync: true, shareWithFriends: true } } } });
-    await pending;
-  });
-  expect(mockSync).not.toHaveBeenCalled();
-});
-
 it('keeps your local count visible when the server has no eligible comparison count', async () => {
   mockStatus = 'signedIn';
   mockApi.friendsDaily.mockImplementation(async (date: string) => ({
@@ -392,4 +370,25 @@ it('does not open a fallback share sheet after sign-out while WhatsApp is openin
     await sharing;
   });
   expect(Share.share).not.toHaveBeenCalled();
+});
+
+it('checks friend counts again automatically after a connection failure', async () => {
+  const previousState = AppState.currentState;
+  AppState.currentState = 'active';
+  jest.useFakeTimers();
+  try {
+    mockStatus = 'signedIn';
+    mockApi.friendsDaily.mockRejectedValueOnce(new Error('offline'));
+    await mount();
+    expect(JSON.stringify(tree.toJSON())).toContain('We’ll check again automatically');
+    expect(labelText('Your daily count')).toBe('12');
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(60_000);
+    });
+    expect(mockApi.friendsDaily).toHaveBeenCalledTimes(2);
+    expect(JSON.stringify(tree.toJSON())).not.toContain('We’ll check again automatically');
+  } finally {
+    AppState.currentState = previousState;
+    jest.useRealTimers();
+  }
 });

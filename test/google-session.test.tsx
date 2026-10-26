@@ -257,3 +257,41 @@ it('uses the signed-in Google profile name as the presentation name', async () =
   await login();
   expect(signedIn().displayName).toBe('Siddiq Kolimi');
 });
+
+test('local scope initialization failure exposes Retry and resumes without erasing data', async () => {
+  const { selectPersonalSession } = require('@/data/session');
+  selectPersonalSession
+    .mockRejectedValueOnce(new Error('disk unavailable'))
+    .mockRejectedValueOnce(new Error('disk unavailable'));
+  await mount();
+  expect(JSON.stringify(renderer!.toJSON())).toContain('Your phone data is retained');
+  await act(async () =>
+    renderer!.root.findByProps({ accessibilityLabel: 'Retry' }).props.onPress(),
+  );
+  expect(latest.status).toBe('signedOut');
+});
+
+test('failed sign-out scope selection can retry the safe exit without signing in again', async () => {
+  await mount();
+  await login();
+  const { selectPersonalSession } = require('@/data/session');
+  selectPersonalSession.mockRejectedValueOnce(new Error('disk unavailable'));
+  await act(async () => {
+    await expect(signedIn().signOut()).rejects.toThrow('disk unavailable');
+  });
+  expect(JSON.stringify(renderer!.toJSON())).toContain('Your phone data is retained');
+  await act(async () =>
+    renderer!.root.findByProps({ accessibilityLabel: 'Retry' }).props.onPress(),
+  );
+  expect(latest.status).toBe('signedOut');
+  expect(GoogleSignin.signOut).toHaveBeenCalled();
+});
+
+test('failed silent renewal releases the shared request so Retry can recover', async () => {
+  await mount();
+  await login();
+  jest.mocked(GoogleSignin.signInSilently).mockRejectedValueOnce(new Error('sdk unavailable'));
+  await expect(signedIn().getAccessToken()).rejects.toThrow('sdk unavailable');
+  expect(latest.status).toBe('signedIn');
+  await expect(signedIn().getAccessToken()).resolves.toBe('renewed-token');
+});

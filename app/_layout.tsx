@@ -13,28 +13,50 @@ import { OnboardingProvider } from '@/onboarding/context';
 import { FirstLaunchRedirect } from '@/onboarding/FirstLaunchRedirect';
 import { EntitlementRecovery } from '@/billing/EntitlementRecovery';
 import { SUBSCRIPTIONS_REQUIRED } from '@/config/access';
-import { Notice, Screen, useTheme } from '@/ui/kit';
+import { Button, Notice, Screen, useTheme } from '@/ui/kit';
 
 const env = readEnv();
 
 export default function RootLayout() {
   const t = useTheme();
   const reduced = useReducedMotion();
+  const [dbReady, setDbReady] = useState(false);
+  const [dbAttempt, setDbAttempt] = useState(0);
   const [dbError, setDbError] = useState<string | null>(null);
 
   useEffect(() => {
-    getDb().catch((e: unknown) => setDbError(e instanceof Error ? e.message : 'unknown error'));
-  }, []);
+    let alive = true;
+    void getDb()
+      .then(() => {
+        if (alive) setDbReady(true);
+      })
+      .catch(() => {
+        if (alive)
+          setDbError('Saved phone data could not be opened. Retry to resume initialization.');
+      });
+    return () => {
+      alive = false;
+    };
+  }, [dbAttempt]);
 
   if (dbError) {
     return (
       <SafeAreaProvider>
         <Screen>
           <Notice tone="warn" title="Local storage could not be opened" body={dbError} />
+          <Button
+            label="Retry"
+            onPress={() => {
+              setDbError(null);
+              setDbAttempt((n) => n + 1);
+            }}
+          />
         </Screen>
       </SafeAreaProvider>
     );
   }
+
+  if (!dbReady) return <ActivityIndicator accessibilityLabel="Opening local storage" />;
 
   return (
     <SafeAreaProvider>

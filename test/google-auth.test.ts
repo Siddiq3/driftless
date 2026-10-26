@@ -39,3 +39,18 @@ test('unavailable Play Services do not launch an account picker', async () => {
   await expect(googleIdentity(sdk, true)).rejects.toThrow('unavailable');
   expect(sdk.signIn).not.toHaveBeenCalled();
 });
+
+test('a stalled silent session times out and a later attempt can recover', async () => {
+  jest.useFakeTimers();
+  try {
+    const sdk = client();
+    jest.mocked(sdk.signInSilently).mockImplementationOnce(() => new Promise(() => {}));
+    const pending = expect(googleIdentity(sdk, false)).rejects.toThrow('timed out');
+    await jest.advanceTimersByTimeAsync(10_000);
+    await pending;
+    expect(await googleIdentity(sdk, false)).toBe('renewed-google-identity');
+    expect(jest.getTimerCount()).toBe(0);
+  } finally {
+    jest.useRealTimers();
+  }
+});

@@ -263,9 +263,31 @@ class AccountUsage(private val store: SqliteStore, private val context: Context)
         listOf("minutes","views").filter {values.has(it)}.map { metric -> app.driftless.tracking.core.Limit(metric,(values.getLong(metric)/if(metric=="minutes") 60000 else 1).toInt()) }
     }
     /** Reset suppresses cloud display through its cutoff day, including stale snapshots. */
-    fun measurement(date: String): Map<String,Any?>? = synchronized(store) {
+    fun measurement(date: String, personal: Map<String,Pair<Long?,Long?>> = emptyMap()): Map<String,Any?>? = synchronized(store) {
         if(!active() || date<Recorder.localDate(policy()!!.getLong("activeFromMs"),zone()) || (cutoff()>0 && date<=Recorder.localDate(cutoff(),zone()))) return@synchronized null
-        val views=effectiveUsage("views",date); val minutes=effectiveUsage("minutes",date)?.div(60000)
+        // Personal backup includes pre-sign-in observations which were never allowance charges.
+        // Reconcile the two projections per stable device, never sum their overlapping totals.
+        fun reconciled(metric: String): Long? {
+            if(personal.isEmpty()) return effectiveUsage(metric,date)?.let { if(metric=="minutes") it/60000 else it }
+            val devices=mutableMapOf<String,Long?>()
+            val snap=meta("snapshot:$date")?.optJSONObject("devices")
+            if(snap!=null) for(id in snap.keys()) {
+                val value=snap.getJSONObject(id).optJSONObject("used")
+                devices[id]=if(value==null || !value.has(metric)) null else value.getLong(metric).let { if(metric=="minutes") it/60000 else it }
+            }
+            val id=db.rawQuery("SELECT value FROM tracking_meta WHERE key='device_id'",null).use { if(it.moveToFirst()) it.getString(0) else "" }
+            val local=apps(date)
+            if(local.length()>0) used(local,metric)?.let { value ->
+                val amount=if(metric=="minutes") value/60000 else value
+                devices[id]=maxOf(devices[id] ?: 0,amount)
+            }
+            for((device,values) in personal) {
+                val value=if(metric=="views") values.first else values.second
+                if(value!=null) devices[device]=maxOf(devices[device] ?: 0,value)
+            }
+            return devices.values.filterNotNull().takeIf {it.isNotEmpty()}?.sum()
+        }
+        val views=reconciled("views"); val minutes=reconciled("minutes")
         mapOf("localDate" to date,"views" to views,"minutes" to minutes,"status" to if(views==null && minutes==null) "unavailable" else "experimental","tz" to zone().id,"scope" to scope(),"source" to "account")
     }
     fun blocked(pkg: String, shortVideo: Boolean = true): Boolean = active() && status(pkg,shortVideo) !in listOf("reserved", "reserved_stale", "unlimited")

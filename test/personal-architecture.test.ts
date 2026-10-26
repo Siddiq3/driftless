@@ -330,9 +330,13 @@ it('restores personal counts into a fresh install without uploading them as comp
   expect(value).toMatchObject({ personalViews: 42, views: null, minutes: 1 });
   let backedUp: unknown[] = [];
   const fetchImpl = jest.fn(async (_url, options) => {
-    if(String(_url).includes('/usage/account/history')) return {
-      ok:true,status:200,text:async()=>JSON.stringify({days:[],serverTimeMs:Date.now()}),headers:{get:()=>null}
-    } as unknown as Response;
+    if (String(_url).includes('/usage/account/history'))
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ days: [], serverTimeMs: Date.now() }),
+        headers: { get: () => null },
+      } as unknown as Response;
     if (options?.method === 'POST') {
       backedUp = JSON.parse(options.body as string).days;
       return {
@@ -382,4 +386,56 @@ it('restores personal counts into a fresh install without uploading them as comp
     nativeScope,
   );
   expect(backedUp).toEqual([expect.objectContaining({ views: null, personalViews: 42 })]);
+});
+
+it('captures current guest goals before scope change and imports them exactly once at verified bootstrap', async () => {
+  await saveGoal(scopedDatabase(db, nativeScope), {
+    goalId: id,
+    metric: 'views',
+    dailyLimit: 50,
+    enabled: true,
+  });
+  await selectPersonalSession(null); // persist the available guest session
+  await selectPersonalSession('google-a');
+  const account = await resolvePersonalAccount('a', firstIncarnation, () => true, true);
+  expect(await loadGoals(account)).toMatchObject([{ goalId: id, dailyLimit: 50 }]);
+  await resolvePersonalAccount('a', firstIncarnation, () => true, true);
+  expect(await loadGoals(account)).toHaveLength(1);
+  expect(await db.getAllAsync('SELECT * FROM goals WHERE scope=?', 'guest:first')).toHaveLength(1);
+  expect(await db.getAllAsync('SELECT * FROM guest_imports')).toEqual([
+    { source_scope: 'guest:first', target_scope: `account:${firstIncarnation}`, state: 'copied' },
+  ]);
+  await selectPersonalSession(null);
+  expect(nativeScope).not.toBe('guest:first');
+  await selectPersonalSession('google-b');
+  const other = await resolvePersonalAccount('b', secondIncarnation, () => true, true);
+  expect(await loadGoals(other)).toEqual([]);
+});
+
+it('sign-out before account resolution restores the unclaimed guest dataset', async () => {
+  await selectPersonalSession(null);
+  await selectPersonalSession('google-a');
+  await selectPersonalSession(null);
+  expect(nativeScope).toBe('guest:first');
+});
+
+it('a failed native copy leaves a durable bound journal and resumes only for that incarnation', async () => {
+  await selectPersonalSession(null);
+  await selectPersonalSession('google-a');
+  jest.mocked(Tracking.importGuestScope).mockImplementationOnce(() => {
+    throw new Error('fixture native failure');
+  });
+  await expect(resolvePersonalAccount('a', firstIncarnation, () => true, true)).rejects.toThrow(
+    'native failure',
+  );
+  expect(await db.getFirstAsync('SELECT state FROM guest_imports')).toEqual({ state: 'bound' });
+  await resolvePersonalAccount('a', firstIncarnation, () => true, true);
+  expect(await db.getFirstAsync('SELECT state FROM guest_imports')).toEqual({ state: 'copied' });
+  await selectPersonalSession('google-a');
+  await resolvePersonalAccount('a', secondIncarnation, () => true, true);
+  expect(Tracking.importGuestScope).not.toHaveBeenCalledWith(
+    'guest:first',
+    `account:${secondIncarnation}`,
+    false,
+  );
 });

@@ -1,13 +1,23 @@
-import { AccountUsageHistory, AccountUsageResponse, AccountUsageReconcileResponse } from './accountUsage';
+import { withDeadline } from './deadline';
+import {
+  AccountUsageHistory,
+  AccountUsageResponse,
+  AccountUsageReconcileResponse,
+} from './accountUsage';
 import { Problem, v1 } from '@siddiq3/driftless-contracts';
 import { z } from 'zod';
 import { PersonalHistoryResponse, type PersonalDailyAggregate } from './personalUsage';
 import { entitlementGeneration } from '@/billing/cache';
 
-export const AccountState = z.object({
-  state: z.enum(['active', 'deleting', 'deleted', 'legacy_quarantined']),
-  incarnation: z.uuid().nullable(),
-});
+export const AccountState = z
+  .object({
+    state: z.enum(['active', 'deleting', 'deleted', 'legacy_quarantined']),
+    incarnation: z.uuid().nullable(),
+  })
+  .refine(
+    (value) => !['active', 'deleting'].includes(value.state) || value.incarnation !== null,
+    'An active or deleting account requires an incarnation',
+  );
 // Keep lifecycle additions explicit while the published base contract remains 0.4.0.
 const AccountChallenge = v1.ChallengeSummary.extend({ ownerId: z.string().nullable() });
 const AccountChallenges = z.object({ challenges: z.array(AccountChallenge) });
@@ -81,18 +91,35 @@ export function createApiClient(o: ApiClientOptions) {
     path: string,
     schema: S,
     init: { body?: unknown; headers?: Record<string, string>; allowed?: () => boolean } = {},
+    refreshed = false,
   ): Promise<{ data: z.infer<S>; etag: string | null }> {
     const check = () => {
       if (credentialGeneration !== entitlementGeneration() || (init.allowed && !init.allowed()))
         throw new ApiError(409, 'sync_cancelled', 'Backup cancelled');
     };
     check();
-    const token = await o.getAccessToken();
+    let token: string | null;
+    try {
+      token = await withDeadline(
+        o.getAccessToken,
+        o.timeoutMs ?? 15_000,
+        () => new ApiError(null, 'credential_timeout', 'Google session restoration timed out'),
+      );
+    } catch (error) {
+      check();
+      if (error instanceof ApiError) throw error;
+      throw new ApiError(
+        null,
+        'credential_unavailable',
+        'Google session restoration could not complete',
+      );
+    }
     check();
     if (!token) throw new ApiError(401, 'unauthorized', 'not signed in');
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), o.timeoutMs ?? 15_000);
     let res: Response;
+    let text: string;
     try {
       res = await f(`${base}${path}`, {
         method,
@@ -106,12 +133,12 @@ export function createApiClient(o: ApiClientOptions) {
         },
         body: init.body === undefined ? undefined : JSON.stringify(init.body),
       });
+      text = await res.text();
     } catch {
       throw new ApiError(null, 'network', 'network unavailable');
     } finally {
       clearTimeout(timer);
     }
-    const text = await res.text();
     check();
     let json: unknown = null;
     try {
@@ -119,6 +146,9 @@ export function createApiClient(o: ApiClientOptions) {
     } catch {
       /* fall through */
     }
+    // The session getter uses Google silent sign-in. Retry a rejected credential once;
+    // keep the same incarnation/body/idempotency key and cancellation fence.
+    if (res.status === 401 && !refreshed) return send(method, path, schema, init, true);
     if (!res.ok) {
       const p = Problem.safeParse(json);
       throw new ApiError(
@@ -135,15 +165,37 @@ export function createApiClient(o: ApiClientOptions) {
 
   return {
     incarnation: o.incarnation,
-    accountUsageHistory: async (from:string,to:string,deviceId:string,allowed?:()=>boolean) =>
-      (await request('GET',`/v1/usage/account/history?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&deviceId=${encodeURIComponent(deviceId)}`,AccountUsageHistory,{allowed})).data,
-    getAccountUsage: async (allowed?: () => boolean) => (await request('GET','/v1/usage/account',AccountUsageResponse,{allowed})).data,
-    configureAccountUsage: async (body: {tz:string;limits:Record<string,number>;expectedRev:number},allowed?:()=>boolean) =>
-      (await request('PUT','/v1/usage/account',AccountUsageResponse,{body,allowed})).data,
-    reconcileAccountUsage: async (body: unknown,idempotencyKey:string,allowed?:()=>boolean) =>
-      (await request('POST','/v1/usage/account/reconcile',AccountUsageReconcileResponse,{body,headers:{'idempotency-key':idempotencyKey},allowed})).data,
-    reserveAccountUsage: async (body: unknown,allowed?:()=>boolean) =>
-      (await request('POST','/v1/usage/account/reserve',AccountUsageResponse,{body,allowed})).data,
+    accountUsageHistory: async (
+      from: string,
+      to: string,
+      deviceId: string,
+      allowed?: () => boolean,
+    ) =>
+      (
+        await request(
+          'GET',
+          `/v1/usage/account/history?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&deviceId=${encodeURIComponent(deviceId)}`,
+          AccountUsageHistory,
+          { allowed },
+        )
+      ).data,
+    getAccountUsage: async (allowed?: () => boolean) =>
+      (await request('GET', '/v1/usage/account', AccountUsageResponse, { allowed })).data,
+    configureAccountUsage: async (
+      body: { tz: string; limits: Record<string, number>; expectedRev: number },
+      allowed?: () => boolean,
+    ) => (await request('PUT', '/v1/usage/account', AccountUsageResponse, { body, allowed })).data,
+    reconcileAccountUsage: async (body: unknown, idempotencyKey: string, allowed?: () => boolean) =>
+      (
+        await request('POST', '/v1/usage/account/reconcile', AccountUsageReconcileResponse, {
+          body,
+          headers: { 'idempotency-key': idempotencyKey },
+          allowed,
+        })
+      ).data,
+    reserveAccountUsage: async (body: unknown, allowed?: () => boolean) =>
+      (await request('POST', '/v1/usage/account/reserve', AccountUsageResponse, { body, allowed }))
+        .data,
     accountState: async () => (await request('GET', '/v1/account', AccountState)).data,
     registerAccount: async (registrationId: string, expectedIncarnation: string | null) =>
       (

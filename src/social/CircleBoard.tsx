@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useFonts } from 'expo-font';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import { addDays, localDateOf } from '@siddiq3/driftless-contracts/domain';
 import type { v1 } from '@siddiq3/driftless-contracts';
@@ -14,7 +14,6 @@ import { InviteSignInSheet } from '@/auth/InviteSignInSheet';
 import { personalDay, refreshPersonalData } from '@/data/personal';
 import { observeStorage } from '@/db/scope';
 import { currentTimeZone } from '@/sync/run';
-import { useAccountBackup } from '@/sync/AccountBackupProvider';
 import { Button, Notice, Screen, T } from '@/ui/kit';
 import { Icon } from '@/ui/Icon';
 import { shuffledInvitePrompts, type InvitePrompt } from './invitePrompts';
@@ -35,7 +34,6 @@ export function CircleBoard({
 }) {
   const [fonts] = useFonts({ LilitaOne: require('../../assets/fonts/LilitaOne-Regular.ttf') });
   const api = useApi();
-  const backup = useAccountBackup();
   const session = useSession();
   const [invitations, setInvitations] = useState<InvitePrompt[]>([]);
   useFocusEffect(
@@ -43,8 +41,6 @@ export function CircleBoard({
       setInvitations((previous) => shuffledInvitePrompts(previous));
     }, []),
   );
-  const liveApi = useRef(api);
-  const focused = useRef(false);
   const [today, setToday] = useState(() => localDateOf(Date.now(), currentTimeZone()));
   const [date, setDate] = useState(() => today);
   const [total, setTotal] = useState<number | null>(null);
@@ -58,18 +54,17 @@ export function CircleBoard({
     api: ApiClient;
     data: v1.FriendsDailyResponse;
   } | null>(null);
-  const [refresh, setRefresh] = useState(0);
+  const [comparisonIssue, setComparisonIssue] = useState<'sharing' | 'connection' | null>(null);
   const currentComparison =
     comparison?.api === api && comparison.data.localDate === date ? comparison.data : null;
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      liveApi.current = api;
-      focused.current = true;
       setBusy(false);
       setError(null);
       setComparison(null);
+      setComparisonIssue(null);
       setFriends([]);
       const read = () => {
         if (active) setToday(localDateOf(Date.now(), currentTimeZone()));
@@ -96,15 +91,13 @@ export function CircleBoard({
           const data = await api.friendsDaily(date);
           if (active) {
             setComparison({ api, data });
-            setError(null);
+            setComparisonIssue(null);
           }
         } catch (e) {
           if (active) {
             setComparison(null);
-            setError(
-              e instanceof ApiError && e.code === 'consent_required'
-                ? e.message
-                : 'Daily comparisons are unavailable. Check your connection and try refreshing.',
+            setComparisonIssue(
+              e instanceof ApiError && e.code === 'consent_required' ? 'sharing' : 'connection',
             );
           }
         } finally {
@@ -118,13 +111,10 @@ export function CircleBoard({
       return () => {
         unsubscribe();
         active = false;
-        focused.current = false;
         clearInterval(timer);
         clearInterval(comparisonTimer);
       };
-      // The refresh token reruns this effect after a successful upload.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [api, date, managerOpen, refresh]),
+    }, [api, date, managerOpen]),
   );
 
   const requireLogin = () => {
@@ -139,29 +129,6 @@ export function CircleBoard({
     }
     if (!api || busy) return;
     setInviteApi(api);
-  };
-  const syncAndRefresh = async () => {
-    if (!requireLogin() || !api || busy) return;
-    setBusy(true);
-    setError(null);
-    const allowed = () => focused.current && liveApi.current === api;
-    try {
-      const me = await api.getMe();
-      if (!allowed()) return;
-      if (!me.data.profile.consent.cloudSync || !me.data.profile.consent.shareWithFriends)
-        throw new Error(
-          'Allow sharing progress in Friends to compare counts. Account backup starts automatically after sign-in.',
-        );
-      const backedUp = await backup.retry();
-      if (!allowed()) return;
-      if (!backedUp)
-        throw new Error('Backup is still pending. Your local progress is safe; try again shortly.');
-      setRefresh((value) => value + 1);
-    } catch (e) {
-      if (allowed()) setError(e instanceof Error ? e.message : 'Could not sync your counts.');
-    } finally {
-      if (allowed()) setBusy(false);
-    }
   };
   const battle = async () => {
     if (!requireLogin() || !api || busy) return;
@@ -307,7 +274,7 @@ export function CircleBoard({
               {friend.daily?.status === 'private'
                 ? 'Sharing off'
                 : friend.daily?.status !== 'eligible'
-                  ? 'No synced count yet'
+                  ? 'No count available yet'
                   : 'Recorded videos'}
             </T>
           </View>
@@ -349,15 +316,21 @@ export function CircleBoard({
         ))}
       </View>
       <View style={styles.actions}>
-        {api && (
-          <Button
-            label="Sync and refresh counts"
-            kind="secondary"
-            busy={busy}
-            onPress={() => void syncAndRefresh()}
-          />
+        {comparisonIssue === 'sharing' && (
+          <>
+            <Notice
+              title="Compare with friends"
+              body="Choose to share your progress to compare daily counts with friends."
+            />
+            <Button label="Manage sharing" kind="secondary" onPress={() => setManagerOpen(true)} />
+          </>
         )}
-        {error && <Notice title="Try again" body={error} tone="warn" />}
+        {comparisonIssue === 'connection' && (
+          <T v="caption" muted>
+            Friend counts are temporarily unavailable. We’ll check again automatically.
+          </T>
+        )}
+        {error && <Notice title="Couldn’t start your battle" body={error} tone="warn" />}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="View your battles"

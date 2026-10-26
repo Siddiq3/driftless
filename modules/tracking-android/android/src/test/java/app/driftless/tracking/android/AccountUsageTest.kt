@@ -213,4 +213,21 @@ class AccountUsageTest {
         assertFalse(store.recordView(event("offline")))
         context.deleteDatabase(name)
     }
+    @Test fun restoredPersonalBackupIsNotHiddenByAnEmptyAllowanceSnapshot() {
+        install()
+        val restored="""[{"localDate":"$date","deviceId":"old-installation","tz":"${zone.id}","views":50,"minutes":2,"coverage":1,"rev":1}]"""
+        store.mergeSynced(restored,"account:$inc")
+        store.mergeSynced(restored,"account:$inc")
+        assertEquals(50L,store.personalMeasurement(date,setOf(pkg))["views"])
+        assertEquals(2L,store.personalMeasurement(date,setOf(pkg))["minutes"])
+        assertEquals(0L,store.account.effectiveUsage("views",date))
+    }
+    @Test fun personalAndAllowanceCopiesOfOneDeviceAreReconciledWithoutAddingTwice() {
+        install(response(2,5,5))
+        val restored="""[{"localDate":"$date","deviceId":"device-a","tz":"${zone.id}","views":50,"minutes":2,"coverage":1,"rev":1}]"""
+        store.mergeSynced(restored,"account:$inc")
+        assertEquals(50L,store.personalMeasurement(date,setOf(pkg))["views"])
+        assertEquals(5L,store.account.effectiveUsage("views",date))
+    }
+
 }

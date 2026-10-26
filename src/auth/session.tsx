@@ -1,4 +1,4 @@
-import { TurboModuleRegistry } from 'react-native';
+import { Pressable, Text, View, TurboModuleRegistry } from 'react-native';
 import type { GoogleSignin as GoogleSDK } from '@react-native-google-signin/google-signin';
 import * as SecureStore from 'expo-secure-store';
 import {
@@ -41,6 +41,8 @@ export const useSession = () => useContext(Ctx);
 
 function UnconfiguredSession({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const [failed, setFailed] = useState(false);
   useEffect(() => {
     let active = true;
     invalidateEntitlement();
@@ -48,11 +50,22 @@ function UnconfiguredSession({ children }: { children: ReactNode }) {
       .then(() => {
         if (active) setReady(true);
       })
-      .catch(() => undefined);
+      .catch(() => {
+        if (active) setFailed(true);
+      });
     return () => {
       active = false;
     };
-  }, []);
+  }, [attempt]);
+  if (failed)
+    return (
+      <ScopeRecovery
+        retry={() => {
+          setFailed(false);
+          setAttempt((n) => n + 1);
+        }}
+      />
+    );
   return (
     <Ctx.Provider value={{ status: ready ? 'unconfigured' : 'loading' }}>{children}</Ctx.Provider>
   );
@@ -64,6 +77,19 @@ export function SessionProvider({ env, children }: { env: Env | null; children: 
   return <GoogleSession env={env}>{children}</GoogleSession>;
 }
 
+function ScopeRecovery({ retry }: { retry: () => void }) {
+  return (
+    <View style={{ padding: 24 }}>
+      <Text accessibilityRole="alert">
+        Saved progress could not be opened. Your phone data is retained. Retry to resume safely.
+      </Text>
+      <Pressable accessibilityRole="button" accessibilityLabel="Retry" onPress={retry}>
+        <Text>Retry</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
   const GoogleSignin = useMemo(
     // Lazy load after checking native availability, so guest mode works in older dev clients.
@@ -71,12 +97,15 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
     () => require('@react-native-google-signin/google-signin').GoogleSignin as typeof GoogleSDK,
     [],
   );
+  const [attempt, setAttempt] = useState(0);
+  const [initializationFailed, setInitializationFailed] = useState(false);
   const [signedIn, setSignedIn] = useState<boolean | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const generation = useRef({ value: 0 });
   const enabled = useRef(false);
   const tokenRequest = useRef<Promise<string | null> | null>(null);
   const signingIn = useRef(false);
+  const pendingSignOut = useRef(false);
   const accountOwner = useRef<string | null>(null);
 
   useEffect(() => {
@@ -106,7 +135,7 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
           await selectPersonalSession(null);
           if (active) setSignedIn(false);
         } catch {
-          /* Keep session loading if safe local scope cannot be selected. */
+          if (active) setInitializationFailed(true);
         }
       }
     });
@@ -114,7 +143,7 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
       active = false;
       lifetime.value++;
     };
-  }, [env.googleWebClientId, GoogleSignin]);
+  }, [env.googleWebClientId, GoogleSignin, attempt]);
 
   const signIn = useCallback(async () => {
     if (signingIn.current) return;
@@ -142,18 +171,25 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
   }, [GoogleSignin]);
 
   const signOut = useCallback(async () => {
+    pendingSignOut.current = true;
     invalidateEntitlement();
     generation.current.value++;
     tokenRequest.current = null;
     enabled.current = false;
     setSignedIn(undefined);
-    await selectPersonalSession(null);
+    try {
+      await selectPersonalSession(null);
+    } catch (error) {
+      setInitializationFailed(true);
+      throw error;
+    }
     setSignedIn(false);
     try {
       await SecureStore.setItemAsync(ENABLED_KEY, 'false');
       await SecureStore.deleteItemAsync(OWNER_KEY);
     } finally {
       await GoogleSignin.signOut();
+      pendingSignOut.current = false;
     }
   }, [GoogleSignin]);
 
@@ -174,34 +210,33 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
     // Silent sign-in obtains the current Google ID token without opening a browser/account picker.
     // Share a concurrent refresh; an explicit sign-out invalidates its result.
     if (!tokenRequest.current) {
-      const request = googleIdentity(GoogleSignin, false)
-        .then(async (token) => {
-          if (
-            token &&
-            accountOwner.current &&
-            GoogleSignin.getCurrentUser()?.user.id !== accountOwner.current
-          ) {
-            if (generation.current.value === current) {
-              invalidateEntitlement();
-              enabled.current = false;
-              await selectPersonalSession(null);
-              if (generation.current.value === current) setSignedIn(false);
-            }
-            return null;
-          }
-          if (!token && generation.current.value === current) {
+      const request = googleIdentity(GoogleSignin, false).then(async (token) => {
+        if (
+          token &&
+          accountOwner.current &&
+          GoogleSignin.getCurrentUser()?.user.id !== accountOwner.current
+        ) {
+          if (generation.current.value === current) {
             invalidateEntitlement();
             enabled.current = false;
             await selectPersonalSession(null);
             if (generation.current.value === current) setSignedIn(false);
           }
-          return token;
-        })
-        .catch(() => null);
-      tokenRequest.current = request;
-      void request.finally(() => {
-        if (tokenRequest.current === request) tokenRequest.current = null;
+          return null;
+        }
+        if (!token && generation.current.value === current) {
+          invalidateEntitlement();
+          enabled.current = false;
+          await selectPersonalSession(null);
+          if (generation.current.value === current) setSignedIn(false);
+        }
+        return token;
       });
+      tokenRequest.current = request;
+      const release = () => {
+        if (tokenRequest.current === request) tokenRequest.current = null;
+      };
+      void request.then(release, release);
     }
     const token = await tokenRequest.current;
     return enabled.current && generation.current.value === current ? token : null;
@@ -219,5 +254,15 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
             disconnect,
           }
         : { status: 'signedOut', googleSupported: true, signIn, error };
+  if (initializationFailed)
+    return (
+      <ScopeRecovery
+        retry={() => {
+          setInitializationFailed(false);
+          if (pendingSignOut.current) void signOut().catch(() => setInitializationFailed(true));
+          else setAttempt((n) => n + 1);
+        }}
+      />
+    );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
