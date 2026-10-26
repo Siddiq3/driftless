@@ -59,6 +59,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
     @Volatile var isOperational = false
         private set
     private var classifyScheduled = false
+    private var lastClassificationUptime = -1L
     private var saltDate: String? = null
     private var salt: ByteArray = ByteArray(0)
     private val versions = HashMap<String, String?>()
@@ -85,6 +86,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
         if(current===this) stop()
         main.removeCallbacksAndMessages(null)
         versions.clear(); playerTransition.reset(); pendingScroll=false; pendingScrollPackage=null
+        lastClassificationUptime=-1L
         lastCallbackUptime=-1L; lastPauseToken=null; lastPauseMs=0L; lastGoalCheckMs=0L
         prefs = TrackingPrefs(this)
         floatingBadge = FloatingCountBadge(this)
@@ -126,7 +128,14 @@ class DriftlessAccessibilityService : AccessibilityService() {
         // Sample the transition immediately and again after settling. Waiting for only the final
         // frame can miss YouTube's short-lived empty player subtree (no scroll event is emitted).
         // Deduplication remains by item identity and dwell, never by callback frequency.
-        if (!classifyScheduled) {
+        val uptime = android.os.SystemClock.uptimeMillis()
+        // YouTube can replace its caption/control subtree entirely inside the trailing
+        // settle window without a scroll event. Sample fresh roots during the burst too,
+        // at most once per frame budget; otherwise that replacement is never observed.
+        // Keep one trailing read, not one queued task per callback. Other apps are unchanged.
+        val sampleYouTubeBurst = pkg == "com.google.android.youtube" &&
+            uptime - lastClassificationUptime >= YOUTUBE_BURST_SAMPLE_MS
+        if (!classifyScheduled || sampleYouTubeBurst) {
             classifyNow()
             classifyScheduled = true
             main.postDelayed(classifyTask, SETTLE_MS)
@@ -137,6 +146,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
         main.removeCallbacks(classifyTask)
         classifyScheduled = false
         if(!isOperational) return
+        lastClassificationUptime = android.os.SystemClock.uptimeMillis()
         val now = SqliteStore.get(this@DriftlessAccessibilityService).account.now()
         if (!::engine.isInitialized || !prefs.disclosureAccepted ||
             !getSystemService(PowerManager::class.java).isInteractive ||
@@ -494,6 +504,8 @@ class DriftlessAccessibilityService : AccessibilityService() {
         const val GOAL_CHECK_MS = 60_000L
         const val PAUSE_COOLDOWN_MS = 3_000L
         const val SETTLE_MS = 100L
+        /** Cap event-driven root traversals during YouTube content-change bursts (~31/s). */
+        const val YOUTUBE_BURST_SAMPLE_MS = 32L
         const val RETENTION_MS = 30L * 24 * 3600 * 1000
 
         /** The bound instance, if Android is currently running the service. */
