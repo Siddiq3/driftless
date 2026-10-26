@@ -384,23 +384,21 @@ it('reports Google SDK failure as recoverable credential unavailability', async 
 
 it('transmits the direct target and explicit battle consent without patching the global profile', async () => {
   const id = me.incarnation;
-  const f = jest
-    .fn()
-    .mockResolvedValue(
-      resp(200, {
-        challengeId: id,
-        ownerId: 'owner',
-        title: 'Scroll battle',
-        metric: 'fewest_views',
-        startDate: '2026-10-26',
-        endDate: '2026-11-01',
-        tz: 'UTC',
-        maxMembers: 2,
-        memberCount: 1,
-        targetUserId: id,
-        invitationState: 'pending',
-      }),
-    );
+  const f = jest.fn().mockResolvedValue(
+    resp(200, {
+      challengeId: id,
+      ownerId: 'owner',
+      title: 'Scroll battle',
+      metric: 'fewest_views',
+      startDate: '2026-10-26',
+      endDate: '2026-11-01',
+      tz: 'UTC',
+      maxMembers: 2,
+      memberCount: 1,
+      targetUserId: id,
+      invitationState: 'pending',
+    }),
+  );
   const api = client(f);
   await api.createChallenge({
     title: 'Scroll battle',
@@ -426,4 +424,26 @@ it('transmits the direct target and explicit battle consent without patching the
   await api.battleScoreConsent(id, false);
   expect(JSON.parse(f.mock.calls[3][1].body)).toEqual({ share: false });
   expect(f.mock.calls.some(([url]) => String(url).includes('/v1/me'))).toBe(false);
+});
+
+describe('link-based battle API', () => {
+  it('creates and accepts only with explicit score consent', async () => {
+    const fetch = jest
+      .fn()
+      .mockResolvedValueOnce(resp(200, { code: 'ABCDEFGHJK', expiresAt: '2026-11-02T00:00:00Z' }))
+      .mockResolvedValueOnce(resp(200, { ok: true }));
+    const api = client(fetch);
+    await api.createBattleInvite();
+    await api.acceptBattleInvite('ABCDEFGHJK');
+    expect(
+      fetch.mock.calls.map(([url, init]) => [url, init.method, JSON.parse(init.body)]),
+    ).toEqual([
+      ['https://api.example.test/v1/battles/invites', 'POST', { scoreConsent: true }],
+      [
+        'https://api.example.test/v1/battles/invites/ABCDEFGHJK/accept',
+        'POST',
+        { scoreConsent: true },
+      ],
+    ]);
+  });
 });

@@ -33,7 +33,7 @@ const PAGE_DETAILS: Record<string, { title: string; mark: string }> = {
   '/goals': { title: 'Daily goals', mark: '◎' },
   '/blocking': { title: 'Focus', mark: 'Ⅱ' },
   '/friends': { title: 'Friends', mark: '♡' },
-  '/challenges': { title: 'Challenges', mark: '⚑' },
+  '/challenges': { title: 'War', mark: '⚑' },
   '/privacy': { title: 'Privacy', mark: '◇' },
   '/disclosure': { title: 'Enable counting', mark: '▥' },
   '/pro': { title: 'Feature access', mark: '✦' },
@@ -111,7 +111,7 @@ export function Screen({
   const details = PAGE_DETAILS[path];
   const tabs = [
     { label: 'Today', mark: '◉', href: '/welcome', active: ['/welcome', '/home', '/tracking'] },
-    { label: 'Circle', mark: '♡', href: '/friends', active: ['/friends', '/challenges'] },
+    { label: 'War', mark: '⚔', href: '/friends', active: ['/friends', '/challenges'] },
     {
       label: 'Progress',
       mark: '↗',

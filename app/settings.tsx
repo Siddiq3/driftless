@@ -1,3 +1,4 @@
+import { useAccountIncarnation } from '@/auth/account';
 import type { v1 } from '@siddiq3/driftless-contracts';
 import { Tracking, type TrackingHealth } from 'tracking-android';
 import { capabilityReport } from '@/capabilities/model';
@@ -10,7 +11,7 @@ import { APP_VERSION, readEnv } from '@/config/env';
 import { cacheEntitlement } from '@/billing/pro';
 import { entitlementGeneration } from '@/billing/cache';
 import { useAccountBackup } from '@/sync/AccountBackupProvider';
-import { Details, Button, Section, Notice, Screen, T } from '@/ui/kit';
+import { Details, Button, Section, Notice, Screen, T, Toggle } from '@/ui/kit';
 
 const CAPABILITY_LABELS: Record<keyof v1.Capabilities, string> = {
   videoCounting: 'Reels & Shorts counting',
@@ -30,18 +31,22 @@ export default function Settings() {
   const s = useSession();
   const backup = useAccountBackup();
   const env = readEnv();
+  const incarnation = useAccountIncarnation();
+  const [sharingBusy, setSharingBusy] = useState(false);
+  const [sharingError, setSharingError] = useState<string | null>(null);
   const api = useMemo(
     () =>
       s.status === 'signedIn' && env
         ? createApiClient({
             baseUrl: env.apiUrl,
             getAccessToken: s.getAccessToken,
-            platform: 'android',
+            platform: Platform.OS === 'ios' ? 'ios' : 'android',
+            incarnation: incarnation ?? undefined,
             appVersion: APP_VERSION,
           })
         : null,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [s.status, env?.apiUrl],
+    [s.status, env?.apiUrl, incarnation],
   );
   const [load, setLoad] = useState<Load>({ state: 'loading' });
   const [health, setHealth] = useState<TrackingHealth | null>(null);
@@ -158,6 +163,43 @@ export default function Settings() {
             <T v="heading">{s.displayName || load.me.profile.displayName || 'Welcome'}</T>
             <T muted>All features included · No subscription needed</T>
           </Section>
+          <Details title="Progress sharing" icon="shield">
+            <T muted>Share daily totals with all friends</T>
+            <Toggle
+              accessibilityLabel="Share my progress with friends"
+              value={load.me.profile.consent.shareWithFriends}
+              disabled={sharingBusy}
+              onValueChange={(value) => {
+                if (!api || sharingBusy) return;
+                const generation = requestGeneration.current;
+                setSharingBusy(true);
+                setSharingError(null);
+                void api
+                  .patchMe(
+                    {
+                      consent: value
+                        ? { cloudSync: true, shareWithFriends: true }
+                        : { shareWithFriends: false },
+                    },
+                    load.me.profile.rev,
+                  )
+                  .then(({ data }) => {
+                    if (generation === requestGeneration.current)
+                      setLoad({ state: 'ok', me: data });
+                  })
+                  .catch(() => {
+                    if (generation === requestGeneration.current)
+                      setSharingError('Sharing settings could not be saved. Please retry.');
+                  })
+                  .finally(() => setSharingBusy(false));
+              }}
+            />
+            <T v="caption" muted>
+              General friend sharing is separate from War invitations. To stop sharing in a battle,
+              remove that friend from Friends.
+            </T>
+            {sharingError && <Notice title="Sharing not updated" body={sharingError} tone="warn" />}
+          </Details>
           <Section>
             <T v="heading">Account</T>
             <T v="caption" muted>

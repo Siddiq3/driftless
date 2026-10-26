@@ -15,12 +15,37 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   userInterfaceStyle: 'dark',
   platforms: ['android', 'ios'],
   ios: {
+    ...(process.env.EXPO_PUBLIC_JOIN_BASE_URL
+      ? {
+          associatedDomains: [
+            `applinks:${new URL(process.env.EXPO_PUBLIC_JOIN_BASE_URL).hostname}`,
+          ],
+        }
+      : {}),
     bundleIdentifier: 'com.siddiqkolimi.scrollsnooze',
     supportsTablet: false,
     entitlements: { 'com.apple.developer.family-controls': true },
     infoPlist: { ITSAppUsesNonExemptEncryption: false },
   },
   android: {
+    ...(process.env.EXPO_PUBLIC_JOIN_BASE_URL
+      ? {
+          intentFilters: [
+            {
+              action: 'VIEW',
+              autoVerify: true,
+              category: ['BROWSABLE', 'DEFAULT'],
+              data: [
+                {
+                  scheme: 'https',
+                  host: new URL(process.env.EXPO_PUBLIC_JOIN_BASE_URL).hostname,
+                  pathPrefix: '/join/',
+                },
+              ],
+            },
+          ],
+        }
+      : {}),
     package: 'com.siddiqkolimi.scrollsnooze',
     adaptiveIcon: {
       foregroundImage: './assets/branding/adaptive-foreground.png',
@@ -59,6 +84,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ],
   experiments: { typedRoutes: true },
   extra: {
+    joinBaseUrl: process.env.EXPO_PUBLIC_JOIN_BASE_URL ?? null,
     apiUrl: process.env.EXPO_PUBLIC_API_URL ?? null,
     googleIosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? null,
     googleWebClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? null,

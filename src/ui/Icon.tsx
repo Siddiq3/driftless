@@ -19,7 +19,8 @@ export type IconName =
   | 'clock'
   | 'play'
   | 'help'
-  | 'cloud';
+  | 'cloud'
+  | 'trash';
 const paths: Partial<Record<IconName, string>> = {
   home: 'M3 10 12 3l9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z',
   counter: 'M5 4v4M5 12v8M12 4v9M12 17v3M19 4v2M19 10v10M3 8h4M10 13h4M17 6h4',
@@ -40,6 +41,7 @@ const paths: Partial<Record<IconName, string>> = {
   clock: 'M12 6v6l4 2',
   play: 'm9 6 10 6-10 6Z',
   help: 'M9 9a3 3 0 1 1 5 2c-2 1-2 2-2 3M12 17h.01',
+  trash: 'M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7',
   cloud: 'M6 19a5 5 0 1 1 1-10 6 6 0 0 1 12-1 5 5 0 0 1-1 11Z',
 };
 

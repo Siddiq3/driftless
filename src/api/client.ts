@@ -1,3 +1,4 @@
+import { BattleInvitePreviewSchema } from './battleLinks';
 import { BattleCreate, BattleSummary, BattleList, BattleLeaderboard } from './challenges';
 import { withDeadline } from './deadline';
 import {
@@ -242,6 +243,40 @@ export function createApiClient(o: ApiClientOptions) {
         await request('POST', '/v1/billing/play/verify', v1.VerifyResponse, {
           body: { productId, purchaseToken },
         })
+      ).data,
+    createBattleInvite: async (allowed?: () => boolean) =>
+      (
+        await request('POST', '/v1/battles/invites', v1.InviteResponse, {
+          body: { scoreConsent: true },
+          allowed,
+        })
+      ).data,
+    battleInvite: async (code: string, allowed?: () => boolean) =>
+      (
+        await request(
+          'GET',
+          `/v1/battles/invites/${encodeURIComponent(code)}`,
+          BattleInvitePreviewSchema,
+          { allowed },
+        )
+      ).data,
+    acceptBattleInvite: async (code: string, allowed?: () => boolean) =>
+      (
+        await request(
+          'POST',
+          `/v1/battles/invites/${encodeURIComponent(code)}/accept`,
+          OkResponse,
+          { body: { scoreConsent: true }, allowed },
+        )
+      ).data,
+    battleDaily: async (date: string, allowed?: () => boolean) =>
+      (
+        await request(
+          'GET',
+          `/v1/battles/daily?date=${encodeURIComponent(date)}`,
+          v1.FriendsDailyResponse,
+          { allowed },
+        )
       ).data,
     friends: async () => (await request('GET', '/v1/friends', v1.FriendsResponse)).data.friends,
     friendsDaily: async (date: string) => {
