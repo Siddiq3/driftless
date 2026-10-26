@@ -159,7 +159,6 @@ export function CircleBoard({
     friends
       .filter((friend) => friend.status === 'accepted')
       .map((friend) => ({ ...friend, daily: null }));
-  const showingLocalCount = total !== null;
   const ownViews = total;
   const visibleFriends = accepted.slice(0, 4);
   const visibleInvitations = invitations.slice(0, 4 - visibleFriends.length);
@@ -251,11 +250,6 @@ export function CircleBoard({
           <T style={styles.you}>
             {session.status === 'signedIn' ? session.displayName || 'You' : 'You'}
           </T>
-          {showingLocalCount && (
-            <T v="caption" muted>
-              Your saved count
-            </T>
-          )}
         </View>
         <T
           accessibilityLabel={`Your daily count: ${ownViews ?? 'unavailable'}`}

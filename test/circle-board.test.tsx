@@ -240,13 +240,13 @@ it('replaces old cloud counts with a clearly local count when requests fail or s
   mockApi.friendsDaily.mockRejectedValueOnce(new Error('offline'));
   await tap('Previous day');
   expect(labelText('Your daily count')).toBe('12');
-  expect(JSON.stringify(tree.toJSON())).toContain('Your saved count');
+  expect(JSON.stringify(tree.toJSON())).not.toContain('Your saved count');
   mockApi.friendsDaily.mockRejectedValueOnce(
     new ApiError(403, 'consent_required', 'Sharing is off'),
   );
   await tap('Next day');
   expect(labelText('Your daily count')).toBe('12');
-  expect(JSON.stringify(tree.toJSON())).toContain('Your saved count');
+  expect(JSON.stringify(tree.toJSON())).not.toContain('Your saved count');
   expect(JSON.stringify(tree.toJSON())).toContain('Choose to share your progress');
 });
 it('updates comparisons automatically without a manual sync control', async () => {
@@ -296,7 +296,7 @@ it('keeps your local count visible when the server has no eligible comparison co
   }));
   await mount();
   expect(labelText('Your daily count')).toBe('12');
-  expect(JSON.stringify(tree.toJSON())).toContain('Your saved count');
+  expect(JSON.stringify(tree.toJSON())).not.toContain('Your saved count');
 });
 it('allocates a handle automatically using the Google name, without a handle form', async () => {
   mockStatus = 'signedIn';

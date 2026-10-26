@@ -88,11 +88,6 @@ export function FocusHero({ state, refresh }: { state: ProgressState; refresh: (
           <T v="label" muted style={{ textAlign: 'center', fontSize: 14 }}>
             Short videos today
           </T>
-          {data?.today.measurementStatus === 'experimental' && (
-            <T v="caption" muted>
-              Experimental measurement · not a competition score
-            </T>
-          )}
         </View>
       </View>
       {state.state === 'error' && (
