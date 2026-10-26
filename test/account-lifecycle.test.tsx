@@ -1,3 +1,11 @@
+jest.mock('@/ui/StartupScreen', () => ({
+  StartupScreen: () =>
+    require('react').createElement(require('react-native').Text, null, 'Opening ScrollSnooze'),
+}));
+jest.mock('@/data/accountReady', () => ({
+  accountReady: jest.fn().mockResolvedValue(false),
+  markAccountReady: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock('@/sync/accountBackup', () => ({
   backupAccount: jest.fn().mockResolvedValue({ state: 'saved', message: 'Saved' }),
 }));
@@ -7,6 +15,7 @@ jest.mock('@/sync/accountUsage', () => ({
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { Text } from 'react-native';
+import { accountReady, markAccountReady } from '@/data/accountReady';
 import { backupAccount } from '@/sync/accountBackup';
 import { ApiError } from '@/api/client';
 import { AccountBoundary } from '@/auth/account';
@@ -55,6 +64,7 @@ const bound = {
 };
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.mocked(accountReady).mockResolvedValue(false);
   mockStatus = 'signedIn';
   state = { state: 'legacy_quarantined', incarnation: null };
   discovery.accountState.mockImplementation(async () => state);
@@ -254,4 +264,21 @@ test('incompatible bootstrap response asks for an update without endless Retry',
   expect(visible()).toContain('incompatible');
   expect(root.root.findAllByProps({ accessibilityLabel: 'Retry' })).toHaveLength(0);
   expect(discovery.registerAccount).not.toHaveBeenCalled();
+});
+
+test('returning initialized account opens without waiting for uploads or cloud history', async () => {
+  state = { state: 'active', incarnation };
+  jest.mocked(accountReady).mockResolvedValue(true);
+  jest.mocked(backupAccount).mockRejectedValueOnce(new Error('background outage'));
+  await mount();
+  expect(visible()).toContain('private screens');
+  expect(backupAccount).not.toHaveBeenCalled();
+  expect(discovery.registerAccount).not.toHaveBeenCalled();
+  jest.mocked(backupAccount).mockReset().mockResolvedValue({ state: 'saved', message: 'Saved' });
+});
+test('first completed restore marks only the verified local incarnation ready', async () => {
+  state = { state: 'active', incarnation };
+  await mount();
+  expect(backupAccount).toHaveBeenCalledTimes(1);
+  expect(markAccountReady).toHaveBeenCalledWith(expect.anything(), expect.any(Function));
 });

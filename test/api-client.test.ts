@@ -303,6 +303,7 @@ it('refreshes a rejected credential once through the existing session getter', a
   });
   expect((await api.getMe()).data.userId).toBe(me.userId);
   expect(getAccessToken).toHaveBeenCalledTimes(2);
+  expect(getAccessToken.mock.calls).toEqual([[false], [true]]);
   expect(f.mock.calls.map(([, init]) => init.headers.authorization)).toEqual([
     'Bearer expired',
     'Bearer renewed',

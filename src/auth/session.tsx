@@ -32,7 +32,7 @@ type SessionState =
   | {
       status: 'signedIn';
       displayName?: string | null;
-      getAccessToken: () => Promise<string | null>;
+      getAccessToken: (forceRefresh?: boolean) => Promise<string | null>;
       signOut: () => Promise<void>;
       disconnect: () => Promise<void>;
     };
@@ -103,6 +103,7 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const generation = useRef({ value: 0 });
   const enabled = useRef(false);
+  const cachedToken = useRef<{ value: string; until: number } | null>(null);
   const tokenRequest = useRef<Promise<string | null> | null>(null);
   const signingIn = useRef(false);
   const pendingSignOut = useRef(false);
@@ -124,19 +125,16 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
         if (!active) return;
         accountOwner.current = owner ?? null;
         enabled.current = Boolean(token);
+        cachedToken.current = token ? { value: token, until: Date.now() + 60_000 } : null;
         await selectPersonalSession(owner ?? null);
         if (!active) return;
         setSignedIn(Boolean(token));
       }
-    })().catch(async () => {
+    })().catch(() => {
       if (active) {
+        // A timeout/outage is not a sign-out. Keep the saved choice and guest data intact.
         invalidateEntitlement();
-        try {
-          await selectPersonalSession(null);
-          if (active) setSignedIn(false);
-        } catch {
-          if (active) setInitializationFailed(true);
-        }
+        setInitializationFailed(true);
       }
     });
     return () => {
@@ -159,6 +157,7 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
       await SecureStore.setItemAsync(ENABLED_KEY, 'true');
       generation.current.value++;
       tokenRequest.current = null;
+      cachedToken.current = { value: token, until: Date.now() + 60_000 };
       accountOwner.current = owner ?? null;
       enabled.current = true;
       await selectPersonalSession(owner ?? null);
@@ -176,6 +175,7 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
     generation.current.value++;
     tokenRequest.current = null;
     enabled.current = false;
+    cachedToken.current = null;
     setSignedIn(undefined);
     try {
       await selectPersonalSession(null);
@@ -203,44 +203,59 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
   }, [signOut, GoogleSignin]);
 
   const credentialGeneration = generation.current.value;
-  const getAccessToken = useCallback(async (): Promise<string | null> => {
-    if (!signedIn || !enabled.current || generation.current.value !== credentialGeneration)
-      return null;
-    const current = generation.current.value;
-    // Silent sign-in obtains the current Google ID token without opening a browser/account picker.
-    // Share a concurrent refresh; an explicit sign-out invalidates its result.
-    if (!tokenRequest.current) {
-      const request = googleIdentity(GoogleSignin, false).then(async (token) => {
-        if (
-          token &&
-          accountOwner.current &&
-          GoogleSignin.getCurrentUser()?.user.id !== accountOwner.current
-        ) {
-          if (generation.current.value === current) {
+  const getAccessToken = useCallback(
+    async (forceRefresh = false): Promise<string | null> => {
+      if (!signedIn || !enabled.current || generation.current.value !== credentialGeneration)
+        return null;
+      const current = generation.current.value;
+      const matchesOwner = () => GoogleSignin.getCurrentUser()?.user.id === accountOwner.current;
+      if (
+        !forceRefresh &&
+        matchesOwner() &&
+        cachedToken.current &&
+        Date.now() < cachedToken.current.until &&
+        Date.now() >= cachedToken.current.until - 60_000
+      )
+        return cachedToken.current.value;
+      if (forceRefresh) cachedToken.current = null;
+      // Silent sign-in obtains the current Google ID token without opening a browser/account picker.
+      // Share a concurrent refresh; an explicit sign-out invalidates its result.
+      if (!tokenRequest.current) {
+        const request = googleIdentity(GoogleSignin, false).then(async (token) => {
+          if (
+            token &&
+            accountOwner.current &&
+            GoogleSignin.getCurrentUser()?.user.id !== accountOwner.current
+          ) {
+            if (generation.current.value === current) {
+              invalidateEntitlement();
+              enabled.current = false;
+              await selectPersonalSession(null);
+              if (generation.current.value === current) setSignedIn(false);
+            }
+            return null;
+          }
+          if (!token && generation.current.value === current) {
             invalidateEntitlement();
             enabled.current = false;
             await selectPersonalSession(null);
             if (generation.current.value === current) setSignedIn(false);
           }
-          return null;
-        }
-        if (!token && generation.current.value === current) {
-          invalidateEntitlement();
-          enabled.current = false;
-          await selectPersonalSession(null);
-          if (generation.current.value === current) setSignedIn(false);
-        }
-        return token;
-      });
-      tokenRequest.current = request;
-      const release = () => {
-        if (tokenRequest.current === request) tokenRequest.current = null;
-      };
-      void request.then(release, release);
-    }
-    const token = await tokenRequest.current;
-    return enabled.current && generation.current.value === current ? token : null;
-  }, [signedIn, GoogleSignin, credentialGeneration]);
+          if (token && enabled.current && generation.current.value === current)
+            cachedToken.current = { value: token, until: Date.now() + 60_000 };
+          return token;
+        });
+        tokenRequest.current = request;
+        const release = () => {
+          if (tokenRequest.current === request) tokenRequest.current = null;
+        };
+        void request.then(release, release);
+      }
+      const token = await tokenRequest.current;
+      return enabled.current && generation.current.value === current ? token : null;
+    },
+    [signedIn, GoogleSignin, credentialGeneration],
+  );
 
   const value: SessionState =
     signedIn === undefined

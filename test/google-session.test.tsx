@@ -148,7 +148,7 @@ test('sign-out invalidates a pending token and cached API-client getters', async
         complete = resolve;
       }),
   );
-  const pending = session.getAccessToken();
+  const pending = session.getAccessToken(true);
   await act(async () => {
     await session.signOut();
   });
@@ -170,8 +170,8 @@ test('concurrent API calls share one silent Google credential request', async ()
       }),
   );
   const session = signedIn();
-  const first = session.getAccessToken();
-  const second = session.getAccessToken();
+  const first = session.getAccessToken(true);
+  const second = session.getAccessToken(true);
   complete(response('current-id-token'));
   await expect(Promise.all([first, second])).resolves.toEqual([
     'current-id-token',
@@ -246,7 +246,7 @@ test('an API client from a previous login cannot get the new login credentials',
   jest.mocked(GoogleSignin.signInSilently).mockClear();
   await expect(previous.getAccessToken()).resolves.toBeNull();
   expect(GoogleSignin.signInSilently).not.toHaveBeenCalled();
-  await expect(signedIn().getAccessToken()).resolves.toBe('renewed-token');
+  await expect(signedIn().getAccessToken(true)).resolves.toBe('renewed-token');
 });
 
 it('uses the signed-in Google profile name as the presentation name', async () => {
@@ -260,9 +260,7 @@ it('uses the signed-in Google profile name as the presentation name', async () =
 
 test('local scope initialization failure exposes Retry and resumes without erasing data', async () => {
   const { selectPersonalSession } = require('@/data/session');
-  selectPersonalSession
-    .mockRejectedValueOnce(new Error('disk unavailable'))
-    .mockRejectedValueOnce(new Error('disk unavailable'));
+  selectPersonalSession.mockRejectedValueOnce(new Error('disk unavailable'));
   await mount();
   expect(JSON.stringify(renderer!.toJSON())).toContain('Your phone data is retained');
   await act(async () =>
@@ -291,7 +289,63 @@ test('failed silent renewal releases the shared request so Retry can recover', a
   await mount();
   await login();
   jest.mocked(GoogleSignin.signInSilently).mockRejectedValueOnce(new Error('sdk unavailable'));
-  await expect(signedIn().getAccessToken()).rejects.toThrow('sdk unavailable');
+  await expect(signedIn().getAccessToken(true)).rejects.toThrow('sdk unavailable');
+  expect(latest.status).toBe('signedIn');
+  await expect(signedIn().getAccessToken(true)).resolves.toBe('renewed-token');
+});
+
+test('cold reopen restores Google once and reuses its credential for bootstrap requests', async () => {
+  mockMarkers.set('driftless.google.enabled.v1', 'true');
+  await mount();
   expect(latest.status).toBe('signedIn');
   await expect(signedIn().getAccessToken()).resolves.toBe('renewed-token');
+  await expect(signedIn().getAccessToken()).resolves.toBe('renewed-token');
+  expect(GoogleSignin.signInSilently).toHaveBeenCalledTimes(1);
+});
+test('temporary restoration failure never silently sends an opted-in account to guest mode', async () => {
+  mockMarkers.set('driftless.google.enabled.v1', 'true');
+  jest.mocked(GoogleSignin.signInSilently).mockRejectedValueOnce(new Error('temporary outage'));
+  await mount();
+  expect(JSON.stringify(renderer!.toJSON())).toContain('Your phone data is retained');
+  expect(mockMarkers.get('driftless.google.enabled.v1')).toBe('true');
+  const { selectPersonalSession } = require('@/data/session');
+  expect(selectPersonalSession).not.toHaveBeenCalled();
+  await act(async () =>
+    renderer!.root.findByProps({ accessibilityLabel: 'Retry' }).props.onPress(),
+  );
+  expect(latest.status).toBe('signedIn');
+});
+
+test('reuses a recent credential but renews after its short reuse window', async () => {
+  await mount();
+  await login();
+  const now = Date.now();
+  jest.spyOn(Date, 'now').mockReturnValue(now);
+  await expect(signedIn().getAccessToken()).resolves.toBe('google-id-token');
+  expect(GoogleSignin.signInSilently).not.toHaveBeenCalled();
+  jest.mocked(Date.now).mockReturnValue(now + 61_000);
+  await expect(signedIn().getAccessToken()).resolves.toBe('renewed-token');
+  await expect(signedIn().getAccessToken()).resolves.toBe('renewed-token');
+  expect(GoogleSignin.signInSilently).toHaveBeenCalledTimes(1);
+});
+test('a cold-reopen Google timeout remains recoverable instead of selecting guest storage', async () => {
+  jest.useFakeTimers();
+  try {
+    mockMarkers.set('driftless.google.enabled.v1', 'true');
+    jest.mocked(GoogleSignin.signInSilently).mockImplementationOnce(() => new Promise(() => {}));
+    await mount();
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(10_000);
+    });
+    const { selectPersonalSession } = require('@/data/session');
+    expect(selectPersonalSession).not.toHaveBeenCalled();
+    expect(mockMarkers.get('driftless.google.enabled.v1')).toBe('true');
+    expect(JSON.stringify(renderer!.toJSON())).toContain('Your phone data is retained');
+    await act(async () =>
+      renderer!.root.findByProps({ accessibilityLabel: 'Retry' }).props.onPress(),
+    );
+    expect(latest.status).toBe('signedIn');
+  } finally {
+    jest.useRealTimers();
+  }
 });

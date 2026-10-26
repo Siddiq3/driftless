@@ -7,9 +7,10 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { ActivityIndicator, AppState, Text, TextInput } from 'react-native';
+import { AppState, Text, TextInput } from 'react-native';
 import { randomUUID } from 'expo-crypto';
 import { z } from 'zod';
+import { accountReady, markAccountReady } from '@/data/accountReady';
 import { backupAccount } from '@/sync/accountBackup';
 import { bootstrapFailure } from './bootstrapFailure';
 import { installAccountUsage } from '@/sync/accountUsage';
@@ -18,6 +19,7 @@ import { ApiError, AccountState, createApiClient } from '@/api/client';
 import { APP_VERSION, readEnv } from '@/config/env';
 import { resolvePersonalAccount, selectPersonalSession } from '@/data/session';
 import { invalidateEntitlement } from '@/billing/cache';
+import { StartupScreen } from '@/ui/StartupScreen';
 import { dark } from '@/design-tokens';
 import { Button, Notice, Screen } from '@/ui/kit';
 
@@ -87,19 +89,24 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
           incarnation: state.incarnation,
         });
         progress('profile');
-        const { data: me } = await bound.getMe(allowed);
+        const [{ data: me }, usage] = await Promise.all([
+          bound.getMe(allowed),
+          bound.getAccountUsage(allowed),
+        ]);
         if (me.incarnation !== state.incarnation)
           throw new Error('Account incarnation response mismatch');
         progress('storage');
-        await resolvePersonalAccount(me.userId, me.incarnation, allowed, true);
+        const db = await resolvePersonalAccount(me.userId, me.incarnation, allowed, true);
         if (!alive) return;
         progress('usage');
-        const usage = await bound.getAccountUsage(allowed);
         if (usage.policy) {
           await installAccountUsage(usage, state.incarnation, allowed);
-          progress('restore');
-          const backup = await backupAccount(bound, allowed, undefined, me);
-          if (backup.state !== 'saved') throw new Error(backup.message);
+          if (!(await accountReady(db, allowed))) {
+            progress('restore');
+            const backup = await backupAccount(bound, allowed, undefined, me);
+            if (backup.state !== 'saved') throw new Error(backup.message);
+            await markAccountReady(db, allowed);
+          }
           usageReady = true;
         }
       } else {
@@ -203,16 +210,22 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
       if (apiRef.current === api) setBusy(false);
     }
   };
+  if (!current && !error)
+    return (
+      <StartupScreen
+        onSignOut={
+          session.status === 'signedIn'
+            ? () => {
+                void session
+                  .signOut()
+                  .catch(() => setError('Sign-out could not finish. Please retry.'));
+              }
+            : undefined
+        }
+      />
+    );
   return (
     <Screen>
-      {!current && !error && (
-        <>
-          <ActivityIndicator color={dark.accent} accessibilityLabel="Restoring account" />
-          <Text style={{ color: dark.text }}>
-            Restoring your account… Your saved phone data is retained.
-          </Text>
-        </>
-      )}
       {current && (
         <Notice
           title={

@@ -40,14 +40,17 @@ export class ApiError extends Error {
 export type ApiClientOptions = {
   baseUrl: string;
   incarnation?: string;
-  getAccessToken: () => Promise<string | null>;
+  getAccessToken: (forceRefresh?: boolean) => Promise<string | null>;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
   platform: 'android' | 'ios';
   appVersion: string;
 };
 
-const sharedReads = new WeakMap<() => Promise<string | null>, Map<string, Promise<unknown>>>();
+const sharedReads = new WeakMap<
+  (forceRefresh?: boolean) => Promise<string | null>,
+  Map<string, Promise<unknown>>
+>();
 
 /** Thin typed client. Every response is validated against the shared contract. */
 export function createApiClient(o: ApiClientOptions) {
@@ -101,7 +104,7 @@ export function createApiClient(o: ApiClientOptions) {
     let token: string | null;
     try {
       token = await withDeadline(
-        o.getAccessToken,
+        () => o.getAccessToken(refreshed),
         o.timeoutMs ?? 15_000,
         () => new ApiError(null, 'credential_timeout', 'Google session restoration timed out'),
       );

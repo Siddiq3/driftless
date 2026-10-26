@@ -2,7 +2,7 @@ import { AccountBoundary } from '@/auth/account';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState, type ReactNode } from 'react';
-import { ActivityIndicator } from 'react-native';
+import { StartupScreen } from '@/ui/StartupScreen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { SessionProvider, useSession } from '@/auth/session';
 import { AccountBackupProvider } from '@/sync/AccountBackupProvider';
@@ -56,7 +56,7 @@ export default function RootLayout() {
     );
   }
 
-  if (!dbReady) return <ActivityIndicator accessibilityLabel="Opening local storage" />;
+  if (!dbReady) return <StartupScreen />;
 
   return (
     <SafeAreaProvider>
@@ -86,7 +86,6 @@ export default function RootLayout() {
 
 function PersonalSessionBoundary({ children }: { children: ReactNode }) {
   const session = useSession();
-  if (session.status === 'loading')
-    return <ActivityIndicator accessibilityLabel="Opening your saved progress" />;
+  if (session.status === 'loading') return <StartupScreen />;
   return children;
 }
