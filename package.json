@@ -1,6 +1,6 @@
 {
-  "name": "driftless",
-  "version": "0.1.0",
+  "name": "scrollsnooze",
+  "version": "1.0.0",
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
@@ -14,10 +14,13 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "ios": "expo run:ios",
-    "prebuild:ios": "expo prebuild --platform ios --no-install"
+    "prebuild:ios": "expo prebuild --platform ios --no-install",
+    "release:android": "eas build --platform android --profile production",
+    "release:android:review": "node scripts/release-android.mjs --unsigned-review",
+    "release:android:local": "node scripts/release-android.mjs"
   },
   "dependencies": {
-    "@siddiq3/driftless-contracts": "0.4.0",
+    "@siddiq3/driftless-contracts": "file:vendor/siddiq3-driftless-contracts-0.4.0.tgz",
     "expo": "~57.0.30",
     "expo-build-properties": "~57.0.22",
     "expo-constants": "~57.0.0",

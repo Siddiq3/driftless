@@ -22,3 +22,10 @@ __pycache__/
 
 # Local IDE state
 .idea/
+
+# Upload signing credentials and generated release artifacts
+*.jks
+*.p12
+*.pfx
+/output/release/
+credentials.json

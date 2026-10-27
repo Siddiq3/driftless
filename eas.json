@@ -1,16 +1,35 @@
 {
-  "cli": { "version": ">= 16.0.0", "appVersionSource": "local" },
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "local"
+  },
   "build": {
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "ios": { "simulator": false }
+      "ios": {
+        "simulator": false
+      }
     },
     "simulator": {
       "developmentClient": true,
       "distribution": "internal",
-      "ios": { "simulator": true }
+      "ios": {
+        "simulator": true
+      }
     },
-    "production": { "distribution": "store" }
+    "production": {
+      "distribution": "store",
+      "environment": "production",
+      "credentialsSource": "remote",
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_WEBSITE_URL": "https://scrollsnooze.vercel.app",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "642376879468-jr70kvap8q8ml33hac4to9aqctla1kce.apps.googleusercontent.com",
+        "EXPO_PUBLIC_API_URL": "https://pwi8tdewmb.execute-api.us-east-1.amazonaws.com"
+      }
+    }
   }
 }

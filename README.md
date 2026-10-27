@@ -1,4 +1,4 @@
-# Driftless (working name) — app
+# ScrollSnooze — app
 
 Original digital-wellbeing app that helps people understand and reduce short-video scrolling.
 Android + initial iPhone port. Expo SDK 57 custom dev client with Kotlin tracking and Swift Screen Time controls.
@@ -16,11 +16,10 @@ Backend and shared contracts: [Siddiq3/driftless-backend](https://github.com/Sid
 
 ## Develop
 
-The shared contracts package comes from GitHub Packages, so you need a GitHub token with
-`read:packages`:
+The shared contracts package is bundled in `vendor/`, so installing the app does not
+require a GitHub Packages token. See [the snapshot details](vendor/README.md).
 
 ```sh
-export NODE_AUTH_TOKEN=<github token with read:packages>
 pnpm install
 pnpm typecheck && pnpm lint && pnpm test
 pnpm android        # builds and runs the Android dev client

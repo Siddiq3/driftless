@@ -7,9 +7,9 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'ScrollSnooze',
-  slug: 'driftless',
-  scheme: 'driftless',
-  version: '0.1.0',
+  slug: 'scrollsnooze',
+  scheme: ['scrollsnooze', 'driftless'],
+  version: '1.0.0',
   icon: './assets/branding/app-icon.png',
   orientation: 'portrait',
   userInterfaceStyle: 'dark',
@@ -22,6 +22,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     package: 'com.siddiqkolimi.scrollsnooze',
+    versionCode: 1,
     adaptiveIcon: {
       foregroundImage: './assets/branding/adaptive-foreground.png',
       backgroundColor: '#10102B',
@@ -55,11 +56,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-system-ui',
     'expo-notifications',
     './plugins/withDriftlessBrand.cjs',
+    './plugins/withAndroidRelease.cjs',
     ['expo-build-properties', { android: { usesCleartextTraffic: false } }],
   ],
   experiments: { typedRoutes: true },
   extra: {
+    eas: {
+      projectId: 'd3efe889-842f-451c-b322-ee9827f61767',
+    },
     apiUrl: process.env.EXPO_PUBLIC_API_URL ?? null,
+    websiteUrl: process.env.EXPO_PUBLIC_WEBSITE_URL || 'https://scrollsnooze.vercel.app',
     googleIosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? null,
     googleWebClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? null,
   },

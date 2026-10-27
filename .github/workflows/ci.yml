@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: read
-  packages: read # install @siddiq3/driftless-contracts from GitHub Packages
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -27,7 +26,6 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 17, cache: gradle }
       - name: install
-        env: { NODE_AUTH_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
         run: |
           if [ -f pnpm-lock.yaml ]; then ci/step.sh install pnpm install --frozen-lockfile
           else ci/step.sh install pnpm install --no-frozen-lockfile; fi

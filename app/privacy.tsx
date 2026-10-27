@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Share } from 'react-native';
+import { Alert, Linking, Share } from 'react-native';
+import { websiteLinks } from '@/config/website';
 import { Tracking } from 'tracking-android';
 import { ApiError } from '@/api/client';
 import { useApi } from '@/api/useApi';
@@ -19,6 +20,10 @@ export default function Privacy() {
   const s = useSession();
   const [note, setNote] = useState<{ title: string; body: string; warn?: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
+  const links = websiteLinks();
+  const openWebsite = (url: string) => {
+    void Linking.openURL(url).catch(() => setNote({ title: 'Could not open website', body: 'Please try again or contact siddiqkolimi.dev@gmail.com.', warn: true }));
+  };
 
   const confirm = (title: string, body: string, action: string, fn: () => void) =>
     Alert.alert(title, body, [
@@ -73,6 +78,15 @@ export default function Privacy() {
   return (
     <Screen>
       <VisualBanner art="focus" title="Your data stays yours" />
+      {links && (
+        <Section>
+          <T v="heading">Policies & support</T>
+          <Button kind="secondary" label="Read privacy policy" onPress={() => openWebsite(links.privacy)} />
+          <Button kind="secondary" label="Request deletion on the website" onPress={() => openWebsite(links.deletion)} />
+          <Button kind="secondary" label="Terms of use" onPress={() => openWebsite(links.terms)} />
+          <Button kind="secondary" label="Contact support" onPress={() => openWebsite(links.support)} />
+        </Section>
+      )}
       {note && <Notice tone={note.warn ? 'warn' : 'info'} title={note.title} body={note.body} />}
 
       <Details title="What we store" icon="shield">
