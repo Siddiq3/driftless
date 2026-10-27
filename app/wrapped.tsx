@@ -5,9 +5,9 @@ import { WrapStories } from '@/wrapped/Stories';
 import { useWrap } from '@/wrapped/useWrap';
 
 export default function Wrapped() {
-  const params = useLocalSearchParams<{ period?: string }>();
+  const params = useLocalSearchParams<{ period?: string; end?: string }>();
   const period = params.period === 'weekly' ? 'weekly' : 'daily';
-  const [state, refresh] = useWrap(period);
+  const [state, refresh] = useWrap(period, params.end);
   if (state.state === 'loading')
     return (
       <Screen>

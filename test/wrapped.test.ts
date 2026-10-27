@@ -8,7 +8,15 @@ jest.mock('tracking-android', () => ({
   },
 }));
 jest.mock('@/sync/run', () => ({ currentTimeZone: () => 'UTC' }));
-import { completePhoneWrap, peakWindow, clock, personality, readPhoneWrap } from '@/wrapped/model';
+import {
+  completePhoneWrap,
+  peakWindow,
+  clock,
+  personality,
+  readPhoneWrap,
+  hasWrapData,
+  resolveWrapEnd,
+} from '@/wrapped/model';
 import { Tracking, type Daily, type TrackingHealth } from 'tracking-android';
 import { aggregateDay } from '@/sync/aggregate';
 import { latestWrapEnd, summarizeWrap, wrapBounds } from '@siddiq3/driftless-contracts/domain';
@@ -190,4 +198,27 @@ test('hourly totals ignore other dates and reject malformed detail without inven
   expect(
     completePhoneWrap('weekly', '2026-10-18', [], [], { available: true, days: [] }).views.value,
   ).toBeNull();
+});
+
+test('wrap readiness distinguishes unknown periods from measured zero and partial weeks', () => {
+  expect(hasWrapData(summarizeWrap('daily', '2026-10-18', []))).toBe(false);
+  expect(hasWrapData(summarizeWrap('daily', '2026-10-18', [day('2026-10-18', 0)]))).toBe(true);
+  expect(hasWrapData(summarizeWrap('weekly', '2026-10-18', [day('2026-10-14', 20)]))).toBe(true);
+  expect(
+    hasWrapData(summarizeWrap('daily', '2026-10-18', [{ ...day('2026-10-18', null), minutes: 0 }])),
+  ).toBe(true);
+  expect(hasWrapData(summarizeWrap('daily', '2026-10-18', [day('2026-10-17', 20)]))).toBe(false);
+});
+
+test('announced wrap dates survive midnight while invalid and unfinished periods are rejected', () => {
+  jest.useFakeTimers().setSystemTime(new Date('2026-10-27T12:00:00Z'));
+  try {
+    expect(resolveWrapEnd('daily', '2026-10-25')).toBe('2026-10-25');
+    expect(resolveWrapEnd('weekly', '2026-10-18')).toBe('2026-10-18');
+    for (const requested of ['invalid', '2026-02-30', '2026-10-27', '2026-11-01'])
+      expect(resolveWrapEnd('daily', requested)).toBe('2026-10-26');
+    expect(resolveWrapEnd('weekly', '2026-10-24')).toBe('2026-10-25');
+  } finally {
+    jest.useRealTimers();
+  }
 });

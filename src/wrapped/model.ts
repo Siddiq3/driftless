@@ -19,6 +19,23 @@ export type Recap = Omit<v1.WrapResponse, 'source'> & {
   sessions: WrapSession[];
   returnCount: number;
 };
+/** A measured zero is data; an unknown period is not ready. Partial weeks remain usable. */
+export function hasWrapData(recap: Pick<Recap, 'views' | 'minutes'>) {
+  return [recap.views, recap.minutes].some(
+    (metric) => metric.trackedDays > 0 && metric.value !== null,
+  );
+}
+
+/** Freeze a prompt's completed period, including when opened after midnight. */
+export function resolveWrapEnd(period: WrapPeriod, requested?: string) {
+  const latest = defaultEnd(period);
+  if (!requested || !/^\d{4}-\d{2}-\d{2}$/.test(requested) || requested > latest) return latest;
+  const date = new Date(`${requested}T12:00:00Z`);
+  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== requested)
+    return latest;
+  if (period === 'weekly' && date.getUTCDay() !== 0) return latest;
+  return requested;
+}
 export function defaultEnd(period: WrapPeriod) {
   return latestWrapEnd(period, localDateOf(Date.now(), currentTimeZone()));
 }

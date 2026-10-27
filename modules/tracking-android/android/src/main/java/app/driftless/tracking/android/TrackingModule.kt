@@ -147,6 +147,7 @@ class TrackingModule : Module() {
             SqliteStore.get(context).account.resetHistory()
             TrackingPrefs(context).floatingCountEnabled = false
             TrackingPrefs(context).clearMemeHistory()
+            TrackingPrefs(context).clearWrapHistory()
             TrackingPrefs(context).clearFeedState()
             DriftlessAccessibilityService.current?.changeDataScope(SqliteStore.get(context).activeScope())
             CountWidget.update(context)
@@ -325,6 +326,7 @@ class TrackingModule : Module() {
             TrackingPrefs(context).floatingCountEnabled = false
             DriftlessAccessibilityService.current?.refreshFloatingCount()
             TrackingPrefs(context).clearMemeHistory()
+            TrackingPrefs(context).clearWrapHistory()
             TrackingPrefs(context).clearFeedState()
             SqliteStore.get(context).wipeAll()
             CountWidget.update(context)

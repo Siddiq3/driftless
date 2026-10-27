@@ -137,6 +137,16 @@ class TrackingPrefs(private val context: Context) {
         }.apply()
     }
 
+    fun shownWrapEnd(period: String): String? = p.getString(scoped("wrapped_ready_$period"), null)
+    fun markWrapShown(wrap: ReadyWrap) {
+        p.edit().putString(scoped("wrapped_ready_${wrap.period}"), wrap.end).apply()
+    }
+    fun clearWrapHistory() {
+        p.edit().also { editor ->
+            p.all.keys.filter { it.startsWith("wrapped_ready_") }.forEach { editor.remove(it) }
+        }.apply()
+    }
+
     val installSecret: ByteArray
         @Synchronized get() {
             p.getString(KEY_SECRET, null)?.let { return it.hexToBytes() }

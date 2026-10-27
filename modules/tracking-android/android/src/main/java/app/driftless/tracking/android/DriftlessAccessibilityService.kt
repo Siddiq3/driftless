@@ -42,6 +42,9 @@ class DriftlessAccessibilityService : AccessibilityService() {
 
     private lateinit var memeCard: MemeMilestoneCard
     private lateinit var feedPause: FeedPauseOverlay
+    private lateinit var wrapReady: WrapReadyOverlay
+    private var wrapPromptedThisVisit = false
+    private var wrapCheckedAt = 0L
     private var memeDate: String? = null
     private var memeCount: Int? = null
     private lateinit var floatingBadge: FloatingCountBadge
@@ -92,6 +95,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
         floatingBadge = FloatingCountBadge(this)
         memeCard = MemeMilestoneCard(this)
         feedPause = FeedPauseOverlay(this)
+        wrapReady = WrapReadyOverlay(this)
         rules = RulesLoader.load(this)
         val store = SqliteStore.get(this)
         val now = SqliteStore.get(this@DriftlessAccessibilityService).account.now()
@@ -175,6 +179,13 @@ class DriftlessAccessibilityService : AccessibilityService() {
             pendingScroll = false
             return
         }
+        if (::wrapReady.isInitialized && wrapReady.isShowing) {
+            engine.onLeave(now)
+            badgeSurface = c.surface; badgeIdentity = c.fingerprint != null; badgePackage = pkg
+            if (c.surface != Surface.SHORT_VIDEO) hideFloatingCount() else maybePause(pkg, now)
+            pendingScroll = false
+            return
+        }
         if (::memeCard.isInitialized && memeCard.isShowing) {
             engine.onLeave(now)
             if (c.surface != Surface.SHORT_VIDEO) hideFloatingCount()
@@ -191,8 +202,9 @@ class DriftlessAccessibilityService : AccessibilityService() {
         engine.onObservation(pkg, versionOf(pkg), c, (pendingScroll && pendingScrollPackage==pkg) || replaced, now)
         pendingScroll = false
         badgeSurface = c.surface; badgeIdentity = c.fingerprint != null; badgePackage = pkg
-        updateFloatingCount(now)
         maybePause(pkg, now)
+        maybeShowWrap(now)
+        updateFloatingCount(now)
     }
 
     private var lastPauseMs = 0L
@@ -201,6 +213,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
         val store=SqliteStore.get(this)
         val token="${store.activeScope()}:${store.account.date()}:$pkg:$reason"
         if(token==lastPauseToken || now-lastPauseMs<PAUSE_COOLDOWN_MS) return
+        if (::wrapReady.isInitialized) wrapReady.hide()
         startActivity(Intent(this,PauseActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             .putExtra(PauseActivity.EXTRA_PKG,pkg).putExtra(PauseActivity.EXTRA_REASON,reason)
             .putExtra(PauseActivity.EXTRA_SCOPE,store.activeScope()))
@@ -246,7 +259,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
             } else null
             val reason = feedDecision.reason ?: scopedReason
             if (reason != null) {
-                memeCard.hide(); floatingBadge.hide()
+                memeCard.hide(); floatingBadge.hide(); wrapReady.hide()
                 val pauseScope=store.activeScope()
                 val pauseDate=date
                 feedPause.show(reason, feedDecision.state.breakUntilMs - now,
@@ -291,6 +304,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
         }
         engine.onTick(now)
         engine.activePackage?.let { maybePause(it, now) }
+        maybeShowWrap(now)
         updateFloatingCount(now)
         if (now - lastGoalCheckMs >= GOAL_CHECK_MS) {
             lastGoalCheckMs = now
@@ -341,11 +355,49 @@ class DriftlessAccessibilityService : AccessibilityService() {
         if (::floatingBadge.isInitialized) floatingBadge.hide()
         if (::memeCard.isInitialized) memeCard.hide()
         if (::feedPause.isInitialized) feedPause.hide()
+        if (::wrapReady.isInitialized) wrapReady.hide()
+        wrapPromptedThisVisit = false; wrapCheckedAt = 0L
+    }
+
+    private fun maybeShowWrap(now: Long) {
+        if (!::wrapReady.isInitialized || wrapReady.isShowing || wrapPromptedThisVisit ||
+            feedPause.isShowing || memeCard.isShowing || !prefs.disclosureAccepted ||
+            badgeSurface != Surface.SHORT_VIDEO || !badgeIdentity) return
+        val pkg = badgePackage ?: return
+        if (pkg !in rules.apps || rootInActiveWindow?.packageName?.toString() != pkg ||
+            !getSystemService(PowerManager::class.java).isInteractive ||
+            getSystemService(KeyguardManager::class.java).isKeyguardLocked ||
+            (lastPauseMs > 0 && now - lastPauseMs < PAUSE_COOLDOWN_MS) ||
+            (wrapCheckedAt > 0 && now - wrapCheckedAt < GOAL_CHECK_MS)) return
+        wrapCheckedAt = now
+        runCatching {
+            val store = SqliteStore.get(this)
+            val wrap = WrapReady.next(store, rules.apps.keys, prefs) ?: return
+            val scope = store.activeScope()
+            if (wrapReady.show(wrap) {
+                // A delayed overlay tap must never open a different account's recap.
+                if (store.activeScope() == scope) {
+                    val uri = android.net.Uri.Builder().scheme("scrollsnooze").authority("")
+                        .path("/wrapped").appendQueryParameter("period", wrap.period)
+                        .appendQueryParameter("end", wrap.end).build()
+                    runCatching {
+                        startActivity(Intent(Intent.ACTION_VIEW, uri).setPackage(packageName)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }
+                }
+            }) {
+                prefs.markWrapShown(wrap)
+                wrapPromptedThisVisit = true
+                floatingBadge.hide()
+                engine.onLeave(now)
+            }
+        }
     }
 
     private fun updateFloatingCount(now: Long) {
         if (!::floatingBadge.isInitialized) return
-        if (::feedPause.isInitialized && feedPause.isShowing) { floatingBadge.hide(); return }
+        if ((::feedPause.isInitialized && feedPause.isShowing) ||
+            (::wrapReady.isInitialized && wrapReady.isShowing)) { floatingBadge.hide(); return }
         val pkg = badgePackage
         val foreground = rootInActiveWindow?.packageName?.toString()
         val power = getSystemService(PowerManager::class.java)
