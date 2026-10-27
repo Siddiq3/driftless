@@ -15,10 +15,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   userInterfaceStyle: 'dark',
   platforms: ['android', 'ios'],
   ios: {
-    ...(process.env.EXPO_PUBLIC_JOIN_BASE_URL
+    ...(process.env.EXPO_PUBLIC_JOIN_BASE_URL || 'https://scrollsnooze.vercel.app'
       ? {
           associatedDomains: [
-            `applinks:${new URL(process.env.EXPO_PUBLIC_JOIN_BASE_URL).hostname}`,
+            `applinks:${new URL(process.env.EXPO_PUBLIC_JOIN_BASE_URL || 'https://scrollsnooze.vercel.app').hostname}`,
           ],
         }
       : {}),
@@ -28,7 +28,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     infoPlist: { ITSAppUsesNonExemptEncryption: false },
   },
   android: {
-    ...(process.env.EXPO_PUBLIC_JOIN_BASE_URL
+    ...(process.env.EXPO_PUBLIC_JOIN_BASE_URL || 'https://scrollsnooze.vercel.app'
       ? {
           intentFilters: [
             {
@@ -38,7 +38,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
               data: [
                 {
                   scheme: 'https',
-                  host: new URL(process.env.EXPO_PUBLIC_JOIN_BASE_URL).hostname,
+                  host: new URL(
+                    process.env.EXPO_PUBLIC_JOIN_BASE_URL || 'https://scrollsnooze.vercel.app',
+                  ).hostname,
                   pathPrefix: '/join/',
                 },
               ],
@@ -89,7 +91,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     eas: {
       projectId: 'd3efe889-842f-451c-b322-ee9827f61767',
     },
-    joinBaseUrl: process.env.EXPO_PUBLIC_JOIN_BASE_URL ?? null,
+    joinBaseUrl: process.env.EXPO_PUBLIC_JOIN_BASE_URL || 'https://scrollsnooze.vercel.app',
     apiUrl: process.env.EXPO_PUBLIC_API_URL ?? null,
     websiteUrl: process.env.EXPO_PUBLIC_WEBSITE_URL || 'https://scrollsnooze.vercel.app',
     googleIosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? null,

@@ -4,7 +4,7 @@ import { INVITE_CODE, parseBattleInvite } from './inviteLinks';
 const KEY = 'scrollsnooze.battle.pending.v1';
 export function joinBaseUrl(): string | null {
   const extra = Constants.expoConfig?.extra;
-  const raw = extra?.joinBaseUrl ?? extra?.apiUrl;
+  const raw = extra?.joinBaseUrl ?? extra?.websiteUrl ?? 'https://scrollsnooze.vercel.app';
   try {
     const url = new URL(raw);
     return url.protocol === 'https:' ? url.origin : null;

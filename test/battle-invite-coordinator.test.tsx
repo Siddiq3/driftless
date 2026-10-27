@@ -1,6 +1,7 @@
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { Platform } from 'react-native';
+import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { BattleInviteCoordinator } from '@/social/BattleInviteCoordinator';
@@ -21,7 +22,11 @@ jest.mock('expo-secure-store', () => ({
 }));
 jest.mock('expo-constants', () => ({
   __esModule: true,
-  default: { expoConfig: { extra: { apiUrl: 'https://join.example' } } },
+  default: {
+    expoConfig: {
+      extra: { apiUrl: 'https://api.example', joinBaseUrl: 'https://scrollsnooze.vercel.app' },
+    },
+  },
 }));
 jest.mock('expo-linking', () => ({
   getInitialURL: jest.fn().mockResolvedValue(null),
@@ -48,6 +53,7 @@ const render = async () => {
 beforeEach(() => {
   jest.clearAllMocks();
   mockStore.clear();
+  jest.mocked(Linking.getInitialURL).mockResolvedValue(null);
   mockLoad = { state: 'ready', record: { completed: false } };
   mockApi = null;
   mockPath = '/onboarding';
@@ -90,4 +96,18 @@ test('iPhone preserves an explicit invite without querying Play', async () => {
   await render();
   expect(installReferrer).not.toHaveBeenCalled();
   expect(await pendingInvite()).toBe('ABCDEFGHJK');
+});
+
+test('installed-app HTTPS invitation survives onboarding and opens acceptance after sign-in', async () => {
+  jest
+    .mocked(Linking.getInitialURL)
+    .mockResolvedValue('https://scrollsnooze.vercel.app/join/KLMNPQRSTU?utm_content=duel');
+  await render();
+  expect(await pendingInvite()).toBe('KLMNPQRSTU');
+  expect(router.push).not.toHaveBeenCalled();
+  mockLoad = { state: 'ready', record: { completed: true } };
+  mockApi = { incarnation: 'a' };
+  mockPath = '/friends';
+  await act(async () => tree.update(<BattleInviteCoordinator />));
+  expect(router.push).toHaveBeenCalledWith('/battle-invite?code=KLMNPQRSTU');
 });

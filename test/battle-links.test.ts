@@ -8,6 +8,17 @@ test('invitation links accept only our configured HTTPS origins and valid codes'
     ]),
   ).toBe(code);
   expect(parseBattleInvite(`driftless://battle-invite?code=${code}`)).toBe(code);
+  expect(parseBattleInvite(`scrollsnooze://battle-invite?code=${code}`)).toBe(code);
+  expect(
+    parseBattleInvite(`https://scrollsnooze.vercel.app/join/${code}?utm_content=duel`, [
+      'https://scrollsnooze.vercel.app',
+    ]),
+  ).toBe(code);
+  expect(
+    parseBattleInvite(`https://scrollsnooze.vercel.app/join/${code}/`, [
+      'https://scrollsnooze.vercel.app',
+    ]),
+  ).toBe(code);
   expect(
     parseBattleInvite(`https://evil.example/join/${code}`, ['https://join.example']),
   ).toBeNull();

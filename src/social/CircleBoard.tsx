@@ -122,7 +122,7 @@ function WarBoard({ api }: { api: ApiClient | null }) {
   const openCode = async () => {
     const parsed = parseInvite(code);
     if (!parsed) {
-      setCodeError('Paste a ScrollSnooze invite link or its 10-character code.');
+      setCodeError('Paste the ScrollSnooze invitation link your friend shared.');
       return;
     }
     try {
@@ -291,10 +291,10 @@ function WarBoard({ api }: { api: ApiClient | null }) {
           <View style={styles.dialog}>
             <T v="title">Open your invitation</T>
             <Field
-              label="Invitation link or code"
+              label="Invitation link"
               value={code}
               onChangeText={setCode}
-              autoCapitalize="characters"
+              autoCapitalize="none"
             />
             {codeError && <Notice title="Check your invitation" body={codeError} tone="warn" />}
             <Button

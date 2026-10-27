@@ -27,6 +27,7 @@
       },
       "env": {
         "EXPO_PUBLIC_WEBSITE_URL": "https://scrollsnooze.vercel.app",
+        "EXPO_PUBLIC_JOIN_BASE_URL": "https://scrollsnooze.vercel.app",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "642376879468-jr70kvap8q8ml33hac4to9aqctla1kce.apps.googleusercontent.com",
         "EXPO_PUBLIC_API_URL": "https://pwi8tdewmb.execute-api.us-east-1.amazonaws.com"
       }
