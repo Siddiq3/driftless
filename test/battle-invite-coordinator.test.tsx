@@ -30,7 +30,7 @@ jest.mock('expo-constants', () => ({
 }));
 jest.mock('expo-linking', () => ({
   getInitialURL: jest.fn().mockResolvedValue(null),
-  addEventListener: () => ({ remove: jest.fn() }),
+  addEventListener: jest.fn(() => ({ remove: jest.fn() })),
 }));
 jest.mock('../modules/battle-links/src', () => ({
   installReferrer: jest.fn(),
@@ -109,5 +109,22 @@ test('installed-app HTTPS invitation survives onboarding and opens acceptance af
   mockApi = { incarnation: 'a' };
   mockPath = '/friends';
   await act(async () => tree.update(<BattleInviteCoordinator />));
+  expect(router.push).toHaveBeenCalledWith('/battle-invite?code=KLMNPQRSTU');
+});
+
+test('an invitation received while the installed app is open goes to acceptance', async () => {
+  jest.mocked(installReferrer).mockResolvedValue(null);
+  mockLoad = { state: 'ready', record: { completed: true } };
+  mockApi = { incarnation: 'a' };
+  mockPath = '/friends';
+  await render();
+  const callback = jest.mocked(Linking.addEventListener).mock.calls.at(-1)?.[1] as (event: {
+    url: string;
+  }) => void;
+  expect(callback).toBeDefined();
+  await act(async () => {
+    callback({ url: 'https://scrollsnooze.vercel.app/join/KLMNPQRSTU?utm_content=duel' });
+  });
+  expect(await pendingInvite()).toBe('KLMNPQRSTU');
   expect(router.push).toHaveBeenCalledWith('/battle-invite?code=KLMNPQRSTU');
 });
