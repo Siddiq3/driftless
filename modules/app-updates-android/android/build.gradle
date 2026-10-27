@@ -1,0 +1,25 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'app.driftless.updates'
+version = '0.1.0'
+
+android {
+  namespace "app.driftless.updates"
+  defaultConfig { versionCode 1; versionName '0.1.0' }
+  testOptions {
+    unitTests {
+      includeAndroidResources = true
+      all { testLogging { events "passed", "skipped", "failed"; exceptionFormat "full" } }
+    }
+  }
+}
+
+dependencies {
+  implementation 'com.google.android.play:app-update:2.1.0'
+  testImplementation 'junit:junit:4.13.2'
+  testImplementation 'org.robolectric:robolectric:4.16'
+  testImplementation 'androidx.test:core:1.7.0'
+}

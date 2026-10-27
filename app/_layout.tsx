@@ -1,4 +1,5 @@
 import { BattleInviteCoordinator } from '@/social/BattleInviteCoordinator';
+import { AppUpdateBoundary } from '@/updates/AppUpdateBoundary';
 import { AccountBoundary } from '@/auth/account';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -19,6 +20,16 @@ import { Button, Notice, Screen, useTheme } from '@/ui/kit';
 const env = readEnv();
 
 export default function RootLayout() {
+  return (
+    <SafeAreaProvider>
+      <AppUpdateBoundary>
+        <AppRoot />
+      </AppUpdateBoundary>
+    </SafeAreaProvider>
+  );
+}
+
+function AppRoot() {
   const t = useTheme();
   const reduced = useReducedMotion();
   const [dbReady, setDbReady] = useState(false);
@@ -42,52 +53,43 @@ export default function RootLayout() {
 
   if (dbError) {
     return (
-      <SafeAreaProvider>
-        <Screen>
-          <Notice tone="warn" title="Local storage could not be opened" body={dbError} />
-          <Button
-            label="Retry"
-            onPress={() => {
-              setDbError(null);
-              setDbAttempt((n) => n + 1);
-            }}
-          />
-        </Screen>
-      </SafeAreaProvider>
+      <Screen>
+        <Notice tone="warn" title="Local storage could not be opened" body={dbError} />
+        <Button
+          label="Retry"
+          onPress={() => {
+            setDbError(null);
+            setDbAttempt((n) => n + 1);
+          }}
+        />
+      </Screen>
     );
   }
 
-  if (!dbReady)
-    return (
-      <SafeAreaProvider>
-        <StartupScreen />
-      </SafeAreaProvider>
-    );
+  if (!dbReady) return <StartupScreen />;
 
   return (
-    <SafeAreaProvider>
-      <SessionProvider env={env}>
-        <PersonalSessionBoundary>
-          <AccountBoundary>
-            <OnboardingProvider>
-              <AccountBackupProvider>
-                <StatusBar style="light" />
-                <FirstLaunchRedirect />
-                <BattleInviteCoordinator />
-                {SUBSCRIPTIONS_REQUIRED && <EntitlementRecovery />}
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                    animation: reduced ? 'none' : 'fade_from_bottom',
-                    contentStyle: { backgroundColor: t.bg },
-                  }}
-                />
-              </AccountBackupProvider>
-            </OnboardingProvider>
-          </AccountBoundary>
-        </PersonalSessionBoundary>
-      </SessionProvider>
-    </SafeAreaProvider>
+    <SessionProvider env={env}>
+      <PersonalSessionBoundary>
+        <AccountBoundary>
+          <OnboardingProvider>
+            <AccountBackupProvider>
+              <StatusBar style="light" />
+              <FirstLaunchRedirect />
+              <BattleInviteCoordinator />
+              {SUBSCRIPTIONS_REQUIRED && <EntitlementRecovery />}
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  animation: reduced ? 'none' : 'fade_from_bottom',
+                  contentStyle: { backgroundColor: t.bg },
+                }}
+              />
+            </AccountBackupProvider>
+          </OnboardingProvider>
+        </AccountBoundary>
+      </PersonalSessionBoundary>
+    </SessionProvider>
   );
 }
 
