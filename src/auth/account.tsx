@@ -21,7 +21,7 @@ import { resolvePersonalAccount, selectPersonalSession } from '@/data/session';
 import { invalidateEntitlement } from '@/billing/cache';
 import { StartupScreen } from '@/ui/StartupScreen';
 import { dark } from '@/design-tokens';
-import { Button, Field, Notice, Screen } from '@/ui/kit';
+import { Button, Notice, Screen } from '@/ui/kit';
 
 const Context = createContext<string | null>(null);
 export const useAccountIncarnation = () => useContext(Context);
@@ -32,9 +32,7 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
   const session = useSession();
   const token = session.status === 'signedIn' ? session.getAccessToken : null;
   const apiUrl = readEnv()?.apiUrl;
-  const [timezone, setTimezone] = useState(
-    () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-  );
+  const [timezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
   const [revision, setRevision] = useState(0);
   const api = useMemo(
     () =>
@@ -77,8 +75,20 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
     };
     const load = async () => {
       progress('account');
-      const state = await api.accountState();
+      let state = await api.accountState();
       if (!alive) return;
+      if (state.state === 'deleted' || state.state === 'legacy_quarantined') {
+        progress('registration');
+        try {
+          state = await api.registerAccount(registrationId.current, state.incarnation);
+        } catch (e) {
+          // Another device may have finished registration. Discover its account; never reset it.
+          if (!(e instanceof ApiError) || e.code !== 'registration_conflict') throw e;
+          state = await api.accountState();
+          if (state.state !== 'active' && state.state !== 'deleting') throw e;
+        }
+        if (!alive) return;
+      }
       let usageReady = false;
       if (state.state === 'active' && state.incarnation) {
         const bound = createApiClient({
@@ -89,12 +99,23 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
           incarnation: state.incarnation,
         });
         progress('profile');
-        const [{ data: me }, usage] = await Promise.all([
+        const [{ data: me }, existingUsage] = await Promise.all([
           bound.getMe(allowed),
           bound.getAccountUsage(allowed),
         ]);
+        if (!alive) return;
         if (me.incarnation !== state.incarnation)
           throw new Error('Account incarnation response mismatch');
+        progress('timezone');
+        // Keep saved account timezones; use the device timezone only for initial setup.
+        const usage = existingUsage.policy
+          ? existingUsage
+          : await bound.configureAccountUsage(
+              { tz: timezone, limits: {}, expectedRev: 0 },
+              allowed,
+            );
+        if (!alive) return;
+        if (!usage.policy) throw new Error('Account timezone setup did not finish');
         progress('storage');
         const db = await resolvePersonalAccount(me.userId, me.incarnation, allowed, true);
         if (!alive) return;
@@ -110,7 +131,7 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
           usageReady = true;
         }
       } else {
-        // Remove a previously visible account dataset before rendering recovery/registration.
+        // Remove a previously visible account dataset before rendering deletion recovery.
         await selectPersonalSession('unresolved');
       }
       if (alive) setResult({ api, state, usageReady });
@@ -127,7 +148,7 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
     return () => {
       alive = false;
     };
-  }, [api, token, apiUrl]);
+  }, [api, token, apiUrl, timezone]);
   useEffect(() => {
     if (!api || current?.state !== 'active') return;
     let alive = true;
@@ -157,54 +178,30 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
   if (current?.state === 'active' && current.incarnation && result?.usageReady)
     return <Context.Provider value={current.incarnation}>{children}</Context.Provider>;
   const act = async () => {
-    if (!api || !current || busy || !apiUrl) return;
+    if (!api || current?.state !== 'deleting' || !current.incarnation || busy || !apiUrl) return;
     setBusy(true);
     setError(null);
     try {
-      if (current.state === 'deleting' && current.incarnation) {
-        await createApiClient({
-          baseUrl: apiUrl!,
-          getAccessToken: token,
-          platform: Platform.OS === 'ios' ? 'ios' : 'android',
-          appVersion: APP_VERSION,
-          incarnation: current.incarnation,
-        }).deleteAccount();
-      } else {
-        const state =
-          current.state === 'active'
-            ? current
-            : await api.registerAccount(registrationId.current, current.incarnation);
-        if (apiRef.current !== api) return;
-        if (!state.incarnation) throw new Error('Registration did not establish an incarnation');
-        const bound = createApiClient({
-          baseUrl: apiUrl!,
-          getAccessToken: token,
-          platform: Platform.OS === 'ios' ? 'ios' : 'android',
-          appVersion: APP_VERSION,
-          incarnation: state.incarnation,
-        });
-        const existing = await bound.getAccountUsage();
-        if (apiRef.current !== api) return;
-        if (!existing.policy)
-          await bound.configureAccountUsage({ tz: timezone, limits: {}, expectedRev: 0 });
-      }
+      await createApiClient({
+        baseUrl: apiUrl!,
+        getAccessToken: token,
+        platform: Platform.OS === 'ios' ? 'ios' : 'android',
+        appVersion: APP_VERSION,
+        incarnation: current.incarnation,
+      }).deleteAccount();
       if (apiRef.current !== api) return;
       invalidateEntitlement();
       setResult(null);
       setRevision((r) => r + 1);
     } catch (e) {
       if (apiRef.current === api) {
-        if (e instanceof ApiError && e.code === 'registration_conflict') {
-          setResult(null);
-          setRevision((r) => r + 1);
-        } else
-          setError(
-            e instanceof ApiError
-              ? bootstrapFailure(e).message
-              : e instanceof Error
-                ? e.message
-                : 'Please retry',
-          );
+        setError(
+          e instanceof ApiError
+            ? bootstrapFailure(e).message
+            : e instanceof Error
+              ? e.message
+              : 'Please retry',
+        );
       }
     } finally {
       if (apiRef.current === api) setBusy(false);
@@ -226,30 +223,10 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
     );
   return (
     <Screen>
-      {current && (
+      {current?.state === 'deleting' && (
         <Notice
-          title={
-            current.state === 'deleting'
-              ? 'Finish account deletion'
-              : current.state === 'active'
-                ? 'Choose your fixed account timezone'
-                : 'Create account'
-          }
-          body={
-            current.state === 'deleting'
-              ? 'Deletion was interrupted. Resume it before creating another account.'
-              : current.state === 'active'
-                ? 'Your account day uses this fixed timezone. Account-wide limits begin at its next midnight; existing local rules apply until then.'
-                : 'Create an account to back up this guest session’s history and goals. Deleted accounts and older saved account datasets stay separate.'
-          }
-        />
-      )}
-      {current && current.state !== 'deleting' && (
-        <Field
-          label="Fixed account timezone"
-          value={timezone}
-          onChangeText={setTimezone}
-          autoCapitalize="none"
+          title="Finish account deletion"
+          body="Deletion was interrupted. Resume it before creating another account."
         />
       )}
       {error && (
@@ -257,18 +234,8 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
           {error}
         </Text>
       )}
-      {current && (
-        <Button
-          label={
-            current.state === 'deleting'
-              ? 'Resume deletion'
-              : current.state === 'active'
-                ? 'Confirm fixed timezone'
-                : 'Create account'
-          }
-          onPress={() => void act()}
-          busy={busy}
-        />
+      {current?.state === 'deleting' && (
+        <Button label="Resume deletion" onPress={() => void act()} busy={busy} />
       )}
       {!current && error && retryable && (
         <Button

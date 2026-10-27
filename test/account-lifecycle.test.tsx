@@ -112,27 +112,24 @@ const press = async (label: string) => {
   await act(async () => root.root.findByProps({ accessibilityLabel: label }).props.onPress());
 };
 
-it('requires explicit timezone confirmation for an existing Phase 1 incarnation without registering it again', async () => {
+it('automatically initializes a missing timezone on an existing account without registering again', async () => {
   state = { state: 'active', incarnation };
-  bound.getAccountUsage
-    .mockResolvedValueOnce({ policy: null, snapshot: null, serverTimeMs: Date.now() })
-    .mockResolvedValueOnce({ policy: null, snapshot: null, serverTimeMs: Date.now() });
+  bound.getAccountUsage.mockResolvedValueOnce({
+    policy: null,
+    snapshot: null,
+    serverTimeMs: Date.now(),
+  });
   await mount();
-  expect(visible()).not.toContain('private screens');
-  await press('Confirm fixed timezone');
   expect(discovery.registerAccount).not.toHaveBeenCalled();
   expect(bound.configureAccountUsage).toHaveBeenCalledWith(
-    expect.objectContaining({ expectedRev: 0, limits: {}, tz: expect.any(String) }),
+    { expectedRev: 0, limits: {}, tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' },
+    expect.any(Function),
   );
   expect(visible()).toContain('private screens');
 });
 
-test('Google sign-in leaves legacy data quarantined until explicit empty registration', async () => {
+test('Google sign-in automatically registers an account and selects only its verified dataset', async () => {
   await mount();
-  expect(visible()).not.toContain('private screens');
-  expect(discovery.registerAccount).not.toHaveBeenCalled();
-  expect(resolvePersonalAccount).not.toHaveBeenCalled();
-  await press('Create account');
   expect(discovery.registerAccount).toHaveBeenCalledWith(
     '00000000-0000-4000-8000-000000000009',
     null,
@@ -162,17 +159,15 @@ test('active account screens and backup stay unmounted until local incarnation s
   expect(discovery.registerAccount).not.toHaveBeenCalled();
 });
 
-test('interrupted deletion resumes against its old incarnation before fresh registration is offered', async () => {
+test('interrupted deletion requires recovery before automatic fresh registration', async () => {
   state = { state: 'deleting', incarnation };
   await mount();
   expect(visible()).not.toContain('private screens');
   await press('Resume deletion');
   expect(bound.deleteAccount).toHaveBeenCalledTimes(1);
   expect(createApiClient).toHaveBeenCalledWith(expect.objectContaining({ incarnation }));
-  expect(discovery.registerAccount).not.toHaveBeenCalled();
-  expect(resolvePersonalAccount).not.toHaveBeenCalled();
-  await press('Create account');
   expect(discovery.registerAccount).toHaveBeenCalledWith(expect.any(String), incarnation);
+  expect(visible()).toContain('private screens');
 });
 
 test('failed lifecycle discovery exposes no account dataset or registration side effect', async () => {
@@ -187,11 +182,10 @@ test('failed lifecycle discovery exposes no account dataset or registration side
 test('registration failure exposes no private screens and retries the same operation', async () => {
   discovery.registerAccount.mockRejectedValueOnce(new Error('response unavailable'));
   await mount();
-  await press('Create account');
-  expect(visible()).toContain('response unavailable');
+  expect(visible()).toContain('phone data is retained');
   expect(visible()).not.toContain('private screens');
   expect(resolvePersonalAccount).not.toHaveBeenCalled();
-  await press('Create account');
+  await press('Retry');
   expect(discovery.registerAccount.mock.calls[1]).toEqual(discovery.registerAccount.mock.calls[0]);
   expect(visible()).toContain('private screens');
 });
@@ -283,4 +277,100 @@ test('first completed restore marks only the verified local incarnation ready', 
   await mount();
   expect(backupAccount).toHaveBeenCalledTimes(1);
   expect(markAccountReady).toHaveBeenCalledWith(expect.anything(), expect.any(Function));
+});
+
+test('new accounts initialize their timezone automatically without showing the registration form', async () => {
+  bound.getAccountUsage.mockResolvedValueOnce({
+    policy: null,
+    snapshot: null,
+    serverTimeMs: Date.now(),
+  });
+  await mount();
+  expect(bound.configureAccountUsage).toHaveBeenCalledWith(
+    { tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', limits: {}, expectedRev: 0 },
+    expect.any(Function),
+  );
+  expect(visible()).toContain('private screens');
+  expect(visible()).not.toContain('Create account');
+  expect(root.root.findAllByProps({ accessibilityLabel: 'Fixed account timezone' })).toHaveLength(
+    0,
+  );
+});
+
+test('returning accounts preserve saved timezone and restore data without registration', async () => {
+  state = { state: 'active', incarnation };
+  await mount();
+  expect(bound.configureAccountUsage).not.toHaveBeenCalled();
+  expect(discovery.registerAccount).not.toHaveBeenCalled();
+  expect(backupAccount).toHaveBeenCalledTimes(1);
+  expect(visible()).toContain('private screens');
+});
+
+test('previously deleted accounts get a fresh dataset with the previous incarnation guard', async () => {
+  state = { state: 'deleted', incarnation };
+  await mount();
+  expect(discovery.registerAccount).toHaveBeenCalledWith(expect.any(String), incarnation);
+  expect(visible()).toContain('private screens');
+});
+
+test('concurrent registration discovers the winning account without creating another dataset', async () => {
+  discovery.registerAccount.mockImplementationOnce(async () => {
+    state = { state: 'active', incarnation };
+    throw new ApiError(409, 'registration_conflict', 'already registered');
+  });
+  await mount();
+  expect(discovery.accountState).toHaveBeenCalledTimes(2);
+  expect(discovery.registerAccount).toHaveBeenCalledTimes(1);
+  expect(visible()).toContain('private screens');
+});
+
+test('timezone setup failure can resume without registering an active account again', async () => {
+  bound.getAccountUsage.mockResolvedValue({
+    policy: null,
+    snapshot: null,
+    serverTimeMs: Date.now(),
+  });
+  bound.configureAccountUsage.mockRejectedValueOnce(new ApiError(503, 'unavailable', 'offline'));
+  await mount();
+  expect(visible()).not.toContain('private screens');
+  expect(resolvePersonalAccount).not.toHaveBeenCalled();
+  await press('Retry');
+  expect(discovery.registerAccount).toHaveBeenCalledTimes(1);
+  expect(visible()).toContain('private screens');
+});
+
+test('registration completing after sign-out cannot configure or select the old account', async () => {
+  let finish!: (value: { state: string; incarnation: string }) => void;
+  discovery.registerAccount.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  await mount();
+  mockStatus = 'signedOut';
+  await act(async () => {
+    root.update(
+      <AccountBoundary>
+        <Text>guest screens</Text>
+      </AccountBoundary>,
+    );
+  });
+  await act(async () => finish({ state: 'active', incarnation }));
+  expect(bound.getAccountUsage).not.toHaveBeenCalled();
+  expect(bound.configureAccountUsage).not.toHaveBeenCalled();
+  expect(resolvePersonalAccount).not.toHaveBeenCalled();
+  expect(visible()).toContain('guest screens');
+});
+
+test('incomplete timezone setup stays retryable instead of leaving an empty screen', async () => {
+  const incomplete = { policy: null, snapshot: null, serverTimeMs: Date.now() };
+  bound.getAccountUsage.mockResolvedValueOnce(incomplete);
+  bound.configureAccountUsage.mockResolvedValueOnce(incomplete);
+  await mount();
+  expect(visible()).not.toContain('private screens');
+  expect(resolvePersonalAccount).not.toHaveBeenCalled();
+  await press('Retry');
+  expect(discovery.registerAccount).toHaveBeenCalledTimes(1);
+  expect(visible()).toContain('private screens');
 });
