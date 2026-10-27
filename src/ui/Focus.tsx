@@ -1,5 +1,6 @@
-import { Notice , Button, Details, Screen, T, useTheme } from '@/ui/kit';
-import { Platform , Animated, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { useResponsiveLayout } from './responsive';
+import { Notice, Button, Details, Screen, T, useTheme } from '@/ui/kit';
+import { Platform, Animated, Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { BrainCompanion } from './BrainCompanion';
@@ -23,7 +24,7 @@ export function AnimatedCount({
   const t = useTheme();
   return (
     <Animated.View
-      style={transition}
+      style={[{ maxWidth: '100%' }, transition]}
       accessible
       accessibilityLabel={
         value === null
@@ -34,6 +35,7 @@ export function AnimatedCount({
       <T
         accessibilityRole="text"
         style={{
+          textAlign: 'center',
           fontSize: 60,
           lineHeight: 70,
           fontWeight: '900',
@@ -50,7 +52,7 @@ export function AnimatedCount({
 
 export function FocusHero({ state, refresh }: { state: ProgressState; refresh: () => void }) {
   const t = useTheme();
-  const { width, height, fontScale } = useWindowDimensions();
+  const layout = useResponsiveLayout();
   const data = state.state === 'ok' ? state.p : null;
   const brain = brainPresentation(state);
   const characterMood = countBrainMood(state);
@@ -72,12 +74,12 @@ export function FocusHero({ state, refresh }: { state: ProgressState; refresh: (
   const experimental = data?.today.views === null ? candidateCount(daily, health) : null;
   return (
     <>
-      <View style={styles.hero}>
+      <View style={[styles.hero, { gap: layout.gap }]}>
         <BrainCompanion
           initialQuote={phrase}
           quoteMood={characterMood === 'drained' ? 'drained' : 'happy'}
           pose={characterMood === 'drained' ? 'drained' : 'fresh'}
-          size={Math.min(width - 96, height < 780 || fontScale > 1.2 ? 144 : 180)}
+          size={layout.mascotSize}
           still={brain.mood === 'unavailable'}
         />
         <View style={{ alignItems: 'center', gap: 10 }}>
@@ -130,6 +132,8 @@ export function FocusHero({ state, refresh }: { state: ProgressState; refresh: (
                       gap: 9,
                       paddingHorizontal: 14,
                       minHeight: 48,
+                      maxWidth: '100%',
+                      flexShrink: 1,
                       marginVertical: 4,
                       borderLeftWidth: index > 0 ? StyleSheet.hairlineWidth : 0,
                       borderLeftColor: t.border,
@@ -236,10 +240,10 @@ export function Dashboard({ guest = false, account }: { guest?: boolean; account
     <Screen
       topBanner={<CountingPermissionBanner health={health} />}
       contentStyle={styles.homeContent}
-      tabBarStyle={{ backgroundColor: t.bg, borderTopWidth: 0, paddingTop: 16, paddingBottom: 16 }}
+      tabBarStyle={{ backgroundColor: t.bg, borderTopWidth: 0, paddingTop: 6, paddingBottom: 6 }}
     >
       <View style={styles.brand}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <BrandMark size={30} />
           <T v="title" style={{ letterSpacing: -0.8 }}>
             ScrollSnooze
@@ -261,9 +265,9 @@ export function Dashboard({ guest = false, account }: { guest?: boolean; account
         />
       )}
       {account && <View style={{ paddingTop: 8 }}>{account}</View>}
-      <View style={styles.homeActivity}>
+      <HomeActivity>
         <FocusHero state={state} refresh={refresh} />
-      </View>
+      </HomeActivity>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Focus and app pauses"
@@ -282,6 +286,17 @@ export function Dashboard({ guest = false, account }: { guest?: boolean; account
         <Icon name="chevron" size={18} />
       </Pressable>
     </Screen>
+  );
+}
+
+function HomeActivity({ children }: { children: ReactNode }) {
+  const layout = useResponsiveLayout();
+  return (
+    <View
+      style={[styles.homeActivity, { paddingVertical: layout.compact ? 8 : 16, gap: layout.gap }]}
+    >
+      {children}
+    </View>
   );
 }
 
@@ -360,6 +375,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 8,
     minHeight: 56,
   },
   iconButton: { minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center' },

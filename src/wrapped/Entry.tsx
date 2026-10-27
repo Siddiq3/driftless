@@ -1,9 +1,10 @@
+import { useResponsiveLayout } from '@/ui/responsive';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { useCallback, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { getDb } from '@/db';
-import { T, useTheme } from '@/ui/kit';
+import { ModalContent, T, useTheme } from '@/ui/kit';
 import { BrainCharacter } from '@/ui/BrainCharacter';
 import { Icon } from '@/ui/Icon';
 import { useReducedMotion } from '@/ui/motion';
@@ -14,6 +15,7 @@ import type { WrapPeriod } from '@siddiq3/driftless-contracts/domain';
 const seenKey = (period: WrapPeriod, end: string) => `wrapped_seen_${period}_${end}`;
 export function WrapEntry({ prompt = false }: { prompt?: boolean }) {
   const t = useTheme();
+  const layout = useResponsiveLayout();
   const reduced = useReducedMotion();
   const [ready, setReady] = useState<{ period: WrapPeriod; end: string } | null>(null);
   const dismissing = useRef(false);
@@ -65,7 +67,7 @@ export function WrapEntry({ prompt = false }: { prompt?: boolean }) {
 
   return (
     <>
-      <View style={{ flexDirection: 'row', gap: 10 }}>
+      <View style={{ flexDirection: layout.stack ? 'column' : 'row', gap: 10 }}>
         {(['daily', 'weekly'] as const).map((period) => (
           <Pressable
             key={period}
@@ -73,7 +75,7 @@ export function WrapEntry({ prompt = false }: { prompt?: boolean }) {
             accessibilityLabel={`Open ${period} Wrapped`}
             onPress={() => router.push({ pathname: '/wrapped', params: { period } })}
             style={({ pressed }) => ({
-              flex: 1,
+              flex: layout.stack ? undefined : 1,
               minHeight: 52,
               borderRadius: 18,
               backgroundColor: t.surfaceRaised,
@@ -98,49 +100,44 @@ export function WrapEntry({ prompt = false }: { prompt?: boolean }) {
         animationType={reduced ? 'none' : 'fade'}
         onRequestClose={() => void dismiss(false)}
       >
-        <View style={styles.scrim}>
-          <ScrollView style={{ maxHeight: '90%', borderRadius: 38 }}>
-            <View style={styles.card} accessibilityViewIsModal>
-              <Svg
-                pointerEvents="none"
-                width="100%"
-                height="100%"
-                style={StyleSheet.absoluteFill}
-                preserveAspectRatio="none"
-              >
-                <Defs>
-                  <LinearGradient id="ready" x1="0" y1="0" x2="0" y2="1">
-                    <Stop offset="0" stopColor="#994E16" />
-                    <Stop offset="1" stopColor="#2B1608" />
-                  </LinearGradient>
-                </Defs>
-                <Rect width="100%" height="100%" fill="url(#ready)" rx={38} />
-              </Svg>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Dismiss Wrapped"
-                onPress={() => void dismiss(false)}
-                style={styles.close}
-              >
-                <T style={{ fontSize: 26 }}>×</T>
-              </Pressable>
-              <T v="title" style={{ color: '#FFE9AD', textAlign: 'center', fontWeight: '900' }}>
-                REELS WRAPPED
-              </T>
-              <BrainCharacter pose="wrapped" size={240} />
-              <T style={{ textAlign: 'center', fontSize: 20 }}>
-                Your {ready?.period === 'weekly' ? 'week' : 'day'} in reels is ready.
-              </T>
-              <SetupButton label="See my Wrapped" onPress={() => void dismiss(true)} />
-            </View>
-          </ScrollView>
-        </View>
+        <ModalContent centered style={styles.card} onClose={() => void dismiss(false)}>
+          <Svg
+            pointerEvents="none"
+            width="100%"
+            height="100%"
+            style={StyleSheet.absoluteFill}
+            preserveAspectRatio="none"
+          >
+            <Defs>
+              <LinearGradient id="ready" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0" stopColor="#994E16" />
+                <Stop offset="1" stopColor="#2B1608" />
+              </LinearGradient>
+            </Defs>
+            <Rect width="100%" height="100%" fill="url(#ready)" rx={38} />
+          </Svg>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss Wrapped"
+            onPress={() => void dismiss(false)}
+            style={styles.close}
+          >
+            <T style={{ fontSize: 26 }}>×</T>
+          </Pressable>
+          <T v="title" style={{ color: '#FFE9AD', textAlign: 'center', fontWeight: '900' }}>
+            REELS WRAPPED
+          </T>
+          <BrainCharacter pose="wrapped" size={240} />
+          <T style={{ textAlign: 'center', fontSize: 20 }}>
+            Your {ready?.period === 'weekly' ? 'week' : 'day'} in reels is ready.
+          </T>
+          <SetupButton label="See my Wrapped" onPress={() => void dismiss(true)} />
+        </ModalContent>
       </Modal>
     </>
   );
 }
 const styles = StyleSheet.create({
-  scrim: { flex: 1, backgroundColor: '#000000BB', justifyContent: 'center', padding: 20 },
   card: {
     backgroundColor: '#6C350E',
     borderWidth: 1,
@@ -154,8 +151,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 8,
     top: 8,
-    minWidth: 44,
-    minHeight: 44,
+    minWidth: 48,
+    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 2,

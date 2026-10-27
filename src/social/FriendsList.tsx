@@ -2,9 +2,8 @@ import { useCallback, useRef, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import type { v1 } from '@siddiq3/driftless-contracts';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ApiClient } from '@/api/client';
-import { Button, LoadingState, Notice, Screen, T } from '@/ui/kit';
+import { ModalContent, Button, LoadingState, Notice, Screen, T } from '@/ui/kit';
 import { Icon } from '@/ui/Icon';
 import { Avatar } from './battleVisuals';
 export function FriendsList({ api }: { api: ApiClient | null }) {
@@ -136,16 +135,15 @@ export function FriendsList({ api }: { api: ApiClient | null }) {
           if (!busy) setSelected(null);
         }}
       >
-        <SafeAreaView style={styles.overlay}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Close friend options"
-            disabled={busy}
-            onPress={() => setSelected(null)}
-            style={{ flex: 1, minHeight: 48 }}
-          />
+        <ModalContent
+          dismissLabel="Close friend options"
+          style={styles.sheet}
+          onClose={() => {
+            if (!busy) setSelected(null);
+          }}
+        >
           {selected && (
-            <View style={styles.sheet} accessibilityViewIsModal>
+            <View style={{ gap: 24 }}>
               <View style={styles.handle} />
               <View style={{ alignItems: 'center' }}>
                 <Avatar name={name(selected)} size={84} />
@@ -181,7 +179,7 @@ export function FriendsList({ api }: { api: ApiClient | null }) {
               </Pressable>
             </View>
           )}
-        </SafeAreaView>
+        </ModalContent>
       </Modal>
     </Screen>
   );
@@ -198,7 +196,6 @@ const styles = StyleSheet.create({
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: 16, minHeight: 76 },
   option: { minHeight: 48, minWidth: 48, alignItems: 'center', justifyContent: 'center' },
-  overlay: { flex: 1, backgroundColor: '#000B', justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: '#0B0B08',
     borderTopLeftRadius: 30,

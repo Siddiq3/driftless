@@ -44,8 +44,10 @@ jest.mock('tracking-android', () => ({ Tracking: { setEntitlement: jest.fn() } }
 jest.mock('expo-crypto', () => ({ randomUUID: () => '00000000-0000-4000-8000-000000000009' }));
 jest.mock('@/ui/kit', () => {
   const React = require('react');
-  const { View, Text, Pressable } = require('react-native');
+  const { View, Text, Pressable, TextInput } = require('react-native');
   return {
+    Field: ({ label, ...props }: { label: string }) =>
+      React.createElement(TextInput, { accessibilityLabel: label, ...props }),
     Screen: View,
     Notice: ({ body }: { body: string }) => React.createElement(Text, null, body),
     Button: ({ label, onPress }: { label: string; onPress: () => void }) =>

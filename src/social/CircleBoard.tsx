@@ -13,7 +13,7 @@ import { FriendInviteSheet } from './FriendInviteSheet';
 import { InviteSignInSheet } from '@/auth/InviteSignInSheet';
 import { personalDay, refreshPersonalData } from '@/data/personal';
 import { currentTimeZone } from '@/sync/run';
-import { Button, Field, Notice, Screen, T } from '@/ui/kit';
+import { ModalContent, Button, Field, Notice, Screen, T } from '@/ui/kit';
 import { Icon } from '@/ui/Icon';
 import { shuffledInvitePrompts } from './invitePrompts';
 import { Avatar } from './battleVisuals';
@@ -150,13 +150,15 @@ function WarBoard({ api }: { api: ApiClient | null }) {
             accessibilityRole="button"
             accessibilityLabel="Your profile"
             onPress={() => router.push('/settings')}
-            style={{ minHeight: 48, justifyContent: 'center' }}
+            style={{ minWidth: 48, minHeight: 48, justifyContent: 'center' }}
           >
             <Avatar name={selfName} size={36} />
           </Pressable>
           <T
             style={{
-              flex: 1,
+              flexGrow: 1,
+              flexBasis: 160,
+              minWidth: 160,
               fontSize: 21,
               lineHeight: 28,
               fontFamily: fonts ? 'LilitaOne' : undefined,
@@ -287,36 +289,40 @@ function WarBoard({ api }: { api: ApiClient | null }) {
         animationType="fade"
         onRequestClose={() => setCodeOpen(false)}
       >
-        <View style={styles.overlay}>
-          <View style={styles.dialog}>
-            <T v="title">Open your invitation</T>
-            <Field
-              label="Invitation link"
-              value={code}
-              onChangeText={setCode}
-              autoCapitalize="none"
-            />
-            {codeError && <Notice title="Check your invitation" body={codeError} tone="warn" />}
-            <Button
-              kind="secondary"
-              label="Paste invitation"
-              onPress={() =>
-                void Clipboard.getString()
-                  .then(setCode)
-                  .catch(() => setCodeError('Paste the link in the field above.'))
-              }
-            />
-            <Button label="Open invitation" onPress={() => void openCode()} />
-            <Button kind="secondary" label="Cancel" onPress={() => setCodeOpen(false)} />
-          </View>
-        </View>
+        <ModalContent centered style={styles.dialog} onClose={() => setCodeOpen(false)}>
+          <T v="title">Open your invitation</T>
+          <Field
+            label="Invitation link"
+            value={code}
+            onChangeText={setCode}
+            autoCapitalize="none"
+          />
+          {codeError && <Notice title="Check your invitation" body={codeError} tone="warn" />}
+          <Button
+            kind="secondary"
+            label="Paste invitation"
+            onPress={() =>
+              void Clipboard.getString()
+                .then(setCode)
+                .catch(() => setCodeError('Paste the link in the field above.'))
+            }
+          />
+          <Button label="Open invitation" onPress={() => void openCode()} />
+          <Button kind="secondary" label="Cancel" onPress={() => setCodeOpen(false)} />
+        </ModalContent>
       </Modal>
     </Screen>
   );
 }
 const styles = StyleSheet.create({
   header: { backgroundColor: C.header, paddingTop: 20 },
-  topbar: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20 },
+  topbar: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: 20,
+  },
   friends: {
     flexDirection: 'row',
     gap: 8,
@@ -328,6 +334,7 @@ const styles = StyleSheet.create({
   },
   dateNav: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 16,
@@ -343,9 +350,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 16,
   },
-  rank: { fontSize: 25, width: 38, textAlign: 'center' },
+  rank: { fontSize: 25, minWidth: 30, maxWidth: 60, textAlign: 'center' },
   person: { flex: 1, color: C.muted, fontSize: 16, lineHeight: 22 },
-  count: { fontSize: 23, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  count: { maxWidth: '40%', fontSize: 23, fontWeight: '700', fontVariant: ['tabular-nums'] },
   inviteRow: {
     minHeight: 78,
     flexDirection: 'row',
@@ -358,9 +365,8 @@ const styles = StyleSheet.create({
     backgroundColor: C.accent,
     borderRadius: 30,
     paddingHorizontal: 16,
-    minHeight: 45,
+    minHeight: 48,
     justifyContent: 'center',
   },
-  overlay: { flex: 1, backgroundColor: '#000B', justifyContent: 'center', padding: 24 },
   dialog: { backgroundColor: '#201B16', borderRadius: 28, padding: 24, gap: 16 },
 });

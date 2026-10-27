@@ -10,6 +10,7 @@ jest.mock('@/ui/Icon', () => ({ Icon: () => null }));
 jest.mock('@/ui/kit', () => {
   const { Text, View, Pressable } = require('react-native');
   return {
+    ModalContent: jest.requireActual('@/ui/kit').ModalContent,
     Screen: View,
     T: Text,
     LoadingState: () => null,

@@ -42,7 +42,7 @@ export function Wick({
       accessible
       accessibilityRole="image"
       accessibilityLabel={`Wick brain, ${wickLabel(stage)}. ${mood.replaceAll('-', ' ')}${progress === null ? '. Allowance unavailable' : `. ${Math.round(progress * 100)} percent of daily allowance used`}`}
-      style={{ width: size, height: size, maxWidth: '100%', alignSelf: 'center' }}
+      style={{ width: size, aspectRatio: 1, maxWidth: '100%', alignSelf: 'center' }}
     >
       <Svg width="100%" height="100%" viewBox="0 0 320 320" accessible={false}>
         <Circle

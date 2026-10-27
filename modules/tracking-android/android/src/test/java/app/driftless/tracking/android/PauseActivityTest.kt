@@ -38,6 +38,24 @@ class PauseActivityTest {
     private fun launch(reason: String = "LIMIT") = Robolectric.buildActivity(PauseActivity::class.java,
         Intent(context, PauseActivity::class.java).putExtra(PauseActivity.EXTRA_PKG, pkg).putExtra(PauseActivity.EXTRA_REASON, reason)).setup()
 
+    @Test fun systemInsetsAreReplacedOnWindowChangesWithoutAccumulatingPadding() {
+        val controller = launch()
+        val scroller = views(controller.get().window.decorView).filterIsInstance<android.widget.ScrollView>().single()
+        fun apply(top: Int, bottom: Int) {
+            scroller.dispatchApplyWindowInsets(android.view.WindowInsets.Builder()
+                .setInsets(android.view.WindowInsets.Type.systemBars(), android.graphics.Insets.of(12, top, 12, bottom))
+                .build())
+        }
+        apply(32, 24)
+        assertEquals(32, scroller.paddingTop)
+        assertEquals(24, scroller.paddingBottom)
+        assertEquals(12, scroller.paddingLeft)
+        apply(24, 48)
+        assertEquals(24, scroller.paddingTop)
+        assertEquals(48, scroller.paddingBottom)
+        controller.pause().stop().destroy()
+    }
+
     @Test fun bypassStillGrantsExactlyFiveMinutesAndConsumesOneDailyUse() {
         val controller = launch()
         val activity = controller.get()

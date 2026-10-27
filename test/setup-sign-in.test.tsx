@@ -21,7 +21,10 @@ jest.mock('@/permissions/PermissionChecklist', () => ({
   PermissionChecklist: () => null,
   PermissionHelpButton: () => null,
 }));
-jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: require('react-native').View }));
+jest.mock('react-native-safe-area-context', () => ({
+  SafeAreaView: require('react-native').View,
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+}));
 jest.mock('@/ui/kit', () => ({
   T: require('react-native').Text,
   Details: require('react-native').View,

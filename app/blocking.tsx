@@ -1,4 +1,4 @@
-import { Platform , Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { ScreenTimeScreen } from '@/ios/ScreenTimeScreen';
 import { AccountAllowanceNotice } from '@/sync/AccountAllowanceNotice';
 import { storageScope } from '@/db/scope';
@@ -38,7 +38,7 @@ function Group({
   return (
     <View style={styles.group}>
       <View style={styles.groupHeading}>
-        <View style={{ flex: 1, gap: 4 }}>
+        <View style={{ flexGrow: 1, flexBasis: 160, gap: 4 }}>
           <T v="heading" style={styles.heading}>
             {title}
           </T>
@@ -73,7 +73,7 @@ function Row({
       <View style={styles.rowIcon}>
         <Icon name={icon} size={20} color={C.accent} />
       </View>
-      <View style={{ flex: 1, gap: 4 }}>
+      <View style={{ flexGrow: 1, flexBasis: 160, gap: 4 }}>
         <T style={{ fontSize: 15, lineHeight: 21, fontWeight: '600' }}>{label}</T>
         {subtitle && (
           <T v="caption" muted>
@@ -178,7 +178,9 @@ function AndroidBlocking() {
         <T
           v="title"
           style={{
-            flex: 1,
+            flexGrow: 1,
+            flexBasis: 160,
+            minWidth: 160,
             color: '#FFE1A4',
             fontSize: 25,
             fontFamily: fonts ? 'LilitaOne' : undefined,
@@ -211,7 +213,7 @@ function AndroidBlocking() {
         </View>
         <View style={styles.heroDivider} />
         <View style={styles.masterRow}>
-          <View style={{ flex: 1, gap: 4 }}>
+          <View style={{ flexGrow: 1, flexBasis: 160, gap: 4 }}>
             <T style={{ fontWeight: '700', fontSize: 16 }}>App pauses</T>
             <T v="caption" style={{ color: '#E8D1B5' }}>
               Use your saved limits and focus times.
@@ -558,7 +560,7 @@ function AndroidBlocking() {
 
 const styles = StyleSheet.create({
   screen: { paddingHorizontal: 18, paddingTop: 12, paddingBottom: 28, gap: 20 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48 },
+  header: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12, minHeight: 48 },
   back: {
     width: 48,
     height: 48,
@@ -603,7 +605,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#2B251D',
   },
-  groupHeading: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  groupHeading: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
   heading: { fontSize: 18, lineHeight: 24, fontWeight: '700' },
   countBadge: {
     paddingHorizontal: 10,

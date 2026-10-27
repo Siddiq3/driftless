@@ -18,6 +18,7 @@ export function CountingPermissionBanner({ health }: { health: TrackingHealth | 
           maxWidth: 680,
           alignSelf: 'center',
           flexDirection: 'row',
+          flexWrap: 'wrap',
           alignItems: 'center',
           gap: 16,
           paddingHorizontal: 18,
@@ -27,7 +28,8 @@ export function CountingPermissionBanner({ health }: { health: TrackingHealth | 
         <Text
           accessibilityLiveRegion="polite"
           style={{
-            flex: 1,
+            flexGrow: 1,
+            flexBasis: 120,
             color: '#FFF7ED',
             fontSize: 16,
             lineHeight: 23,

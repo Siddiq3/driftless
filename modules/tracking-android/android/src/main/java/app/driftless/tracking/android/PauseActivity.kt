@@ -9,6 +9,7 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.util.TypedValue
+import android.view.WindowInsets
 import android.view.Gravity
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.Button
@@ -140,6 +141,18 @@ class PauseActivity : Activity() {
         setContentView(
             ScrollView(this).apply {
                 isFillViewport = true
+                // This activity also runs outside Expo's safe-area provider. Own system insets here.
+                setOnApplyWindowInsetsListener { view, insets ->
+                    if (Build.VERSION.SDK_INT >= 30) {
+                        val safe = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
+                        view.setPadding(safe.left, safe.top, safe.right, safe.bottom)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        view.setPadding(insets.systemWindowInsetLeft, insets.systemWindowInsetTop,
+                            insets.systemWindowInsetRight, insets.systemWindowInsetBottom)
+                    }
+                    insets
+                }
                 setBackgroundColor(Color.parseColor("#0B0B08"))
                 addView(LinearLayout(this@PauseActivity).apply {
                     orientation = LinearLayout.VERTICAL

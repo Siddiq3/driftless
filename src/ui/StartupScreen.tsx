@@ -1,3 +1,4 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import {
   ActivityIndicator,
@@ -14,7 +15,7 @@ import { dark, MIN_TOUCH, radius, space } from '@/design-tokens';
 export function StartupScreen({ onSignOut }: { onSignOut?: () => void }) {
   const [fonts] = useFonts({ LilitaOne: require('../../assets/fonts/LilitaOne-Regular.ttf') });
   return (
-    <View style={styles.screen}>
+    <SafeAreaView style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} bounces={false}>
         <View style={styles.brand}>
           <Text style={[styles.wordmark, fonts && styles.brandFont]}>SCROLLSNOOZE</Text>
@@ -53,7 +54,7 @@ export function StartupScreen({ onSignOut }: { onSignOut?: () => void }) {
           )}
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -77,7 +78,7 @@ const styles = StyleSheet.create({
   brandFont: { fontFamily: 'LilitaOne', fontWeight: '400' },
   tagline: { color: dark.textMuted, fontSize: 13, lineHeight: 20, textAlign: 'center' },
   center: {
-    flex: 1,
+    flexGrow: 1,
     width: '100%',
     maxWidth: 360,
     alignItems: 'center',

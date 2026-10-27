@@ -56,6 +56,7 @@ class MemeMilestoneCard(private val service: AccessibilityService) {
         }
         val header = LinearLayout(service).apply { gravity=Gravity.CENTER_VERTICAL }
         val pill = LinearLayout(service).apply {
+            minimumHeight=dp(48)
             gravity=Gravity.CENTER; setPadding(dp(12),dp(4),dp(12),dp(4))
             background=rounded("#682C25",radius=24)
         }
@@ -66,8 +67,8 @@ class MemeMilestoneCard(private val service: AccessibilityService) {
         pill.addView(TextView(service).apply {
             text=value.text; textSize=20f; setTextColor(Color.parseColor("#FF6F75")); typeface=Typeface.DEFAULT_BOLD
             setPadding(dp(6),0,0,0); contentDescription="${value.text} · ${value.status}"
-        })
-        header.addView(pill,LinearLayout.LayoutParams(0,dp(48),1f))
+        }, LinearLayout.LayoutParams(0,LinearLayout.LayoutParams.WRAP_CONTENT,1f))
+        header.addView(pill,LinearLayout.LayoutParams(0,LinearLayout.LayoutParams.WRAP_CONTENT,1f))
         header.addView(Button(service).apply {
             text="×"; textSize=24f; isAllCaps=false; contentDescription=copy.close
             setTextColor(Color.parseColor("#FFE8B0")); background=rounded("#28241E",radius=24)

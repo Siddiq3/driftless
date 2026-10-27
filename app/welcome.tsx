@@ -19,11 +19,20 @@ export default function Welcome() {
                 borderRadius: 28,
                 padding: 16,
                 flexDirection: 'row',
+                flexWrap: 'wrap',
                 alignItems: 'center',
                 gap: 16,
               }}
             >
-              <T style={{ flex: 1, color: '#FFFFF7', fontSize: 16, lineHeight: 22 }}>
+              <T
+                style={{
+                  flexGrow: 1,
+                  flexBasis: 180,
+                  color: '#FFFFF7',
+                  fontSize: 16,
+                  lineHeight: 22,
+                }}
+              >
                 Create an account to save your progress, even on a new phone.
               </T>
               <Pressable

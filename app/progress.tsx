@@ -1,3 +1,4 @@
+import { useResponsiveLayout } from '@/ui/responsive';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
@@ -17,6 +18,7 @@ const dateLabel = (date: string) =>
     timeZone: 'UTC',
   });
 export default function ProgressScreen() {
+  const layout = useResponsiveLayout();
   const [period, setPeriod] = useState<ActivityPeriod>('daily');
   const [offset, setOffset] = useState(0);
   const [state, refresh] = useActivity(period, offset);
@@ -113,8 +115,8 @@ export default function ProgressScreen() {
         data && (
           <>
             <ActivityChart data={data} period={period} />
-            <View style={styles.totals}>
-              <View style={styles.metric}>
+            <View style={[styles.totals, layout.stack && { flexDirection: 'column' }]}>
+              <View style={[styles.metric, layout.stack && { flexBasis: 'auto' }]}>
                 <T v="display" style={styles.number}>
                   {data.views.value === null ? '—' : data.views.value.toLocaleString()}
                 </T>
@@ -125,7 +127,7 @@ export default function ProgressScreen() {
                   </T>
                 )}
               </View>
-              <View style={styles.metric}>
+              <View style={[styles.metric, layout.stack && { flexBasis: 'auto' }]}>
                 <T v="display" style={styles.number}>
                   {data.minutes.value === null ? '—' : `${data.minutes.value}m`}
                 </T>
@@ -194,6 +196,7 @@ export default function ProgressScreen() {
 const styles = StyleSheet.create({
   switcher: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'center',
     gap: 8,
     paddingTop: 0,
@@ -210,7 +213,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'center',
-    width: '85%',
+    width: '100%',
     minHeight: 48,
   },
   arrow: { minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
@@ -223,8 +226,8 @@ const styles = StyleSheet.create({
     gap: 12,
     minHeight: 110,
   },
-  metric: { flex: 1, alignItems: 'center', gap: 6 },
-  number: { fontSize: 28, lineHeight: 36, fontWeight: '800' },
+  metric: { flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0, alignItems: 'center', gap: 6 },
+  number: { textAlign: 'center', fontSize: 28, lineHeight: 36, fontWeight: '800' },
   muted: { color: '#AAA69A', fontSize: 14 },
   pro: {
     backgroundColor: '#783F00',

@@ -62,7 +62,12 @@ export function InviteSignInSheet({ visible, onClose }: { visible: boolean; onCl
       onRequestClose={onClose}
       navigationBarTranslucent
     >
-      <View style={styles.overlay}>
+      <View
+        style={[
+          styles.overlay,
+          { paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right },
+        ]}
+      >
         <Pressable
           style={StyleSheet.absoluteFill}
           accessibilityRole="button"
@@ -82,7 +87,11 @@ export function InviteSignInSheet({ visible, onClose }: { visible: boolean; onCl
           >
             <View style={styles.handle} />
           </Pressable>
-          <ScrollView bounces={false} contentContainerStyle={styles.content}>
+          <ScrollView
+            style={{ flexShrink: 1 }}
+            bounces={false}
+            contentContainerStyle={styles.content}
+          >
             <Pressable accessibilityRole="button" onPress={privacy} style={styles.help}>
               <Text style={styles.link}>Need help?</Text>
             </Pressable>
@@ -167,7 +176,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 32,
     maxHeight: '90%',
   },
-  handleArea: { height: 44, alignItems: 'center', justifyContent: 'center' },
+  handleArea: { height: 48, alignItems: 'center', justifyContent: 'center' },
   handle: { width: 36, height: 5, borderRadius: 3, backgroundColor: '#C6C1CA' },
   content: { paddingHorizontal: 26, paddingBottom: 14 },
   help: { alignSelf: 'flex-end', minHeight: 48, justifyContent: 'center', marginBottom: 16 },

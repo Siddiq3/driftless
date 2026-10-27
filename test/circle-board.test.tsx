@@ -45,6 +45,7 @@ jest.mock('@/ui/kit', () => {
   const React = require('react'),
     { View, Text, Pressable, TextInput } = require('react-native');
   return {
+    ModalContent: jest.requireActual('@/ui/kit').ModalContent,
     Screen: View,
     T: Text,
     Notice: ({ body }: { body: string }) => <Text>{body}</Text>,

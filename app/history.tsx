@@ -75,6 +75,7 @@ export default function History() {
               accessibilityLabel={`${r.date}: ${r.gap ? 'not tracked' : `${r.minutes ?? 'untracked'} minutes, ${r.videos ?? 'untracked'} videos`}`}
               style={{
                 flexDirection: 'row',
+                flexWrap: 'wrap',
                 alignItems: 'center',
                 gap: 12,
                 paddingVertical: 12,

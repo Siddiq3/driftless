@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Clipboard, Modal, Pressable, Share, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Clipboard, Modal, Share, StyleSheet, View } from 'react-native';
 import type { ApiClient } from '@/api/client';
-import { Button, Notice, T } from '@/ui/kit';
+import { ModalContent, Button, Notice, T } from '@/ui/kit';
 import { ensureSocialProfile } from './profile';
 import { friendInviteMessage, inviteLink } from './invite';
 
@@ -73,52 +72,44 @@ export function FriendInviteSheet({
   };
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={styles.overlay}>
-        <Pressable
-          accessibilityLabel="Close invite"
-          onPress={onClose}
-          style={{ flex: 1, minHeight: 48 }}
-        />
-        <View style={styles.sheet} accessibilityViewIsModal>
-          <View style={styles.handle} />
-          <T v="title" style={{ color: '#FFE4AB' }}>
-            A little friendly competition
-          </T>
-          <T muted>Invite someone to ScrollSnooze and find out who scrolls less.</T>
-          <T v="caption" muted>
-            Creating this link lets people who accept it become your friends and see your daily
-            video totals from the day they join. You can stop sharing with someone by removing them.
-            Your other history stays private.
-          </T>
-          {error && <Notice title="Invite needs attention" body={error} tone="warn" />}
-          {note && <T>{note}</T>}
-          {!code ? (
-            <Button label="Create battle invite" busy={busy} onPress={() => void create()} />
-          ) : (
-            <>
-              <Button label="Share invitation" onPress={() => void share()} />
-              <Button
-                kind="secondary"
-                label="Copy invite link"
-                onPress={() => {
-                  Clipboard.setString(friendInviteMessage(code));
-                  setNote('Invite link copied');
-                }}
-              />
-              <T v="caption" muted>
-                Invitation valid for 7 days. Download buttons will become available when
-                ScrollSnooze is released.
-              </T>
-            </>
-          )}
-          <Button kind="secondary" label="Done" onPress={onClose} />
-        </View>
-      </SafeAreaView>
+      <ModalContent dismissLabel="Close invite" style={styles.sheet} onClose={onClose}>
+        <View style={styles.handle} />
+        <T v="title" style={{ color: '#FFE4AB' }}>
+          A little friendly competition
+        </T>
+        <T muted>Invite someone to ScrollSnooze and find out who scrolls less.</T>
+        <T v="caption" muted>
+          Creating this link lets people who accept it become your friends and see your daily video
+          totals from the day they join. You can stop sharing with someone by removing them. Your
+          other history stays private.
+        </T>
+        {error && <Notice title="Invite needs attention" body={error} tone="warn" />}
+        {note && <T>{note}</T>}
+        {!code ? (
+          <Button label="Create battle invite" busy={busy} onPress={() => void create()} />
+        ) : (
+          <>
+            <Button label="Share invitation" onPress={() => void share()} />
+            <Button
+              kind="secondary"
+              label="Copy invite link"
+              onPress={() => {
+                Clipboard.setString(friendInviteMessage(code));
+                setNote('Invite link copied');
+              }}
+            />
+            <T v="caption" muted>
+              Invitation valid for 7 days. Download buttons will become available when ScrollSnooze
+              is released.
+            </T>
+          </>
+        )}
+        <Button kind="secondary" label="Done" onPress={onClose} />
+      </ModalContent>
     </Modal>
   );
 }
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: '#0009', justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: '#17140F',
     borderTopLeftRadius: 32,

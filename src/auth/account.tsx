@@ -1,4 +1,4 @@
-import { Platform , AppState, Text, TextInput } from 'react-native';
+import { Platform, AppState, Text } from 'react-native';
 import {
   createContext,
   useContext,
@@ -21,7 +21,7 @@ import { resolvePersonalAccount, selectPersonalSession } from '@/data/session';
 import { invalidateEntitlement } from '@/billing/cache';
 import { StartupScreen } from '@/ui/StartupScreen';
 import { dark } from '@/design-tokens';
-import { Button, Notice, Screen } from '@/ui/kit';
+import { Button, Field, Notice, Screen } from '@/ui/kit';
 
 const Context = createContext<string | null>(null);
 export const useAccountIncarnation = () => useContext(Context);
@@ -245,8 +245,8 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
         />
       )}
       {current && current.state !== 'deleting' && (
-        <TextInput
-          accessibilityLabel="Fixed account timezone"
+        <Field
+          label="Fixed account timezone"
           value={timezone}
           onChangeText={setTimezone}
           autoCapitalize="none"

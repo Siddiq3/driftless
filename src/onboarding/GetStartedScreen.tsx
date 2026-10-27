@@ -1,4 +1,5 @@
-import { ScrollView, View, useWindowDimensions } from 'react-native';
+import { useResponsiveLayout } from '@/ui/responsive';
+import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '@/ui/Icon';
 import { BrandMark } from '@/ui/BrandMark';
@@ -18,12 +19,15 @@ export function GetStartedScreen({
   error: string | null;
   onStart: () => void;
 }) {
-  const { height, width } = useWindowDimensions();
+  const layout = useResponsiveLayout();
   const display = {
     fontFamily: fontsLoaded ? 'LilitaOne' : undefined,
     fontWeight: fontsLoaded ? ('400' as const) : ('900' as const),
   };
-  const heroHeight = Math.min(460, Math.max(240, height * 0.53), (width - 32) * 1.5);
+  const heroHeight = Math.max(
+    120,
+    Math.min(layout.compact ? 240 : 380, ((layout.width - 32) * 16) / 9),
+  );
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
       <View
@@ -37,9 +41,10 @@ export function GetStartedScreen({
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
+          gap: 8,
         }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
+        <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 9 }}>
           <BrandMark size={34} />
           <T style={{ ...display, color: '#FFE1A0', fontSize: 20, letterSpacing: -0.5 }}>
             SCROLLSNOOZE

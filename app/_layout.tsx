@@ -57,7 +57,12 @@ export default function RootLayout() {
     );
   }
 
-  if (!dbReady) return <StartupScreen />;
+  if (!dbReady)
+    return (
+      <SafeAreaProvider>
+        <StartupScreen />
+      </SafeAreaProvider>
+    );
 
   return (
     <SafeAreaProvider>

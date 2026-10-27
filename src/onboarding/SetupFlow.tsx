@@ -1,3 +1,4 @@
+import { useResponsiveLayout } from '@/ui/responsive';
 import { router, useFocusEffect } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -10,7 +11,6 @@ import {
   Share,
   StyleSheet,
   View,
-  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Tracking, type TrackingHealth } from 'tracking-android';
@@ -131,7 +131,7 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
   });
   const session = useSession();
   const setup = useOnboarding();
-  const { height } = useWindowDimensions();
+  const layout = useResponsiveLayout();
   const [step, setStep] = useState(initial?.completed ? 0 : activeSetupStep(initial?.step ?? 0));
   const [answers, setAnswers] = useState<SetupAnswers>(initial?.answers ?? EMPTY_ANSWERS);
   const [plan, setPlan] = useState<SetupPlan>(reelsSetupPlan(initial?.plan));
@@ -144,7 +144,7 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
   const transition = useDataMotion(step);
   const estimate = estimateTime(answers, plan);
   const question = QUESTIONS[step - 1];
-  const size = height < 740 ? 190 : 240;
+  const size = Math.min(layout.width - 48, layout.compact ? 140 : 240);
   const priority = answers.priorities[0];
   const app =
     health?.apps.find((a) => a.installed && /instagram/i.test(a.label)) ??
@@ -415,7 +415,7 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
             {
               gap: 22,
               alignItems: 'stretch',
-              paddingTop: step === 12 ? Math.min(90, height * 0.08) : 0,
+              paddingTop: step === 12 && !layout.compact ? 24 : 0,
             },
             transition,
           ]}
@@ -606,66 +606,73 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
           )}
           {error && <Notice tone="warn" title="Please check" body={error} />}
         </Animated.View>
+        <View
+          style={[
+            styles.footer,
+            { paddingHorizontal: 0, paddingBottom: 0, paddingTop: layout.gap, marginTop: 'auto' },
+          ]}
+        >
+          {step < 10 && (
+            <SetupButton
+              label={step === 9 ? 'Start my plan' : 'Continue'}
+              busy={busy}
+              onPress={() => void move(step + 1)}
+            />
+          )}
+          {step === 10 && (
+            <>
+              <SetupButton
+                label={session.status === 'signedIn' ? 'Continue' : 'Continue with Google'}
+                google={session.status !== 'signedIn'}
+                busy={busy}
+                onPress={() => void signIn()}
+              />
+              <SetupButton
+                secondary
+                label="Skip and continue"
+                busy={busy}
+                onPress={() => void move(11)}
+              />
+              {plain('Privacy policy', () => router.push('/privacy'))}
+            </>
+          )}
+          {step === 11 && (
+            <SetupButton label="Continue" busy={busy} onPress={() => void move(12)} />
+          )}
+          {step === 12 && (
+            <>
+              <PermissionHelpButton />
+              {plain(health?.serviceRunning ? 'Continue' : 'Not now', () => void move(13))}
+            </>
+          )}
+          {step === 13 && (
+            <>
+              <SetupButton
+                label={widgetRequested ? 'Continue' : 'Add widget'}
+                busy={busy}
+                onPress={() => (widgetRequested ? void move(14) : pin())}
+              />
+              {plain('Not now', () => void move(14))}
+            </>
+          )}
+          {step === 14 && (
+            <>
+              <SetupButton label="Challenge your friend" busy={busy} onPress={() => void share()} />
+              {plain('I’ll do it later', () => void move(15))}
+            </>
+          )}
+          {step === 15 && (
+            <>
+              <SetupButton
+                label={app ? `Open ${app.label}` : 'Go to Today'}
+                busy={busy}
+                onPress={() => void finish(!!app)}
+              />
+              {app && plain('Go to Today', () => void finish())}
+            </>
+          )}
+        </View>
       </ScrollView>
-      <View style={styles.footer}>
-        {step < 10 && (
-          <SetupButton
-            label={step === 9 ? 'Start my plan' : 'Continue'}
-            busy={busy}
-            onPress={() => void move(step + 1)}
-          />
-        )}
-        {step === 10 && (
-          <>
-            <SetupButton
-              label={session.status === 'signedIn' ? 'Continue' : 'Continue with Google'}
-              google={session.status !== 'signedIn'}
-              busy={busy}
-              onPress={() => void signIn()}
-            />
-            <SetupButton
-              secondary
-              label="Skip and continue"
-              busy={busy}
-              onPress={() => void move(11)}
-            />
-            {plain('Privacy policy', () => router.push('/privacy'))}
-          </>
-        )}
-        {step === 11 && <SetupButton label="Continue" busy={busy} onPress={() => void move(12)} />}
-        {step === 12 && (
-          <>
-            <PermissionHelpButton />
-            {plain(health?.serviceRunning ? 'Continue' : 'Not now', () => void move(13))}
-          </>
-        )}
-        {step === 13 && (
-          <>
-            <SetupButton
-              label={widgetRequested ? 'Continue' : 'Add widget'}
-              busy={busy}
-              onPress={() => (widgetRequested ? void move(14) : pin())}
-            />
-            {plain('Not now', () => void move(14))}
-          </>
-        )}
-        {step === 14 && (
-          <>
-            <SetupButton label="Challenge your friend" busy={busy} onPress={() => void share()} />
-            {plain('I’ll do it later', () => void move(15))}
-          </>
-        )}
-        {step === 15 && (
-          <>
-            <SetupButton
-              label={app ? `Open ${app.label}` : 'Go to Today'}
-              busy={busy}
-              onPress={() => void finish(!!app)}
-            />
-            {app && plain('Go to Today', () => void finish())}
-          </>
-        )}
-      </View>
     </SafeAreaView>
   );
 }

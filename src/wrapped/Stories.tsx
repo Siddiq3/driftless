@@ -28,7 +28,7 @@ const cream = '#FFE9AD';
 type Story = { id: string; colors: [string, string]; label: string; content: ReactNode };
 export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initialIndex?: number }) {
   const insets = useSafeAreaInsets();
-  const { width, height } = useWindowDimensions();
+  const { width, height, fontScale } = useWindowDimensions();
   const reduced = useReducedMotion();
   const [fonts] = useFonts({ LilitaOne: require('../../assets/fonts/LilitaOne-Regular.ttf') });
   const [index, setIndex] = useState(initialIndex);
@@ -48,10 +48,23 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
   const [progress] = useState(() => new Animated.Value(0));
   const capture = useRef<View>(null);
   const shareLock = useRef(false);
-  const artSize = Math.min(width - 100, height < 750 ? 180 : 240);
+  const artSize = Math.max(
+    64,
+    Math.min(
+      width - insets.left - insets.right - 100,
+      height - insets.top - insets.bottom < 700 || fontScale > 1.3 ? 140 : 240,
+    ),
+  );
   const big = (value: string | number, size = 88, color = cream) => (
     <Text
-      style={[styles.big, { fontFamily: fonts ? 'LilitaOne' : undefined, fontSize: size, color }]}
+      style={[
+        styles.big,
+        {
+          fontFamily: fonts ? 'LilitaOne' : undefined,
+          fontSize: Math.min(size, width < 360 ? 64 : size),
+          color,
+        },
+      ]}
     >
       {value}
     </Text>
@@ -434,7 +447,15 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
       : `${recap.from} – ${recap.to}`;
   return (
     <View style={{ flex: 1, backgroundColor: story.colors[1] }}>
-      <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: story.colors[1] }}>
+      <View
+        style={{
+          flex: 1,
+          paddingTop: insets.top,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+          backgroundColor: story.colors[1],
+        }}
+      >
         <Svg pointerEvents="none" width="100%" height="100%" style={StyleSheet.absoluteFill}>
           <Defs>
             <LinearGradient id="wrap" x1="0" y1="0" x2="0" y2="1">
@@ -503,7 +524,7 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
           style={{
             alignItems: 'center',
             padding: 14,
-            paddingBottom: Math.max(insets.bottom, 16),
+            paddingBottom: 8,
             gap: 8,
           }}
         >
@@ -515,7 +536,16 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
           </Text>
         </View>
       </View>
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+      <View
+        style={[
+          styles.footer,
+          {
+            paddingBottom: Math.max(insets.bottom, 12),
+            paddingLeft: Math.max(insets.left, 12),
+            paddingRight: Math.max(insets.right, 12),
+          },
+        ]}
+      >
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Previous story"
@@ -602,15 +632,23 @@ const styles = StyleSheet.create({
   brand: { fontSize: 17, fontWeight: '600', color: '#FFFFFF' },
   caption: { fontSize: 12, color: '#FFFFFFBD', lineHeight: 18 },
   circle: {
-    minWidth: 44,
-    minHeight: 44,
+    minWidth: 48,
+    minHeight: 48,
     borderRadius: 24,
     backgroundColor: '#FFFFFF10',
     alignItems: 'center',
     justifyContent: 'center',
   },
   control: { fontSize: 25, color: '#FFFFFF' },
-  scroll: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 28, paddingVertical: 20 },
+  scroll: {
+    width: '100%',
+    maxWidth: 680,
+    alignSelf: 'center',
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+    paddingVertical: 20,
+  },
   content: { alignItems: 'center', gap: 22 },
   label: {
     fontSize: 14,
@@ -632,7 +670,7 @@ const styles = StyleSheet.create({
   },
   tick: { width: 3, height: '100%', backgroundColor: cream, position: 'absolute', borderRadius: 2 },
   axis: { flexDirection: 'row', justifyContent: 'space-between', width: '100%' },
-  axisText: { fontSize: 12, lineHeight: 22, color: '#FFFFFFA0', textAlign: 'center' },
+  axisText: { flex: 1, fontSize: 12, lineHeight: 22, color: '#FFFFFFA0', textAlign: 'center' },
   split: {
     flexDirection: 'row',
     height: 18,
@@ -659,13 +697,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   bubble: { backgroundColor: '#FFFFF8', padding: 18, borderRadius: 30 },
-  footer: { flexDirection: 'row', justifyContent: 'center', gap: 8, padding: 12 },
+  footer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, padding: 12 },
   share: {
+    flexShrink: 1,
     borderWidth: 1,
     borderColor: '#FFFFFF50',
     borderRadius: 28,
     paddingHorizontal: 22,
-    minHeight: 44,
+    minHeight: 48,
     justifyContent: 'center',
     alignItems: 'center',
   },

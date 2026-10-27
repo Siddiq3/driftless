@@ -1,3 +1,4 @@
+import { ContentViewportContext, useResponsiveLayout, type ContentViewport } from './responsive';
 import { dark, MIN_TOUCH, radius, space, type as typeScale, type Theme } from '../design-tokens';
 import { useState, type ReactNode } from 'react';
 import { Icon, iconForMark, type IconName } from './Icon';
@@ -48,6 +49,7 @@ export function T({
   children,
   accessibilityRole,
   accessibilityLabel,
+  allowFontScaling = true,
 }: {
   v?: Variant;
   muted?: boolean;
@@ -55,21 +57,27 @@ export function T({
   children: ReactNode;
   accessibilityRole?: 'header' | 'text';
   accessibilityLabel?: string;
+  allowFontScaling?: boolean;
 }) {
   const t = useTheme();
   const s = typeScale[v];
+  const fontSize = style?.fontSize ?? s.size;
+  const lineHeight = style?.lineHeight ?? Math.round((fontSize * s.lineHeight) / s.size);
   return (
     <Text
       accessibilityLabel={accessibilityLabel}
       accessibilityRole={
         accessibilityRole ?? (v === 'display' || v === 'title' ? 'header' : 'text')
       }
+      allowFontScaling={allowFontScaling}
       maxFontSizeMultiplier={2}
       style={[
         {
+          flexShrink: 1,
+          minWidth: 0,
           color: muted ? t.textMuted : t.text,
-          fontSize: s.size,
-          lineHeight: s.lineHeight,
+          fontSize,
+          lineHeight,
           fontWeight: s.weight,
         },
         style,
@@ -99,6 +107,8 @@ export function Screen({
 }) {
   const t = useTheme();
   const path = usePathname();
+  const layout = useResponsiveLayout();
+  const [viewport, setViewport] = useState<ContentViewport | null>(null);
   const primary = [
     '/welcome',
     '/home',
@@ -121,40 +131,53 @@ export function Screen({
   ] as const;
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: backgroundColor ?? t.bg }}>
-      {topBanner}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={[styles.screen, contentStyle]}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-        >
-          {details && !hideHeader && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48 }}>
-              {!primary && (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Go back"
-                  onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-                  style={{ minWidth: 48, minHeight: 48, justifyContent: 'center' }}
-                >
-                  <Icon name="back" />
-                </Pressable>
-              )}
-              <T v="title" style={{ flex: 1, letterSpacing: -0.6 }}>
-                {details.title}
-              </T>
-              <Icon
-                name={path === '/settings' ? 'settings' : iconForMark(details.mark)}
-                color={t.textMuted}
-              />
-            </View>
-          )}
-          {children ?? <LoadingState />}
-        </ScrollView>
+        <ContentViewportContext.Provider value={viewport}>
+          <ScrollView
+            style={{ flex: 1 }}
+            onLayout={({ nativeEvent: { layout: bounds } }) => {
+              const next = { width: Math.min(bounds.width, 680), height: bounds.height };
+              setViewport((previous) =>
+                previous?.width === next.width && previous.height === next.height ? previous : next,
+              );
+            }}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[
+              styles.screen,
+              { padding: layout.gutter, gap: layout.gap },
+              contentStyle,
+            ]}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+          >
+            {topBanner}
+            {details && !hideHeader && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48 }}>
+                {!primary && (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Go back"
+                    onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+                    style={{ minWidth: 48, minHeight: 48, justifyContent: 'center' }}
+                  >
+                    <Icon name="back" />
+                  </Pressable>
+                )}
+                <T v="title" style={{ flex: 1, letterSpacing: -0.6 }}>
+                  {details.title}
+                </T>
+                <Icon
+                  name={path === '/settings' ? 'settings' : iconForMark(details.mark)}
+                  color={t.textMuted}
+                />
+              </View>
+            )}
+            {children ?? <LoadingState />}
+          </ScrollView>
+        </ContentViewportContext.Provider>
       </KeyboardAvoidingView>
       {!hideTabs && (primary || path === '/challenges') && (
         <View
@@ -199,6 +222,59 @@ export function Screen({
           })}
         </View>
       )}
+    </SafeAreaView>
+  );
+}
+
+/** Use inside Modal; one safe-area owner and one bounded scrolling body. */
+export function ModalContent({
+  children,
+  style,
+  onClose,
+  centered = false,
+  dismissLabel = 'Dismiss dialog',
+}: {
+  children: ReactNode;
+  style?: ViewStyle;
+  onClose: () => void;
+  centered?: boolean;
+  dismissLabel?: string;
+}) {
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#000B' }}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+        <View
+          style={{
+            flex: 1,
+            justifyContent: centered ? 'center' : 'flex-end',
+            padding: centered ? 16 : 0,
+          }}
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={dismissLabel}
+            onPress={onClose}
+            style={StyleSheet.absoluteFill}
+          />
+          <ScrollView
+            style={{
+              flexGrow: 0,
+              maxHeight: '90%',
+              width: '100%',
+              maxWidth: 560,
+              alignSelf: 'center',
+              borderRadius: 30,
+            }}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="none"
+            contentContainerStyle={{ flexGrow: 1 }}
+          >
+            <View accessibilityViewIsModal style={style}>
+              {children}
+            </View>
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -496,6 +572,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 56,
+    paddingVertical: 4,
     borderRadius: radius.md,
     gap: 2,
   },

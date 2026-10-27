@@ -21,6 +21,7 @@ export function Avatar({
       }}
     >
       <T
+        allowFontScaling={false}
         style={{ fontSize: size * 0.5, lineHeight: size * 0.65, color: '#FFF', fontWeight: '500' }}
       >
         {[...name.trim()][0]?.toUpperCase() || '?'}

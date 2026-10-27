@@ -110,8 +110,8 @@ export function WidgetPreview() {
     <View
       style={{
         width: '84%',
-        aspectRatio: 0.85,
-        maxHeight: 320,
+        minHeight: 240,
+        maxWidth: 300,
         alignSelf: 'center',
         borderRadius: 30,
         overflow: 'hidden',
@@ -139,7 +139,7 @@ export function WidgetPreview() {
           Widget preview
         </T>
       </View>
-      <View style={{ position: 'absolute', bottom: -18, right: -25 }}>
+      <View style={{ alignSelf: 'flex-end' }}>
         <BrainCharacter size={170} />
       </View>
     </View>
@@ -154,7 +154,8 @@ export function ChallengeArtwork() {
       resizeMode="contain"
       style={{
         width: '100%',
-        height: 330,
+        aspectRatio: 1,
+        maxHeight: 330,
         transform: [{ translateY: idle.interpolate({ inputRange: [0, 1], outputRange: [0, -5] }) }],
       }}
     />
@@ -167,7 +168,7 @@ export function PrivacyArtwork() {
         width: '84%',
         alignSelf: 'center',
         maxWidth: 300,
-        height: 330,
+        aspectRatio: 0.85,
         borderTopLeftRadius: 40,
         borderTopRightRadius: 40,
         borderWidth: 6,

@@ -26,7 +26,7 @@ export function BrainCharacter({
   const idle = useIdleMotion(!still, timing.breathe);
   const face = useCharacterExpression(emotion, !still);
   return (
-    <View style={{ width: size, height: size, maxWidth: '100%', alignSelf: 'center' }}>
+    <View style={{ width: size, aspectRatio: 1, maxWidth: '100%', alignSelf: 'center' }}>
       <Animated.View
         style={{
           flex: 1,
