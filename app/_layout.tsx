@@ -1,3 +1,4 @@
+import { BattleInviteCoordinator } from '@/social/BattleInviteCoordinator';
 import { AccountBoundary } from '@/auth/account';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -67,6 +68,7 @@ export default function RootLayout() {
               <AccountBackupProvider>
                 <StatusBar style="light" />
                 <FirstLaunchRedirect />
+                <BattleInviteCoordinator />
                 {SUBSCRIPTIONS_REQUIRED && <EntitlementRecovery />}
                 <Stack
                   screenOptions={{

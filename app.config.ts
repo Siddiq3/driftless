@@ -15,12 +15,37 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   userInterfaceStyle: 'dark',
   platforms: ['android', 'ios'],
   ios: {
+    ...(process.env.EXPO_PUBLIC_JOIN_BASE_URL
+      ? {
+          associatedDomains: [
+            `applinks:${new URL(process.env.EXPO_PUBLIC_JOIN_BASE_URL).hostname}`,
+          ],
+        }
+      : {}),
     bundleIdentifier: 'com.siddiqkolimi.scrollsnooze',
     supportsTablet: false,
     entitlements: { 'com.apple.developer.family-controls': true },
     infoPlist: { ITSAppUsesNonExemptEncryption: false },
   },
   android: {
+    ...(process.env.EXPO_PUBLIC_JOIN_BASE_URL
+      ? {
+          intentFilters: [
+            {
+              action: 'VIEW',
+              autoVerify: true,
+              category: ['BROWSABLE', 'DEFAULT'],
+              data: [
+                {
+                  scheme: 'https',
+                  host: new URL(process.env.EXPO_PUBLIC_JOIN_BASE_URL).hostname,
+                  pathPrefix: '/join/',
+                },
+              ],
+            },
+          ],
+        }
+      : {}),
     package: 'com.siddiqkolimi.scrollsnooze',
     versionCode: 1,
     adaptiveIcon: {
@@ -64,6 +89,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     eas: {
       projectId: 'd3efe889-842f-451c-b322-ee9827f61767',
     },
+    joinBaseUrl: process.env.EXPO_PUBLIC_JOIN_BASE_URL ?? null,
     apiUrl: process.env.EXPO_PUBLIC_API_URL ?? null,
     websiteUrl: process.env.EXPO_PUBLIC_WEBSITE_URL || 'https://scrollsnooze.vercel.app',
     googleIosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? null,

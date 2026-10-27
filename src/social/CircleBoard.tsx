@@ -4,195 +4,135 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import { addDays, localDateOf } from '@siddiq3/driftless-contracts/domain';
 import type { v1 } from '@siddiq3/driftless-contracts';
-import { AppState, Image, Modal, Pressable, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { AppState, Clipboard, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useApi } from '@/api/useApi';
 import { ApiError, type ApiClient } from '@/api/client';
 import { useSession } from '@/auth/session';
-import { BattleInbox } from './BattleInbox';
-import { createBattle } from './battleRequests';
+import { useAccountBackup } from '@/sync/AccountBackupProvider';
 import { FriendInviteSheet } from './FriendInviteSheet';
 import { InviteSignInSheet } from '@/auth/InviteSignInSheet';
 import { personalDay, refreshPersonalData } from '@/data/personal';
-import { observeStorage } from '@/db/scope';
 import { currentTimeZone } from '@/sync/run';
-import { Button, Notice, Screen, T } from '@/ui/kit';
+import { Button, Field, Notice, Screen, T } from '@/ui/kit';
 import { Icon } from '@/ui/Icon';
-import { shuffledInvitePrompts, type InvitePrompt } from './invitePrompts';
-const colors = {
-  bg: '#0B0B08',
-  header: '#301A06',
-  row: '#2C2116',
-  muted: '#B1A58F',
-  accent: '#FFD09D',
-};
-
-type CircleProps = { friendsPanel: ReactNode; openFriends?: boolean };
-export function CircleBoard(props: CircleProps) {
+import { shuffledInvitePrompts } from './invitePrompts';
+import { Avatar } from './battleVisuals';
+import { rankBattle } from './ranking';
+import { parseInvite, rememberInvite } from './pendingInvite';
+const C = { bg: '#0B0B08', header: '#301A06', row: '#2C2116', muted: '#A49E90', accent: '#FFD09D' };
+export function CircleBoard(_props: { friendsPanel?: ReactNode; openFriends?: boolean }) {
   const api = useApi();
-  return (
-    <CircleBoardContent key={api ? (api.incarnation ?? 'account') : 'guest'} {...props} api={api} />
-  );
+  return <WarBoard key={api?.incarnation ?? 'guest'} api={api} />;
 }
-function CircleBoardContent({
-  friendsPanel,
-  openFriends = false,
-  api,
-}: CircleProps & { api: ApiClient | null }) {
+function WarBoard({ api }: { api: ApiClient | null }) {
+  const session = useSession(),
+    backup = useAccountBackup();
   const [fonts] = useFonts({ LilitaOne: require('../../assets/fonts/LilitaOne-Regular.ttf') });
-  const session = useSession();
-  const [invitations, setInvitations] = useState<InvitePrompt[]>([]);
+  const [today, setToday] = useState(() => localDateOf(Date.now(), currentTimeZone()));
+  const [date, setDate] = useState(today),
+    [data, setData] = useState<v1.FriendsDailyResponse | null>(null);
+  const [guestViews, setGuestViews] = useState<number | null>(null);
+  const [issue, setIssue] = useState<string | null>(null),
+    [inviteOpen, setInviteOpen] = useState(false),
+    [signIn, setSignIn] = useState(false);
+  const [codeOpen, setCodeOpen] = useState(false),
+    [code, setCode] = useState(''),
+    [codeError, setCodeError] = useState<string | null>(null);
+  const [prompts, setPrompts] = useState(() => shuffledInvitePrompts([]));
+  const refresh = useRef<() => void>(() => {});
   useFocusEffect(
     useCallback(() => {
-      setInvitations((previous) => shuffledInvitePrompts(previous));
+      setPrompts((previous) => shuffledInvitePrompts(previous));
     }, []),
   );
-  const [today, setToday] = useState(() => localDateOf(Date.now(), currentTimeZone()));
-  const [date, setDate] = useState(() => today);
-  const [total, setTotal] = useState<number | null>(null);
-  const [friends, setFriends] = useState<v1.Friend[]>([]);
-  const [managerOpen, setManagerOpen] = useState(openFriends);
-  const [inviteApi, setInviteApi] = useState<ApiClient | null>(null);
-  const [inviteSignInOpen, setInviteSignInOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [opponent, setOpponent] = useState<v1.Friend | null>(null);
-  const live = useRef(api);
-  useEffect(() => {
-    live.current = api;
-    return () => {
-      live.current = null;
-    };
-  }, [api]);
-  const mounted = useRef(true);
-  const creating = useRef(false);
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
-  const [error, setError] = useState<string | null>(null);
-  const [comparison, setComparison] = useState<{
-    api: ApiClient;
-    data: v1.FriendsDailyResponse;
-  } | null>(null);
-  const [comparisonIssue, setComparisonIssue] = useState<'sharing' | 'connection' | null>(null);
-  const currentComparison =
-    comparison?.api === api && comparison.data.localDate === date ? comparison.data : null;
-
   useFocusEffect(
     useCallback(() => {
-      let active = true;
-      setBusy(false);
-      setError(null);
-      setComparison(null);
-      setComparisonIssue(null);
-      setFriends([]);
-      const read = () => {
-        if (active) setToday(localDateOf(Date.now(), currentTimeZone()));
-        try {
-          refreshPersonalData(1);
-          const measurement = personalDay(date);
-          if (active) setTotal(measurement.views);
-        } catch {
-          if (active) setTotal(null);
-        }
-      };
-      read();
-      const unsubscribe = observeStorage(read);
-      const timer = setInterval(() => {
-        if (AppState.currentState === 'active') read();
-      }, 10_000);
-      let loading = false;
-      const readComparison = async () => {
-        if (!api || managerOpen || loading) return;
+      let alive = true,
+        loading = false;
+      setData(null);
+      setIssue(null);
+      const read = async () => {
+        if (!alive || loading) return;
         loading = true;
+        const nextToday = localDateOf(Date.now(), currentTimeZone());
+        setToday(nextToday);
+        // A board left on Today follows midnight; explicitly chosen historical dates stay put.
+        if (date === today && date !== nextToday) setDate(nextToday);
         try {
-          const rows = await api.friends();
-          if (active) setFriends(rows);
-          const data = await api.friendsDaily(date);
-          if (active) {
-            setComparison({ api, data });
-            setComparisonIssue(null);
+          if (api) {
+            const result = await api.battleDaily(date, () => alive);
+            if (alive) {
+              setData(result);
+              setIssue(null);
+            }
+          } else {
+            refreshPersonalData(1);
+            if (alive) setGuestViews(personalDay(date).views);
           }
         } catch (e) {
-          if (active) {
-            setComparison(null);
-            setComparisonIssue(
-              e instanceof ApiError && e.code === 'consent_required' ? 'sharing' : 'connection',
-            );
+          if (alive) {
+            if (e instanceof ApiError && [401, 403, 404, 409].includes(e.status ?? 0))
+              setData(null);
+            setIssue('Counts could not be updated. Previously loaded counts may be out of date.');
           }
         } finally {
           loading = false;
         }
       };
-      void readComparison();
-      const comparisonTimer = setInterval(() => {
-        if (AppState.currentState === 'active') void readComparison();
-      }, 60_000);
+      refresh.current = () => void read();
+      void read();
+      const timer = setInterval(() => {
+        if (AppState.currentState === 'active') void read();
+      }, 60000);
+      const app = AppState.addEventListener('change', (s) => {
+        if (s === 'active') void read();
+      });
       return () => {
-        unsubscribe();
-        active = false;
+        alive = false;
         clearInterval(timer);
-        clearInterval(comparisonTimer);
+        app.remove();
+        refresh.current = () => {};
       };
-    }, [api, date, managerOpen]),
+    }, [api, date, today]),
   );
-
-  const requireLogin = () => {
-    if (session.status === 'signedIn' && api) return true;
-    router.push('/welcome');
-    return false;
+  useEffect(() => {
+    if (backup.status?.state === 'saved') refresh.current();
+  }, [backup.status]);
+  const selfName = session.status === 'signedIn' ? session.displayName || 'You' : 'You';
+  const rows = rankBattle([
+    {
+      id: 'self',
+      name: 'You',
+      handle: 'You',
+      views: api ? (data?.self.views ?? null) : guestViews,
+      self: true,
+    },
+    ...(data?.friends ?? []).map((friend) => ({
+      id: friend.userId,
+      name: friend.displayName || `@${friend.handle}`,
+      handle: friend.handle,
+      views: friend.daily.views,
+      self: false,
+    })),
+  ]);
+  const invite = () => {
+    if (session.status !== 'signedIn' || !api) setSignIn(true);
+    else setInviteOpen(true);
   };
-  const invite = async () => {
-    if (session.status !== 'signedIn') {
-      setInviteSignInOpen(true);
+  const openCode = async () => {
+    const parsed = parseInvite(code);
+    if (!parsed) {
+      setCodeError('Paste a ScrollSnooze invite link or its 10-character code.');
       return;
     }
-    if (!api || busy) return;
-    setInviteApi(api);
-  };
-  const battle = async () => {
-    if (!requireLogin() || !api || !opponent || creating.current) return;
-    creating.current = true;
-    const allowed = () => mounted.current && live.current === api;
-    setBusy(true);
-    setError(null);
     try {
-      const start = today;
-      const challenge = await createBattle(
-        api,
-        {
-          title: 'Scroll battle',
-          metric: 'fewest_views',
-          startDate: start,
-          endDate: addDays(start, 6),
-          tz: currentTimeZone(),
-          maxMembers: 2,
-          targetUserId: opponent.userId,
-          scoreConsent: true,
-        },
-        allowed,
-      );
-      if (!allowed()) return;
-      setOpponent(null);
-      router.push(`/challenges?battle=${challenge.challengeId}`);
-    } catch (e) {
-      if (allowed()) setError(e instanceof Error ? e.message : 'Could not start the battle.');
-    } finally {
-      creating.current = false;
-      if (allowed()) setBusy(false);
+      await rememberInvite(parsed);
+      setCodeOpen(false);
+      router.push(`/battle-invite?code=${parsed}`);
+    } catch {
+      setCodeError('Could not save the invitation. Please retry.');
     }
   };
-  const accepted =
-    currentComparison?.friends ??
-    friends
-      .filter((friend) => friend.status === 'accepted')
-      .map((friend) => ({ ...friend, daily: null }));
-  const ownViews = total;
-  const visibleFriends = accepted.slice(0, 4);
-  const visibleInvitations = invitations.slice(0, 4 - visibleFriends.length);
-  const requests = friends.filter((friend) => friend.status === 'pending_in').length;
   const dateLabel =
     date === today
       ? 'Today'
@@ -202,45 +142,38 @@ function CircleBoardContent({
             month: 'short',
             day: 'numeric',
           });
-
   return (
-    <Screen
-      hideHeader
-      backgroundColor={colors.bg}
-      contentStyle={{ padding: 0, gap: 0, flexGrow: 1 }}
-    >
+    <Screen hideHeader backgroundColor={C.bg} contentStyle={{ padding: 0, gap: 0, flexGrow: 1 }}>
       <View style={styles.header}>
         <View style={styles.topbar}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Your profile"
             onPress={() => router.push('/settings')}
-            style={styles.profile}
+            style={{ minHeight: 48, justifyContent: 'center' }}
           >
-            <Image
-              source={require('../../assets/branding/scrollsnooze/purple/icon-master.png')}
-              style={{ width: 30, height: 30 }}
-            />
+            <Avatar name={selfName} size={36} />
           </Pressable>
           <T
             style={{
-              ...styles.title,
+              flex: 1,
+              fontSize: 21,
+              lineHeight: 28,
               fontFamily: fonts ? 'LilitaOne' : undefined,
               fontWeight: fonts ? '400' : '900',
+              color: '#FFE4AB',
             }}
           >
             SCROLL BATTLE
           </T>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={requests ? `Friends, ${requests} requests` : 'Friends'}
-            onPress={() => {
-              if (requireLogin()) setManagerOpen(true);
-            }}
-            style={styles.friendsButton}
+            accessibilityLabel="Friends"
+            onPress={() => (api ? router.push('/friend-list') : setSignIn(true))}
+            style={styles.friends}
           >
-            <Icon name="friends" size={18} color="#FFF9ED" />
-            <T style={styles.friendsLabel}>Friends{requests ? ` (${requests})` : ''}</T>
+            <Icon name="friends" size={19} />
+            <T style={{ fontWeight: '700' }}>Friends</T>
           </Pressable>
         </View>
         <View style={styles.dateNav}>
@@ -250,9 +183,11 @@ function CircleBoardContent({
             onPress={() => setDate(addDays(date, -1))}
             style={styles.arrow}
           >
-            <Icon name="back" color={colors.muted} size={23} />
+            <Icon name="back" color={C.muted} />
           </Pressable>
-          <T style={styles.date}>{dateLabel}</T>
+          <T style={{ fontWeight: '700', fontSize: 17, minWidth: 100, textAlign: 'center' }}>
+            {dateLabel}
+          </T>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Next day"
@@ -261,267 +196,171 @@ function CircleBoardContent({
             onPress={() => setDate(addDays(date, 1))}
             style={[styles.arrow, { opacity: date >= today ? 0.3 : 1 }]}
           >
-            <Icon name="chevron" color={colors.muted} size={23} />
+            <Icon name="chevron" color={C.muted} />
           </Pressable>
         </View>
       </View>
-
-      <View style={styles.youRow}>
-        <View style={styles.rank}>
-          <Icon name="friends" size={27} color={colors.muted} />
-        </View>
-        <View style={styles.avatar}>
-          <Image
-            source={require('../../assets/branding/scrollsnooze/purple/icon-master.png')}
-            style={{ width: 33, height: 33, opacity: 0.8 }}
-          />
-        </View>
-        <View style={{ flex: 1, gap: 3 }}>
-          <T style={styles.you}>
-            {session.status === 'signedIn' ? session.displayName || 'You' : 'You'}
+      {rows.map((row) => (
+        <View key={row.id} style={[styles.row, row.self && { backgroundColor: C.row }]}>
+          <T accessibilityLabel={row.rank ? `Rank ${row.rank}` : 'Unranked'} style={styles.rank}>
+            {row.rank === 1
+              ? '🥇'
+              : row.rank === 2
+                ? '🥈'
+                : row.rank === 3
+                  ? '🥉'
+                  : (row.rank ?? '—')}
           </T>
-        </View>
-        <T
-          accessibilityLabel={`Your daily count: ${ownViews ?? 'unavailable'}`}
-          style={styles.count}
-        >
-          {ownViews === null ? '—' : ownViews.toLocaleString()}
-        </T>
-      </View>
-
-      {visibleFriends.map((friend) => (
-        <View key={friend.userId} style={styles.friendRow}>
-          <Icon name="friends" color={colors.muted} size={23} />
-          <View style={{ flex: 1 }}>
-            <T style={styles.friendName}>{friend.displayName || `@${friend.handle}`}</T>
-            <T muted>
-              {friend.daily?.status === 'private'
-                ? 'Sharing off'
-                : friend.daily?.status !== 'eligible'
-                  ? 'No count available yet'
-                  : 'Recorded videos'}
-            </T>
-          </View>
+          <Avatar name={row.self ? selfName : row.name} color={row.self ? '#008E80' : '#009EAC'} />
+          <T style={styles.person}>{row.name}</T>
           <T
-            accessibilityLabel={`Daily count for ${friend.handle}: ${friend.daily?.views ?? 'unavailable'}`}
+            accessibilityLabel={
+              row.self
+                ? `Your daily count: ${row.views ?? 'unavailable'}`
+                : `Daily count for ${row.handle}: ${row.views ?? 'unavailable'}`
+            }
             style={styles.count}
           >
-            {friend.daily?.views?.toLocaleString() ?? '—'}
+            {row.views?.toLocaleString() ?? '—'}
           </T>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Start a battle with ${friend.handle}`}
-            disabled={busy}
-            onPress={() => {
-              setError(null);
-              setOpponent(friend);
-            }}
-            style={styles.invite}
-          >
-            <T style={styles.inviteLabel}>Start battle</T>
-          </Pressable>
         </View>
       ))}
-      <View style={styles.invites}>
-        {visibleInvitations.map(({ label, emoji }) => (
-          <View key={label} style={styles.inviteRow}>
-            <Icon name="friends" color={colors.muted} size={23} />
-            <T style={styles.inviteText}>
-              {label} {emoji}
-            </T>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={label}
-              accessibilityState={{ disabled: busy }}
-              disabled={busy}
-              onPress={() => void invite()}
-              style={[styles.invite, { opacity: busy ? 0.5 : 1 }]}
-            >
-              <T style={styles.inviteLabel}>Invite</T>
-            </Pressable>
-          </View>
-        ))}
-      </View>
-      <View style={styles.actions}>
-        <BattleInbox api={api} />
-        {comparisonIssue === 'connection' && (
-          <T v="caption" muted>
-            Friend counts are temporarily unavailable. We’ll check again automatically.
+      <View style={{ paddingHorizontal: 24 }}>
+        {prompts
+          .slice(0, Math.max(0, 4 - (data?.friends.length ?? 0)))
+          .map(({ label, emoji }, index) => (
+            <View key={label} style={styles.inviteRow}>
+              <T style={{ width: 30, color: '#FFF9ED', fontSize: 16 }}>{rows.length + index + 1}</T>
+              <T style={styles.person}>
+                {label} {emoji}
+              </T>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={label}
+                onPress={invite}
+                style={styles.invite}
+              >
+                <T style={{ color: '#673C12', fontWeight: '700', fontSize: 15 }}>Invite</T>
+              </Pressable>
+            </View>
+          ))}
+        {issue && <Notice title="War not updated" body={issue} tone="warn" />}
+        {!!data?.friends.some((f) => f.daily.views === null) && (
+          <T v="caption" muted style={{ paddingTop: 18 }}>
+            — means no count is available yet. Missing activity isn’t ranked as zero.
           </T>
         )}
-        {error && <Notice title="Couldn’t start your battle" body={error} tone="warn" />}
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="View your battles"
+          accessibilityLabel="Open an invitation"
           onPress={() => {
-            if (requireLogin()) router.push('/challenges');
+            setCodeOpen(true);
+            setCodeError(null);
           }}
-          style={styles.allBattles}
+          style={{ minHeight: 56, justifyContent: 'center', alignSelf: 'center' }}
         >
-          <T style={{ color: colors.muted, fontSize: 13 }}>View your battles</T>
-          <Icon name="chevron" size={16} color={colors.muted} />
+          <T v="caption" muted>
+            Have an invitation?
+          </T>
         </Pressable>
       </View>
-      {opponent && api && (
-        <Modal
-          visible
-          transparent
-          animationType="fade"
-          onRequestClose={() => {
-            if (!busy) setOpponent(null);
-          }}
-        >
-          <SafeAreaView
-            style={{ flex: 1, backgroundColor: '#000000CC', justifyContent: 'center', padding: 24 }}
-          >
-            <View style={{ backgroundColor: '#201B16', borderRadius: 30, padding: 24, gap: 16 }}>
-              <T v="title">Battle with {opponent.displayName ?? `@${opponent.handle}`}</T>
-              <T>A seven-day battle: fewer short videos wins.</T>
-              <T v="caption" muted>
-                Starting this battle shares only your battle score with participants through{' '}
-                {addDays(today, 6)} ({currentTimeZone()}). Your other history stays private. You can
-                stop sharing in Your battles. Global sharing settings won’t change.
-              </T>
-              {error && <Notice title="Battle not started" body={error} tone="warn" />}
-              <Button label="Start battle" busy={busy} onPress={() => void battle()} />
-              <Button
-                label="Cancel"
-                kind="secondary"
-                busy={busy}
-                onPress={() => {
-                  if (!busy) setOpponent(null);
-                }}
-              />
-            </View>
-          </SafeAreaView>
-        </Modal>
-      )}
-      {managerOpen && (
-        <Modal visible animationType="slide" onRequestClose={() => setManagerOpen(false)}>
-          <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-            <View style={styles.modalHeader}>
-              <T v="title">Your friends</T>
-              <Button label="Done" kind="secondary" onPress={() => setManagerOpen(false)} />
-            </View>
-            {friendsPanel}
-          </SafeAreaView>
-        </Modal>
-      )}
-      {inviteApi === api && api && (
+      {inviteOpen && api && (
         <FriendInviteSheet
           visible
           api={api}
-          displayName={session.status === 'signedIn' ? (session.displayName ?? null) : null}
-          onClose={() => setInviteApi(null)}
+          displayName={selfName}
+          onClose={() => setInviteOpen(false)}
         />
       )}
-      {inviteSignInOpen && (
+      {signIn && (
         <InviteSignInSheet
           visible
           onClose={() => {
-            setInviteSignInOpen(false);
-            if (session.status === 'signedIn' && api) setInviteApi(api);
+            setSignIn(false);
+            if (session.status === 'signedIn' && api) setInviteOpen(true);
           }}
         />
       )}
+      <Modal
+        visible={codeOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCodeOpen(false)}
+      >
+        <View style={styles.overlay}>
+          <View style={styles.dialog}>
+            <T v="title">Open your invitation</T>
+            <Field
+              label="Invitation link or code"
+              value={code}
+              onChangeText={setCode}
+              autoCapitalize="characters"
+            />
+            {codeError && <Notice title="Check your invitation" body={codeError} tone="warn" />}
+            <Button
+              kind="secondary"
+              label="Paste invitation"
+              onPress={() =>
+                void Clipboard.getString()
+                  .then(setCode)
+                  .catch(() => setCodeError('Paste the link in the field above.'))
+              }
+            />
+            <Button label="Open invitation" onPress={() => void openCode()} />
+            <Button kind="secondary" label="Cancel" onPress={() => setCodeOpen(false)} />
+          </View>
+        </View>
+      </Modal>
     </Screen>
   );
 }
-
 const styles = StyleSheet.create({
-  header: { backgroundColor: colors.header, paddingTop: 12 },
-  topbar: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 20 },
-  profile: { width: 36, minHeight: 48, justifyContent: 'center' },
-  title: {
-    flex: 1,
-    fontSize: 20,
-    lineHeight: 25,
-    fontWeight: '900',
-    letterSpacing: -0.7,
-    color: '#FFE4AB',
-  },
-  friendsButton: {
+  header: { backgroundColor: C.header, paddingTop: 20 },
+  topbar: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20 },
+  friends: {
     flexDirection: 'row',
-    alignItems: 'center',
     gap: 8,
+    alignItems: 'center',
     backgroundColor: '#402B13',
     borderRadius: 32,
     paddingHorizontal: 16,
     minHeight: 48,
   },
-  friendsLabel: { fontSize: 16, fontWeight: '700' },
   dateNav: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 28,
-    paddingTop: 8,
-    paddingBottom: 8,
+    gap: 16,
+    paddingTop: 25,
+    paddingBottom: 20,
   },
-  date: { fontSize: 16, fontWeight: '700', minWidth: 90, textAlign: 'center' },
-  arrow: { minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
-  youRow: {
+  arrow: { minHeight: 48, minWidth: 48, alignItems: 'center', justifyContent: 'center' },
+  row: {
+    minHeight: 90,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     paddingHorizontal: 24,
-    paddingVertical: 10,
-    minHeight: 80,
-    backgroundColor: colors.row,
+    paddingVertical: 16,
   },
-  rank: { width: 38, alignItems: 'flex-start' },
-  avatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 24,
-    backgroundColor: '#483C23',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  you: { color: colors.muted, fontSize: 16 },
-  count: { fontSize: 23, lineHeight: 30, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  invites: { paddingHorizontal: 26 },
+  rank: { fontSize: 25, width: 38, textAlign: 'center' },
+  person: { flex: 1, color: C.muted, fontSize: 16, lineHeight: 22 },
+  count: { fontSize: 23, fontWeight: '700', fontVariant: ['tabular-nums'] },
   inviteRow: {
+    minHeight: 78,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 10,
-    minHeight: 68,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#28241B',
   },
-  position: { width: 38, fontSize: 16 },
-  inviteText: { flex: 1, color: colors.muted, fontSize: 15, lineHeight: 21 },
   invite: {
-    backgroundColor: colors.accent,
+    backgroundColor: C.accent,
     borderRadius: 30,
-    paddingHorizontal: 17,
-    minHeight: 48,
+    paddingHorizontal: 16,
+    minHeight: 45,
     justifyContent: 'center',
   },
-  inviteLabel: { fontSize: 15, fontWeight: '600', color: '#51320F' },
-  friendRow: {
-    marginHorizontal: 26,
-    gap: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 68,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#28241B',
-  },
-  friendName: { color: colors.muted, fontSize: 15 },
-  actions: { paddingHorizontal: 26, paddingTop: 16, paddingBottom: 20, gap: 12 },
-  allBattles: {
-    minHeight: 48,
-    flexDirection: 'row',
-    gap: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 20,
-  },
+  overlay: { flex: 1, backgroundColor: '#000B', justifyContent: 'center', padding: 24 },
+  dialog: { backgroundColor: '#201B16', borderRadius: 28, padding: 24, gap: 16 },
 });

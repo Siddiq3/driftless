@@ -1,527 +1,199 @@
-jest.mock('@/social/battleRequests', () => ({ createBattle: jest.fn() }));
-import { createBattle } from '@/social/battleRequests';
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { AppState, Clipboard, Linking, Share } from 'react-native';
+import { AppState, Clipboard, Share } from 'react-native';
 import { router } from 'expo-router';
-import { CircleBoard } from '../src/social/CircleBoard';
-import { ApiError } from '../src/api/client';
-import { shuffledInvitePrompts } from '../src/social/invitePrompts';
-let mockStatus = 'signedOut';
-const mockSignIn = jest.fn();
-jest.mock('expo-crypto', () => ({ randomUUID: () => '12345678-1234-4234-8234-123456789012' }));
-const mockApi = {
-  patchMe: jest.fn(),
-  friends: jest.fn(async () => []),
-  friendsDaily: jest.fn(),
-  getMe: jest.fn(),
-  createInvite: jest.fn(),
-  createChallenge: jest.fn(),
-  battleInbox: jest.fn(),
-  joinChallenge: jest.fn(),
-  respondBattle: jest.fn(),
-};
-jest.mock('@/api/useApi', () => ({ useApi: () => (mockStatus === 'signedIn' ? mockApi : null) }));
+import { CircleBoard } from '@/social/CircleBoard';
+import { ApiError } from '@/api/client';
+let mockSignedIn = true;
+let mockBackupStatus = { state: 'local' };
+const mockApi = { incarnation: 'account-a', battleDaily: jest.fn(), createBattleInvite: jest.fn() };
+jest.mock('@/api/useApi', () => ({ useApi: () => (mockSignedIn ? mockApi : null) }));
 jest.mock('@/auth/session', () => ({
-  useSession: () => ({
-    status: mockStatus,
-    googleSupported: true,
-    signIn: mockSignIn,
-    error: null,
-    displayName: mockStatus === 'signedIn' ? 'Siddiq Kolimi' : null,
-  }),
+  useSession: () => ({ status: mockSignedIn ? 'signedIn' : 'signedOut', displayName: 'Kolimi' }),
+}));
+jest.mock('@/sync/AccountBackupProvider', () => ({
+  useAccountBackup: () => ({ status: mockBackupStatus }),
+}));
+jest.mock('@/data/personal', () => ({
+  refreshPersonalData: jest.fn(),
+  personalDay: () => ({ views: 92 }),
+}));
+jest.mock('@/social/profile', () => ({
+  ensureSocialProfile: jest.fn().mockResolvedValue({ data: { profile: { handle: 'kolimi' } } }),
+}));
+jest.mock('@/social/pendingInvite', () => ({
+  inviteUrl: (code: string) => `https://join.example/join/${code}?utm_content=duel`,
+  parseInvite: () => null,
+  rememberInvite: jest.fn(),
 }));
 jest.mock('expo-font', () => ({ useFonts: () => [true] }));
 jest.mock('expo-router', () => ({
   router: { push: jest.fn() },
-  useFocusEffect: (callback: () => () => void) => require('react').useEffect(callback, [callback]),
+  useFocusEffect: (fn: () => () => void) => require('react').useEffect(fn, [fn]),
 }));
-const mockSync = jest.fn();
-jest.mock('@/sync/AccountBackupProvider', () => ({
-  useAccountBackup: () => ({
-    retry: async () => {
-      const outcome = await mockSync();
-      return outcome?.kind !== 'deferred' && outcome?.kind !== 'rejected';
-    },
-  }),
-}));
-jest.mock('@/sync/run', () => ({
-  currentTimeZone: () => 'Asia/Kolkata',
-  syncNow: (...args: unknown[]) => mockSync(...args),
-}));
-jest.mock('tracking-android', () => ({
-  Tracking: {
-    refreshUsage: jest.fn(),
-    daily: () => ({
-      heartbeatMinutes: 1,
-      apps: [{ package: 'com.instagram.android', views: 12, surfaceMs: 1000 }],
-    }),
-    health: () => ({
-      serviceRunning: true,
-      apps: [{ package: 'com.instagram.android', installed: true }],
-    }),
-  },
-}));
-jest.mock('react-native-safe-area-context', () => ({
-  SafeAreaView: require('react-native').View,
-  useSafeAreaInsets: () => ({ top: 0, bottom: 24, left: 0, right: 0 }),
-}));
+jest.mock('@/sync/run', () => ({ currentTimeZone: () => 'UTC' }));
 jest.mock('@/ui/Icon', () => ({ Icon: () => null }));
+jest.mock('@/auth/InviteSignInSheet', () => ({
+  InviteSignInSheet: () =>
+    require('react').createElement(
+      require('react-native').Text,
+      null,
+      'Sign in to invite a friend',
+    ),
+}));
 jest.mock('@/ui/kit', () => {
-  const { View, Text, Pressable } = require('react-native');
+  const React = require('react'),
+    { View, Text, Pressable, TextInput } = require('react-native');
   return {
     Screen: View,
-    Card: View,
-    Details: View,
     T: Text,
-    Notice: ({ body }: { body: string }) => require('react').createElement(Text, null, body),
-    Button: ({ label, onPress }: { label: string; onPress: () => void }) =>
-      require('react').createElement(Pressable, { accessibilityLabel: label, onPress }),
+    Notice: ({ body }: { body: string }) => <Text>{body}</Text>,
+    Field: TextInput,
+    Button: ({ label, onPress }: { label: string; onPress: () => void }) => (
+      <Pressable accessibilityLabel={label} onPress={onPress} />
+    ),
   };
 });
 let tree: ReactTestRenderer;
-const mount = async () => {
-  await act(async () => {
-    tree = create(<CircleBoard friendsPanel={null} />);
-  });
-};
+const text = () => JSON.stringify(tree.toJSON());
+const control = (label: string) =>
+  tree.root.findAll(
+    (n) => n.props.accessibilityLabel === label && typeof n.props.onPress === 'function',
+  )[0];
 const tap = async (label: string) => {
   await act(async () => {
-    await tree.root
-      .findAll(
-        (node) =>
-          node.props.accessibilityLabel === label && typeof node.props.onPress === 'function',
-      )[0]!
-      .props.onPress();
+    await control(label)!.props.onPress();
   });
 };
-const inviteLabels = () => [
-  ...new Set(
-    tree.root
-      .findAll(
-        (node) =>
-          typeof node.props.onPress === 'function' &&
-          node.props.accessibilityLabel?.startsWith('Invite your '),
-      )
-      .map((node) => node.props.accessibilityLabel as string),
-  ),
-];
-beforeEach(() => {
-  mockStatus = 'signedOut';
-  mockSignIn.mockResolvedValue(undefined);
-  jest.clearAllMocks();
-  jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
-  mockApi.createInvite.mockResolvedValue({ code: 'FRIENDCODE' });
-  mockApi.createChallenge.mockResolvedValue({ challengeId: 'battle-123' });
-  mockApi.friends.mockResolvedValue([]);
-  mockApi.battleInbox.mockResolvedValue({ challenges: [], invitations: [] });
-  mockApi.joinChallenge.mockResolvedValue({ challengeId: 'battle-123' });
-  mockApi.respondBattle.mockResolvedValue({ invitationState: 'declined' });
-  jest.mocked(createBattle).mockResolvedValue({ challengeId: 'battle-123' } as never);
-  mockApi.friendsDaily.mockImplementation(async (date: string) => ({
-    localDate: date,
-    self: { status: 'eligible', views: 7, updatedAt: '2026-10-21T00:00:00Z' },
-    friends: [],
-  }));
-  mockApi.patchMe.mockResolvedValue({
-    data: { profile: { handle: 'siddiq_12345678', displayName: 'Siddiq Kolimi', rev: 2 } },
-  });
-  jest.spyOn(Clipboard, 'setString').mockImplementation(() => undefined);
-  jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
-  mockApi.getMe.mockResolvedValue({
-    data: {
-      profile: {
-        handle: 'test_user',
-        displayName: 'Siddiq Kolimi',
-        rev: 1,
-        consent: { cloudSync: true, shareWithFriends: true },
+const inviteLabel = () =>
+  tree.root.findAll(
+    (n) =>
+      typeof n.props.onPress === 'function' &&
+      n.props.accessibilityLabel?.startsWith('Invite your '),
+  )[0]!.props.accessibilityLabel;
+const daily = (date: string, views: number | null = 0, friend: number | null = 6) => ({
+  localDate: date,
+  self: {
+    status: views === null ? 'unavailable' : 'eligible',
+    views,
+    updatedAt: views === null ? null : '2026-10-26T00:00:00Z',
+  },
+  friends: [
+    {
+      userId: 'friend',
+      handle: 'garage',
+      displayName: 'Study Garage',
+      status: 'accepted',
+      since: '2026-10-26T00:00:00Z',
+      daily: {
+        status: friend === null ? 'unavailable' : 'eligible',
+        views: friend,
+        updatedAt: friend === null ? null : '2026-10-26T00:00:00Z',
       },
     },
+  ],
+});
+const mount = async () => {
+  await act(async () => {
+    tree = create(<CircleBoard />);
   });
-  mockSync.mockResolvedValue({ kind: 'sent' });
+};
+beforeEach(() => {
+  Object.defineProperty(AppState, 'currentState', { configurable: true, value: 'active' });
+  jest.clearAllMocks();
+  mockSignedIn = true;
+  mockBackupStatus = { state: 'local' };
+  mockApi.battleDaily.mockImplementation(async (date: string) => daily(date));
+  mockApi.createBattleInvite.mockResolvedValue({ code: 'ABCDEFGHJK' });
+  jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
+  jest.spyOn(Clipboard, 'setString').mockImplementation(() => undefined);
 });
 afterEach(async () => {
   if (tree) await act(async () => tree.unmount());
+  jest.useRealTimers();
   jest.restoreAllMocks();
 });
-it('requires login before sharing invites or viewing battles', async () => {
+it('ranks daily battle friends and real zero without a challenges screen or creation form', async () => {
   await mount();
-  await tap(inviteLabels()[0]!);
-  await tap('View your battles');
-  expect(router.push).toHaveBeenCalledWith('/welcome');
-  expect(mockApi.createInvite).not.toHaveBeenCalled();
-  expect(mockApi.createChallenge).not.toHaveBeenCalled();
-  expect(Share.share).not.toHaveBeenCalled();
+  expect(text()).toContain('Your daily count: 0');
+  expect(text()).toContain('Daily count for garage: 6');
+  expect(text()).toContain('Rank 1');
+  expect(text()).not.toContain('View your battles');
+  expect(text()).not.toContain('Start battle');
+  await tap('Friends');
+  expect(router.push).toHaveBeenCalledWith('/friend-list');
 });
-it('opens the reference sign-in sheet for a guest invite and calls the Google sign-in flow', async () => {
+it('shares only after explicit invitation creation and a share tap', async () => {
   await mount();
-  await tap(inviteLabels()[0]!);
-  expect(router.push).not.toHaveBeenCalled();
-  expect(JSON.stringify(tree.toJSON())).toContain('to invite a friend');
-  await tap('Continue with Google');
-  expect(mockSignIn).toHaveBeenCalledTimes(1);
-  expect(mockApi.createInvite).not.toHaveBeenCalled();
+  await tap(inviteLabel());
+  expect(mockApi.createBattleInvite).not.toHaveBeenCalled();
   expect(Share.share).not.toHaveBeenCalled();
-  await tap('Close sign-in');
-  expect(
-    tree.root.findAll((node) => node.props.accessibilityLabel === 'Continue with Google'),
-  ).toHaveLength(0);
-});
-it('opens the invite sheet after login and shares only when requested', async () => {
-  mockStatus = 'signedIn';
-  await mount();
-  await tap(inviteLabels()[0]!);
-  expect(mockApi.createInvite).toHaveBeenCalledTimes(1);
+  await tap('Create battle invite');
+  expect(mockApi.createBattleInvite).toHaveBeenCalledTimes(1);
   expect(Share.share).not.toHaveBeenCalled();
-  expect(JSON.stringify(tree.toJSON())).toContain('battle more');
-  await tap('More sharing options');
+  await tap('Share invitation');
   expect(Share.share).toHaveBeenCalledWith({
-    message: expect.stringContaining('driftless://friends?invite=FRIENDCODE'),
+    message: expect.stringContaining(
+      'Join me on ScrollSnooze and let’s find out who scrolls less!\nhttps://join.example/join/ABCDEFGHJK?utm_content=duel',
+    ),
   });
 });
-it('opens the battles screen without a standalone battle creation button', async () => {
-  mockStatus = 'signedIn';
+it('missing server observations stay unavailable rather than falling back to a local candidate count', async () => {
+  mockApi.battleDaily.mockImplementation(async (date: string) => daily(date, null, null));
   await mount();
-  expect(
-    tree.root.findAll((node) => node.props.accessibilityLabel === 'Start a 2-person battle'),
-  ).toHaveLength(0);
-  await tap('View your battles');
-  expect(mockApi.createChallenge).not.toHaveBeenCalled();
-  expect(Share.share).not.toHaveBeenCalled();
-  expect(router.push).toHaveBeenCalledWith('/challenges');
+  expect(text()).toContain('Your daily count: unavailable');
+  expect(text()).toContain('Daily count for garage: unavailable');
+  expect(text()).not.toContain('92');
+  expect(text()).not.toContain('Rank 1');
 });
-it('shows four invites alongside You and keeps them stable while opening sign-in', async () => {
+it('shows a sign-in sheet before a guest can invite', async () => {
+  mockSignedIn = false;
   await mount();
-  const labels = inviteLabels();
-  expect(labels).toHaveLength(4);
-  await tap(labels[0]!);
-  expect(inviteLabels()).toEqual(labels);
-  await tap('Close sign-in');
-  expect(inviteLabels()).toEqual(labels);
+  await tap(inviteLabel());
+  expect(text()).toContain('Sign in to invite a friend');
+  expect(mockApi.createBattleInvite).not.toHaveBeenCalled();
 });
-it('changes the ordering on the next visit even if randomness repeats', () => {
-  jest.spyOn(Math, 'random').mockReturnValue(0.5);
-  const first = shuffledInvitePrompts();
-  const second = shuffledInvitePrompts(first);
-  expect(second).toHaveLength(4);
-  expect(new Set(second.map((row) => row.label)).size).toBe(4);
-  expect(second).not.toEqual(first);
-});
-it('allows browsing dates without login and disables future dates', async () => {
+it('disables future dates and ignores delayed results from an older selected date', async () => {
   await mount();
-  const next = () =>
-    tree.root.findAll(
-      (node) =>
-        node.props.accessibilityLabel === 'Next day' && typeof node.props.onPress === 'function',
-    )[0]!;
-  expect(next().props.disabled).toBe(true);
-  await tap('Previous day');
-  expect(next().props.disabled).toBe(false);
-  await tap('Next day');
-  expect(next().props.disabled).toBe(true);
-  expect(router.push).not.toHaveBeenCalled();
-});
-
-const labelText = (label: string) =>
-  tree.root.findAll((node) => node.props.accessibilityLabel?.startsWith(`${label}:`))[0]!.props
-    .children;
-it('shows cloud-eligible totals rather than the local candidate count, including real zero', async () => {
-  mockStatus = 'signedIn';
-  const friend = {
-    userId: 'friend',
-    handle: 'bestie',
-    displayName: null,
-    status: 'accepted',
-    since: '2026-10-21T00:00:00Z',
-  };
-  mockApi.friendsDaily.mockImplementation(async (date: string) => ({
-    localDate: date,
-    self: { status: 'eligible', views: 7 },
-    friends: [{ ...friend, daily: { status: 'eligible', views: 0 } }],
-  }));
-  await mount();
-  expect(labelText('Your daily count')).toBe('12');
-  expect(labelText('Daily count for bestie')).toBe('0');
-});
-it('replaces old cloud counts with a clearly local count when requests fail or sharing is off', async () => {
-  mockStatus = 'signedIn';
-  await mount();
-  expect(labelText('Your daily count')).toBe('12');
-  mockApi.friendsDaily.mockRejectedValueOnce(new Error('offline'));
-  await tap('Previous day');
-  expect(labelText('Your daily count')).toBe('12');
-  expect(JSON.stringify(tree.toJSON())).not.toContain('Your saved count');
-  mockApi.friendsDaily.mockRejectedValueOnce(
-    new ApiError(403, 'consent_required', 'Sharing is off'),
-  );
-  await tap('Next day');
-  expect(labelText('Your daily count')).toBe('12');
-  expect(JSON.stringify(tree.toJSON())).not.toContain('Your saved count');
-  expect(JSON.stringify(tree.toJSON())).not.toContain('Choose to share your progress');
-});
-it('updates comparisons automatically without a manual sync control', async () => {
-  mockStatus = 'signedIn';
-  await mount();
-  expect(mockApi.friendsDaily).toHaveBeenCalledTimes(1);
-  expect(JSON.stringify(tree.toJSON())).not.toContain('Sync and refresh counts');
-  expect(mockSync).not.toHaveBeenCalled();
-});
-it('keeps sharing prompts out of the battle screen when sharing is off', async () => {
-  mockStatus = 'signedIn';
-  mockApi.friendsDaily.mockRejectedValueOnce(
-    new ApiError(403, 'consent_required', 'Turn on cloud backup and share progress'),
-  );
-  await mount();
-  expect(JSON.stringify(tree.toJSON())).not.toContain('Turn on cloud backup');
-  expect(JSON.stringify(tree.toJSON())).not.toContain('Choose to share your progress');
-  expect(labelText('Your daily count')).toBe('12');
-  expect(JSON.stringify(tree.toJSON())).not.toContain('Manage sharing');
-  expect(JSON.stringify(tree.toJSON())).not.toContain('Compare with friends');
-  expect(mockApi.patchMe).not.toHaveBeenCalled();
-});
-it('ignores a delayed response from the previously selected date', async () => {
-  mockStatus = 'signedIn';
-  let resolveOld!: (value: unknown) => void;
-  let oldDate = '';
-  mockApi.friendsDaily.mockImplementationOnce((date: string) => {
-    oldDate = date;
-    return new Promise((resolve) => {
-      resolveOld = resolve;
-    });
-  });
-  await mount();
-  await tap('Previous day');
-  expect(labelText('Your daily count')).toBe('12');
-  await act(async () =>
-    resolveOld({ localDate: oldDate, self: { status: 'eligible', views: 999 }, friends: [] }),
-  );
-  expect(labelText('Your daily count')).toBe('12');
-});
-it('keeps your local count visible when the server has no eligible comparison count', async () => {
-  mockStatus = 'signedIn';
-  mockApi.friendsDaily.mockImplementation(async (date: string) => ({
-    localDate: date,
-    self: { status: 'unavailable', views: null },
-    friends: [],
-  }));
-  await mount();
-  expect(labelText('Your daily count')).toBe('12');
-  expect(JSON.stringify(tree.toJSON())).not.toContain('Your saved count');
-});
-it('allocates a handle automatically using the Google name, without a handle form', async () => {
-  mockStatus = 'signedIn';
-  mockApi.getMe.mockResolvedValue({
-    data: { profile: { handle: null, displayName: null, rev: 1 } },
-  });
-  await mount();
-  await tap(inviteLabels()[0]!);
-  expect(mockApi.patchMe).toHaveBeenCalledWith(
-    { displayName: 'Siddiq Kolimi', handle: 'siddiqkoli_12345678' },
-    1,
-    expect.any(Function),
-  );
-  expect(mockApi.createInvite).toHaveBeenCalledTimes(1);
-  expect(JSON.stringify(tree.toJSON())).not.toContain('Choose a handle');
-  expect(JSON.stringify(tree.toJSON())).toContain('Siddiq Kolimi');
-  expect(Share.share).not.toHaveBeenCalled();
-});
-it('copies a working installed-app link and opens Instagram only after a user action', async () => {
-  mockStatus = 'signedIn';
-  await mount();
-  await tap(inviteLabels()[0]!);
-  await tap('Copy invite link');
-  expect(Clipboard.setString).toHaveBeenCalledWith('driftless://friends?invite=FRIENDCODE');
-  await tap('Share on Instagram');
-  expect(Linking.openURL).toHaveBeenCalledWith('instagram://app');
-  expect(mockApi.createInvite).toHaveBeenCalledTimes(1);
-});
-it('does not reveal a late invitation after switching to a different account', async () => {
-  mockStatus = 'signedIn';
-  let finish!: (value: unknown) => void;
-  mockApi.createInvite.mockImplementationOnce(
+  expect(control('Next day')!.props.disabled).toBe(true);
+  let resolve!: (v: unknown) => void;
+  mockApi.battleDaily.mockImplementationOnce(
     () =>
-      new Promise((resolve) => {
-        finish = resolve;
+      new Promise((r) => {
+        resolve = r;
       }),
   );
-  await mount();
-  await tap(inviteLabels()[0]!);
-  mockStatus = 'signedOut';
-  await act(async () => tree.update(<CircleBoard friendsPanel={null} />));
-  await act(async () => finish({ code: 'OLDCODE' }));
-  expect(JSON.stringify(tree.toJSON())).not.toContain('OLDCODE');
-  expect(Share.share).not.toHaveBeenCalled();
-});
-it('does not open a fallback share sheet after sign-out while WhatsApp is opening', async () => {
-  mockStatus = 'signedIn';
-  let failOpen!: (error: Error) => void;
-  jest.mocked(Linking.openURL).mockImplementationOnce(
-    () =>
-      new Promise((_resolve, reject) => {
-        failOpen = reject;
-      }),
-  );
-  await mount();
-  await tap(inviteLabels()[0]!);
-  let sharing!: Promise<void>;
+  await tap('Previous day');
+  await tap('Previous day');
   await act(async () => {
-    sharing = tree.root
-      .findAll(
-        (node) =>
-          node.props.accessibilityLabel === 'Share on WhatsApp' &&
-          typeof node.props.onPress === 'function',
-      )[0]!
-      .props.onPress();
+    resolve(daily('2026-01-01', 900, 901));
   });
-  mockStatus = 'signedOut';
-  await act(async () => tree.update(<CircleBoard friendsPanel={null} />));
-  await act(async () => {
-    failOpen(new Error('unavailable'));
-    await sharing;
-  });
-  expect(Share.share).not.toHaveBeenCalled();
+  expect(text()).not.toContain('901');
 });
-
-it('checks friend counts again automatically after a connection failure', async () => {
-  const previousState = AppState.currentState;
-  AppState.currentState = 'active';
+it('refreshes after backup, foreground return and each minute', async () => {
   jest.useFakeTimers();
-  try {
-    mockStatus = 'signedIn';
-    mockApi.friendsDaily.mockRejectedValueOnce(new Error('offline'));
-    await mount();
-    expect(JSON.stringify(tree.toJSON())).toContain('We’ll check again automatically');
-    expect(labelText('Your daily count')).toBe('12');
-    await act(async () => {
-      await jest.advanceTimersByTimeAsync(60_000);
-    });
-    expect(mockApi.friendsDaily).toHaveBeenCalledTimes(2);
-    expect(JSON.stringify(tree.toJSON())).not.toContain('We’ll check again automatically');
-  } finally {
-    AppState.currentState = previousState;
-    jest.useRealTimers();
-  }
-});
-
-it('Start battle targets the selected stable friend ID after battle-only consent disclosure', async () => {
-  mockStatus = 'signedIn';
-  mockApi.friends.mockResolvedValue([
-    {
-      userId: 'friend-a',
-      handle: 'bestie',
-      displayName: 'Bestie',
-      status: 'accepted',
-      since: '2026-10-26T00:00:00Z',
-    },
-  ] as never);
-  mockApi.friendsDaily.mockRejectedValueOnce(new ApiError(403, 'consent_required', 'sharing off'));
   await mount();
-  await tap('Start a battle with bestie');
-  expect(createBattle).not.toHaveBeenCalled();
-  expect(JSON.stringify(tree.toJSON())).toContain('Global sharing settings won’t change');
-  await tap('Start battle');
-  expect(createBattle).toHaveBeenCalledWith(
-    mockApi,
-    expect.objectContaining({
-      targetUserId: 'friend-a',
-      maxMembers: 2,
-      metric: 'fewest_views',
-      scoreConsent: true,
-    }),
-    expect.any(Function),
-  );
-  expect(mockApi.patchMe).not.toHaveBeenCalled();
-  expect(Share.share).not.toHaveBeenCalled();
-  expect(router.push).toHaveBeenCalledWith('/challenges?battle=battle-123');
-});
-it('targeted in-app invitation accepts and refreshes without external sharing', async () => {
-  mockStatus = 'signedIn';
-  mockApi.battleInbox.mockResolvedValueOnce({
-    challenges: [],
-    invitations: [
-      {
-        challengeId: 'battle-123',
-        title: 'Scroll battle',
-        ownerName: 'Bestie',
-        startDate: '2026-10-26',
-        endDate: '2026-11-01',
-        tz: 'UTC',
-        invitationState: 'pending',
-      },
-    ],
+  const initial = mockApi.battleDaily.mock.calls.length;
+  await act(async () => {
+    await jest.advanceTimersByTimeAsync(60000);
   });
-  await mount();
-  expect(JSON.stringify(tree.toJSON())).toContain('Bestie');
-  expect(JSON.stringify(tree.toJSON())).toContain(
-    'Your battle score is shared only with participants',
-  );
-  await tap('Accept battle');
-  expect(mockApi.joinChallenge).toHaveBeenCalledWith('battle-123', true, expect.any(Function));
-  expect(mockApi.battleInbox).toHaveBeenCalledTimes(2);
-  expect(router.push).toHaveBeenCalledWith('/challenges?battle=battle-123');
-  expect(mockApi.patchMe).not.toHaveBeenCalled();
+  expect(mockApi.battleDaily.mock.calls.length).toBe(initial + 1);
+  mockBackupStatus = { state: 'saved' };
+  await act(async () => tree.update(<CircleBoard />));
+  expect(mockApi.battleDaily.mock.calls.length).toBe(initial + 2);
 });
-it('shows declined/expired invitation states without an accept action', async () => {
-  mockStatus = 'signedIn';
-  mockApi.battleInbox.mockResolvedValue({
-    challenges: [],
-    invitations: [
-      { challengeId: 'declined', ownerName: 'Bestie', invitationState: 'declined' },
-      { challengeId: 'expired', ownerName: 'Another', invitationState: 'expired' },
-    ],
+it('keeps stale data labeled on network failure and clears it on access loss', async () => {
+  jest.useFakeTimers();
+  await mount();
+  mockApi.battleDaily.mockRejectedValueOnce(new Error('offline'));
+  await act(async () => {
+    await jest.advanceTimersByTimeAsync(60000);
   });
-  await mount();
-  expect(JSON.stringify(tree.toJSON())).toContain('Invitation declined');
-  expect(JSON.stringify(tree.toJSON())).toContain('Battle ended');
-  expect(tree.root.findAllByProps({ accessibilityLabel: 'Accept battle' })).toHaveLength(0);
-});
-it('declining an invitation updates the inbox without joining', async () => {
-  mockStatus = 'signedIn';
-  mockApi.battleInbox.mockResolvedValueOnce({
-    challenges: [],
-    invitations: [
-      {
-        challengeId: 'battle-123',
-        title: 'Scroll battle',
-        ownerName: 'Bestie',
-        startDate: '2026-10-26',
-        endDate: '2026-11-01',
-        tz: 'UTC',
-        invitationState: 'pending',
-      },
-    ],
+  expect(text()).toContain('Previously loaded counts may be out of date');
+  expect(text()).toContain('Daily count for garage: 6');
+  mockApi.battleDaily.mockRejectedValueOnce(new ApiError(403, 'forbidden', 'no access'));
+  await act(async () => {
+    await jest.advanceTimersByTimeAsync(60000);
   });
-  await mount();
-  await tap('Decline');
-  expect(mockApi.respondBattle).toHaveBeenCalledWith('battle-123', 'decline', expect.any(Function));
-  expect(mockApi.joinChallenge).not.toHaveBeenCalled();
-});
-
-it('a late direct-battle response after sign-out cannot navigate or expose the previous account invitation', async () => {
-  mockStatus = 'signedIn';
-  mockApi.friends.mockResolvedValue([
-    {
-      userId: 'friend-a',
-      handle: 'bestie',
-      displayName: 'Bestie',
-      status: 'accepted',
-      since: '2026-10-26T00:00:00Z',
-    },
-  ] as never);
-  mockApi.friendsDaily.mockRejectedValueOnce(new ApiError(403, 'consent_required', 'off'));
-  let finish!: (value: any) => void;
-  jest.mocked(createBattle).mockImplementationOnce(
-    () =>
-      new Promise((resolve) => {
-        finish = resolve;
-      }),
-  );
-  await mount();
-  await tap('Start a battle with bestie');
-  await tap('Start battle');
-  mockStatus = 'signedOut';
-  await act(async () => tree.update(<CircleBoard friendsPanel={null} />));
-  await act(async () => finish({ challengeId: 'old-account-battle' }));
-  expect(router.push).not.toHaveBeenCalledWith('/challenges?battle=old-account-battle');
-  expect(JSON.stringify(tree.toJSON())).not.toContain('Battle with');
+  expect(text()).not.toContain('Daily count for garage: 6');
 });
