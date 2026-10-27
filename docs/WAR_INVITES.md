@@ -30,7 +30,7 @@ Validation: app Jest suite, backend DynamoDB integration suite, shared contract 
 TypeScript, production-source lint, Serverless packaging/template checks, Android debug
 build and iOS JS export. War, Friends list, delete sheet and acceptance were inspected
 on an Android emulator with isolated demo data; the landing page was inspected in Chrome.
-No live two-account/store install attribution or iOS native build was performed. 
+No live two-account/store install attribution or iOS native build was performed.
 
 ## Production domain update
 
