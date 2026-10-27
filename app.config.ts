@@ -94,7 +94,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     joinBaseUrl: process.env.EXPO_PUBLIC_JOIN_BASE_URL || 'https://scrollsnooze.vercel.app',
     apiUrl: process.env.EXPO_PUBLIC_API_URL ?? null,
     websiteUrl: process.env.EXPO_PUBLIC_WEBSITE_URL || 'https://scrollsnooze.vercel.app',
-    googleIosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? null,
+    ...(process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID
+      ? { googleIosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID }
+      : {}),
     googleWebClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? null,
   },
 });
