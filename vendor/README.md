@@ -3,10 +3,10 @@
 The app installs `@siddiq3/driftless-contracts` 0.4.0 from the committed archive here.
 No GitHub token is required by EAS or CI. Existing package imports and exports are preserved.
 
-Source: https://github.com/Siddiq3/driftless-backend/tree/0231871bea80a61e29d39412b53b3c6a01e86af1/packages/contracts
+Source: https://github.com/Siddiq3/driftless-backend/tree/9a4181d53628f8e4916e40a0386ebba8cef5d3c5/packages/contracts
 
 Built using the package TypeScript configuration, then `npm pack --ignore-scripts`.
-SHA-256: `22cf2162b1ca4779ae761a6f80a78316117bfc42d7bfe507cbb070ae214c7735`.
+SHA-256: `80aa5c5460f854303cefb0d0b69ad07de1426008aa7f1809876c89f4f6ee430e`.
 
 To update: build the intended backend contracts commit, pack it into this directory,
 update the dependency path/version and lockfile if present, then run app TypeScript and tests.

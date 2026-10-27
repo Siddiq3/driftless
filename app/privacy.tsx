@@ -12,7 +12,6 @@ import { useOnboarding } from '@/onboarding/context';
 import { VisualBanner } from '@/ui/Focus';
 import { useAccountBackup } from '@/sync/AccountBackupProvider';
 
-
 export default function Privacy() {
   const api = useApi();
   const backup = useAccountBackup();
@@ -22,7 +21,13 @@ export default function Privacy() {
   const [busy, setBusy] = useState(false);
   const links = websiteLinks();
   const openWebsite = (url: string) => {
-    void Linking.openURL(url).catch(() => setNote({ title: 'Could not open website', body: 'Please try again or contact siddiqkolimi.dev@gmail.com.', warn: true }));
+    void Linking.openURL(url).catch(() =>
+      setNote({
+        title: 'Could not open website',
+        body: 'Please try again or contact siddiqkolimi.dev@gmail.com.',
+        warn: true,
+      }),
+    );
   };
 
   const confirm = (title: string, body: string, action: string, fn: () => void) =>
@@ -81,10 +86,22 @@ export default function Privacy() {
       {links && (
         <Section>
           <T v="heading">Policies & support</T>
-          <Button kind="secondary" label="Read privacy policy" onPress={() => openWebsite(links.privacy)} />
-          <Button kind="secondary" label="Request deletion on the website" onPress={() => openWebsite(links.deletion)} />
+          <Button
+            kind="secondary"
+            label="Read privacy policy"
+            onPress={() => openWebsite(links.privacy)}
+          />
+          <Button
+            kind="secondary"
+            label="Request deletion on the website"
+            onPress={() => openWebsite(links.deletion)}
+          />
           <Button kind="secondary" label="Terms of use" onPress={() => openWebsite(links.terms)} />
-          <Button kind="secondary" label="Contact support" onPress={() => openWebsite(links.support)} />
+          <Button
+            kind="secondary"
+            label="Contact support"
+            onPress={() => openWebsite(links.support)}
+          />
         </Section>
       )}
       {note && <Notice tone={note.warn ? 'warn' : 'info'} title={note.title} body={note.body} />}
