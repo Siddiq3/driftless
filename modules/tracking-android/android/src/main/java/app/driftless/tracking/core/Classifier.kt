@@ -35,11 +35,15 @@ data class AppRules(
     val adLabels: Set<String>,
     val validatedVersions: List<String>,
     val captionDescriptionViewIds: Set<String> = emptySet(),
+    /** Anonymous metadata branch used by YouTube's description-only player layout. */
+    val captionDescriptionFirstChildViewIds: Set<String> = emptySet(),
 )
 
 data class RuleSet(val version: Int, val apps: Map<String, AppRules>)
 
-data class Classification(val surface: Surface, val fingerprint: String?, val isAd: Boolean, val nodesVisited: Int, val itemContainerPresent: Boolean = true)
+data class Classification(val surface: Surface, val fingerprint: String?, val isAd: Boolean, val nodesVisited: Int, val itemContainerPresent: Boolean = true,
+    /** Salted hashes of the same metadata already used for identity; never raw text. */
+    val identitySignals: Set<String> = emptySet())
 
 class Classifier(private val maxNodes: Int = MAX_NODES, private val maxDepth: Int = MAX_DEPTH) {
 
@@ -104,7 +108,10 @@ class Classifier(private val maxNodes: Int = MAX_NODES, private val maxDepth: In
                 if (label != null && label in rules.adLabels) ad = true
             }
             if (depth < maxDepth) {
-                for (i in 0 until n.childCount) n.child(i)?.let { queue.addLast(Work(it, depth + 1, scopes, controls, metadata)) }
+                for (i in 0 until n.childCount) n.child(i)?.let {
+                    queue.addLast(Work(it, depth + 1, scopes, controls,
+                        metadata || (i == 0 && id in rules.captionDescriptionFirstChildViewIds)))
+                }
             }
         }
 
@@ -118,9 +125,16 @@ class Classifier(private val maxNodes: Int = MAX_NODES, private val maxDepth: In
             } else {
                 null
             }
+        // Keep independent caption nodes as corroborating signals. A lone caption or
+        // changing button label cannot establish a swipe with a persistent player.
+        val signals = rules.itemParts.flatMap { part ->
+            if (part.field == Field.CAPTION_TEXT)
+                captions[part]?.takeIf { it.isNotEmpty() } ?: descriptions[part].orEmpty()
+            else listOfNotNull(parts[part])
+        }.map { Fingerprint.of(salt, listOf(it)) }.toSet()
         return Classification(Surface.SHORT_VIDEO, fp, ad, visited,
             if (rules.itemParts.any { it.field == Field.CAPTION_TEXT }) playerControlsPresent
-            else rules.itemParts.isNotEmpty() && rules.itemParts.all { it.viewId in containers })
+            else rules.itemParts.isNotEmpty() && rules.itemParts.all { it.viewId in containers }, signals)
     }
 
     companion object {

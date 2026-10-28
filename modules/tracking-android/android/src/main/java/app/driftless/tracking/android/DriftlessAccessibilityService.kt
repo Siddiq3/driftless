@@ -53,6 +53,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
     private var badgePackage: String? = null
     private var debugTraceUntil = 0L
     private var debugLastIdentity: String? = null
+    private var debugLastShortKey: String? = null
     private val debugTrace = org.json.JSONArray()
 
 
@@ -141,8 +142,10 @@ class DriftlessAccessibilityService : AccessibilityService() {
             uptime - lastClassificationUptime >= YOUTUBE_BURST_SAMPLE_MS
         if (!classifyScheduled || sampleYouTubeBurst) {
             classifyNow()
+            main.removeCallbacks(classifyTask)
             classifyScheduled = true
-            main.postDelayed(classifyTask, SETTLE_MS)
+            main.postDelayed(classifyTask, if (pkg == "com.google.android.youtube")
+                app.driftless.tracking.core.PlayerTransition.IDENTITY_DEBOUNCE_MS else SETTLE_MS)
         }
     }
 
@@ -170,7 +173,8 @@ class DriftlessAccessibilityService : AccessibilityService() {
             return
         }
         val c = classifier.classify(A11yNode(root), appRules, saltFor(now))
-        val replaced = playerTransition.observe(pkg, c, now)
+        val replaced = playerTransition.observe(pkg, if (pkg == "com.google.android.youtube") c
+            else c.copy(identitySignals = emptySet()), now)
         if (::feedPause.isInitialized && feedPause.isShowing) {
             engine.onLeave(now)
             badgeSurface = c.surface; badgeIdentity = c.fingerprint != null; badgePackage = pkg
@@ -200,6 +204,16 @@ class DriftlessAccessibilityService : AccessibilityService() {
             runCatching { java.io.File(cacheDir,"exports/driftless-counter-trace.json").writeText(debugTrace.toString()) }
         }
         engine.onObservation(pkg, versionOf(pkg), c, (pendingScroll && pendingScrollPackage==pkg) || replaced, now)
+        if (pkg == "com.google.android.youtube" && c.fingerprint != null && c.fingerprint != debugLastShortKey &&
+            (replaced || (pendingScroll && pendingScrollPackage == pkg) || badgeSurface != Surface.SHORT_VIDEO || badgePackage != pkg) &&
+            (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+            android.util.Log.d("DriftlessTracking", "new short detected itemKey=${c.fingerprint}")
+            debugLastShortKey = c.fingerprint
+        }
+        if (playerTransition.awaitingIdentity) {
+            classifyScheduled = true
+            main.postDelayed(classifyTask, app.driftless.tracking.core.PlayerTransition.IDENTITY_DEBOUNCE_MS)
+        }
         pendingScroll = false
         badgeSurface = c.surface; badgeIdentity = c.fingerprint != null; badgePackage = pkg
         maybePause(pkg, now)

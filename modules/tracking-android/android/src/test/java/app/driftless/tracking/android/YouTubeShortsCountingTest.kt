@@ -70,6 +70,40 @@ class YouTubeShortsCountingTest {
         first();swipe("Short B");assertEquals(2,count());swipe("Short C");assertEquals(3,count())
         repeat(20) {event()};move(2000);call("onTick");assertEquals(3,count())
     }
+    @Test fun tenContentOnlySwipesWithPersistentPlayerCountOnceEachAfterDebounce() {
+        fun short(title: String) = node("reel_recycler", children=*arrayOf(
+            node("reel_player_page_container", children=*arrayOf(
+                node("metapanel", children=*arrayOf(node(desc="Same channel"), node(desc=title))),
+                node("like", desc="Like 10", cls="android.widget.Button")))))
+        root(short("Short 0")); call("classifyNow"); move(2000); call("onTick")
+        repeat(9) { i ->
+            root(short("Short ${i+1}")); move(40); event()
+            shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400))
+            repeat(10) { event() }
+            move(2000); call("onTick")
+            assertEquals(i+2, count())
+        }
+        assertEquals(10, count())
+        root(node("launcher",pkg="com.android.launcher"));call("classifyNow")
+        root(short("Short 9"));move(40);event();move(2000);call("onTick")
+        assertEquals(10,count())
+    }
+    @Test fun capturedDescriptionOnlyLayoutCountsWithoutNamedMetadataOrButtonClasses() {
+        fun short(title:String, likes:String="Like 10") = node("reel_recycler",children=*arrayOf(
+            node("reel_player_page_container",children=*arrayOf(
+                node(children=*arrayOf(node(children=*arrayOf(node(desc="Channel"))),node(desc=title))),
+                node(desc=likes), node("reel_progress_bar",desc="00:01")))))
+        root(short("A"));call("classifyNow");move(2000);call("onTick")
+        for(title in listOf("B","C")) {
+            root(short(title));move(40);event()
+            shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400))
+            move(2000);call("onTick")
+        }
+        assertEquals(3,count())
+        root(short("C","Like 11"));move(40);event()
+        shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(400))
+        move(2000);call("onTick");assertEquals(3,count())
+    }
     @Test fun captionAndControlEditsWithoutReplacementNeverBecomeExtraViews() {
         first()
         repeat(5) {i->move(40);root(player("Caption revision $i",likes="Like ${20+i}"));event();move(2000);call("onTick")}

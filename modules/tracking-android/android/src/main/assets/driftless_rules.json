@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "status": "UNVALIDATED CANDIDATES \u2014 selectors below are starting points for the Phase 2 accuracy study and have not been confirmed on current app versions. validatedVersions stays empty until a version passes gate G-2 (TEST_PLAN \u00a73).",
   "apps": [
     {
@@ -20,6 +20,7 @@
       "package": "com.google.android.youtube",
       "label": "YouTube Shorts",
       "captionDescriptionViewIds": ["metapanel"],
+      "captionDescriptionFirstChildViewIds": ["reel_player_page_container"],
       "surfaceViewIds": ["reel_recycler", "reel_watch_player", "reel_player_page_container"],
       "itemParts": [
         {

@@ -133,4 +133,41 @@ class ClassifierTest {
         assertNull(c.classify(tree("Caption one","Like 11","hidden two"),r.copy(captionDescriptionViewIds=emptySet()),salt).fingerprint)
     }
 
+    @Test fun metadataSignalsReuseOnlyVisibleCaptionInputsAndExcludeControls() {
+        val r = rules.copy(surfaceViewIds=setOf("pager"), itemParts=listOf(ItemPart("player",Field.CAPTION_TEXT)), captionDescriptionViewIds=setOf("metapanel"))
+        fun tree(title: String, likes: String) = FakeNode(viewId="pager", children=listOf(
+            FakeNode(viewId="player", children=listOf(
+                FakeNode(viewId="metapanel", children=listOf(
+                    FakeNode(contentDesc="Channel"), FakeNode(contentDesc=title),
+                    FakeNode(contentDesc="Hidden", isVisible=false))),
+                FakeNode(className="android.widget.Button", contentDesc=likes)))))
+        val a = c.classify(tree("Title A", "Like 10"), r, salt)
+        val b = c.classify(tree("Title B", "Like 11"), r, salt)
+        assertEquals(2, a.identitySignals.size)
+        assertEquals(1, (a.identitySignals intersect b.identitySignals).size)
+        assertEquals(a.identitySignals, c.classify(tree("Title A", "Like 12"), r, salt).identitySignals)
+        assertFalse(a.identitySignals.contains("Channel"))
+    }
+
+    @Test fun youtubeDescriptionOnlyMetadataBranchIgnoresAnonymousSidebarAndProgress() {
+        // YouTube 20.10.41 emulator capture: first player child is anonymous metadata;
+        // later children are anonymous ViewGroup controls, not Button nodes.
+        val r = rules.copy(surfaceViewIds=setOf("reel_recycler"),
+            itemParts=listOf(ItemPart("reel_player_page_container",Field.CAPTION_TEXT)),
+            captionDescriptionFirstChildViewIds=setOf("reel_player_page_container"))
+        fun tree(title: String, likes: String, progress: String) = FakeNode(viewId="reel_recycler",children=listOf(
+            FakeNode(viewId="reel_player_page_container",children=listOf(
+                FakeNode(className="android.view.ViewGroup",children=listOf(
+                    FakeNode(children=listOf(FakeNode(contentDesc="Channel"))),
+                    FakeNode(contentDesc=title))),
+                FakeNode(className="android.view.ViewGroup",contentDesc=likes),
+                FakeNode(viewId="reel_progress_bar",contentDesc=progress)))))
+        val a = c.classify(tree("Title A","Like 10","00:01"),r,salt)
+        assertNotNull(a.fingerprint)
+        assertTrue(a.itemContainerPresent)
+        assertEquals(2,a.identitySignals.size)
+        assertEquals(a.fingerprint,c.classify(tree("Title A","Like 11","00:02"),r,salt).fingerprint)
+        assertNotEquals(a.fingerprint,c.classify(tree("Title B","Like 11","00:02"),r,salt).fingerprint)
+    }
+
 }
