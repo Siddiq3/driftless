@@ -6,8 +6,8 @@ const {
   compositeImagesAsync,
 } = require('@expo/image-utils');
 const root = path.resolve(__dirname, '..');
-const source = path.join(root, 'assets/branding/scrollsnooze/purple/icon-master.png');
-const iconBackground = '#10102B';
+const source = path.join(root, 'assets/branding/scrollsnooze/mascot/icon-master.png');
+const iconBackground = '#351700';
 async function generate(target, width, backgroundColor = 'transparent', src = source) {
   const result = await generateImageAsync(
     { projectRoot: root },
@@ -24,10 +24,16 @@ async function generate(target, width, backgroundColor = 'transparent', src = so
 }
 async function main() {
   await generate(path.join(root, 'assets/branding/app-icon.png'), 1024, iconBackground);
+  await generate(
+    path.join(root, 'assets/branding/scrollsnooze/mascot/play-store-icon-512.png'),
+    512,
+    iconBackground,
+  );
   const foreground = path.join(root, 'assets/branding/adaptive-foreground.png');
   const inner = await generateImageAsync(
     { projectRoot: root },
-    { src: source, width: 820, height: 820, resizeMode: 'contain' },
+    // Keep the complete artwork within Android's central 66/108 safe zone.
+    { src: source, width: 624, height: 624, resizeMode: 'contain' },
   );
   const background = await generateImageBackgroundAsync({
     width: 1024,
@@ -37,7 +43,7 @@ async function main() {
   });
   await fs.writeFile(
     foreground,
-    await compositeImagesAsync({ foreground: inner.source, background, x: 102, y: 102 }),
+    await compositeImagesAsync({ foreground: inner.source, background, x: 200, y: 200 }),
   );
   const res = path.join(root, 'android/app/src/main/res');
   await fs.mkdir(path.join(res, 'mipmap-anydpi-v26'), { recursive: true });

@@ -52,7 +52,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     versionCode: 1,
     adaptiveIcon: {
       foregroundImage: './assets/branding/adaptive-foreground.png',
-      backgroundColor: '#10102B',
+      backgroundColor: '#351700',
     },
     // Local usage data must not leave the device via cloud backup (THREAT_MODEL T4).
     allowBackup: false,
