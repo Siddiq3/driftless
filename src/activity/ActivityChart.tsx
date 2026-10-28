@@ -7,7 +7,10 @@ import type { ActivityData, ActivityPeriod } from './model';
 export function ActivityChart({ data, period }: { data: ActivityData; period: ActivityPeriod }) {
   const { fontScale } = useWindowDimensions();
   const labelHeight = 20 * Math.min(fontScale, 2);
-  const columnWidth = (period === 'daily' ? 14 : 44) * Math.min(fontScale, 2);
+  // Keep the complete day/week visible on a small phone at normal text size.
+  // Larger text can still scroll rather than squeezing labels and bars together.
+  const columnWidth = (period === 'daily' ? 6 : 28) * Math.min(fontScale, 2);
+  const minimumWidth = 32 + data.bars.length * columnWidth + Math.max(0, data.bars.length - 1) * 2;
   const max = Math.max(2, ...data.bars.map((b) => b.value ?? 0));
   const ceiling = max <= 10 ? Math.ceil(max / 2) * 2 : Math.ceil(max / 10) * 10;
   const motion = useDataMotion(data.bars.map((b) => `${b.key}:${b.value}`).join('|'));
@@ -29,7 +32,7 @@ export function ActivityChart({ data, period }: { data: ActivityData; period: Ac
             showsHorizontalScrollIndicator
             contentContainerStyle={{ minWidth: '100%', flexGrow: 1 }}
           >
-            <View style={{ minWidth: data.bars.length * columnWidth + 56, flex: 1 }}>
+            <View testID="activity-chart-content" style={{ minWidth: minimumWidth, flex: 1 }}>
               <View style={[styles.plot, { height: 140 + labelHeight }]}>
                 <View style={styles.yAxis}>
                   {[ceiling, ceiling / 2, 0].map((v) => (

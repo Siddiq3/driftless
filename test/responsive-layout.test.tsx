@@ -214,3 +214,47 @@ it('gives large-font charts scrollable space while retaining exact accessible va
     tree.root.findAll((n) => n.props.accessibilityLabel === 'Tue: not recorded').length,
   ).toBeGreaterThan(0);
 });
+
+it.each([
+  ['daily', 24, 1],
+  ['weekly', 7, 1],
+  ['daily', 24, 2],
+  ['weekly', 7, 2],
+] as const)(
+  'keeps the full %s chart with %i buckets reachable at font scale %f',
+  async (period, count, fontScale) => {
+    jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({
+      width: 320,
+      height: 640,
+      scale: 3,
+      fontScale,
+    });
+    const data: ActivityData = {
+      from: '2026-10-28',
+      to: '2026-10-28',
+      dates: ['2026-10-28'],
+      views: { value: 25, days: 1 },
+      minutes: { value: 13, days: 1 },
+      apps: [],
+      hourlyAvailable: period === 'daily',
+      expectedDays: 1,
+      bars: Array.from({ length: count }, (_, index) => ({
+        key: String(index),
+        label: String(index),
+        value: index === count - 2 ? 4 : index === count - 1 ? 21 : 0,
+      })),
+    };
+    await mount(<ActivityChart data={data} period={period} />);
+    const chart = tree.root.findByProps({ testID: 'activity-chart-content' });
+    // Available width on a 320dp phone after page (20dp) and chart (18dp) gutters.
+    const viewportWidth = 320 - 2 * 20 - 2 * 18;
+    if (fontScale === 1) expect(chart.props.style.minWidth).toBeLessThanOrEqual(viewportWidth);
+    else expect(chart.props.style.minWidth).toBeGreaterThan(viewportWidth);
+    expect(
+      chart.findAllByProps({ accessibilityLabel: `${count - 1}: 21 short videos` }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      chart.findAllByProps({ accessibilityLabel: `${count - 2}: 4 short videos` }).length,
+    ).toBeGreaterThan(0);
+  },
+);

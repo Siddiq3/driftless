@@ -17,6 +17,7 @@ jest.mock('@/ui/motion', () => ({ useDataMotion: () => ({}) }));
 jest.mock('@/ui/BrainCharacter', () => ({ BrainCharacter: () => null }));
 jest.mock('@/ui/Icon', () => ({ AppIcon: () => null, Icon: () => null }));
 jest.mock('@/onboarding/GetStartedScreen', () => ({ GetStartedScreen: () => null }));
+jest.mock('@/onboarding/QuestionContent', () => ({ QuestionContent: () => null }));
 jest.mock('@/permissions/PermissionChecklist', () => ({
   PermissionChecklist: () => null,
   PermissionHelpButton: () => null,

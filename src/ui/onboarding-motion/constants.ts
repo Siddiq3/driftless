@@ -1,0 +1,22 @@
+/** Milliseconds and dp; all onboarding motion tuning lives here. */
+export const ONBOARDING_MOTION = {
+  wordDelay: 120,
+  wordFade: 200,
+  questionPause: 250,
+  optionStagger: 70,
+  optionFade: 220,
+  optionLift: 8,
+  exitFade: 140,
+  reducedFade: 160,
+  bobDistance: 4,
+  bobHalfCycle: 1000,
+  idleRotation: 0.6,
+  talkingHalfCycle: 160,
+  talkingScale: 1.025,
+  selectionDown: 70,
+  selectionUp: 120,
+  selectionScale: 0.97,
+  indicatorFade: 180,
+  buttonFade: 250,
+  buttonPressScale: 0.98,
+} as const;

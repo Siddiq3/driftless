@@ -24,6 +24,8 @@ import { useDataMotion } from '@/ui/motion';
 import { appInviteMessage } from '@/social/invite';
 import { useOnboarding } from '@/onboarding/context';
 import { GetStartedScreen } from './GetStartedScreen';
+import { QuestionContent, type QuestionContentHandle } from './QuestionContent';
+import { useMotionPreferences } from '@/ui/onboarding-motion/useMotionPreferences';
 import { PermissionChecklist, PermissionHelpButton } from '@/permissions/PermissionChecklist';
 import {
   SetupButton,
@@ -142,6 +144,20 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
   const scroll = useRef<ScrollView>(null);
   const hadInitial = useRef(initial !== null);
   const transition = useDataMotion(step);
+  const reducedMotion = useMotionPreferences();
+  const questionContent = useRef<QuestionContentHandle>(null);
+  const [readyQuestion, setReadyQuestion] = useState<{
+    step: number;
+    reducedMotion: boolean | null;
+  } | null>(null);
+  const moving = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const estimate = estimateTime(answers, plan);
   const question = QUESTIONS[step - 1];
   const size = Math.min(layout.width - 48, layout.compact ? 140 : 240);
@@ -192,18 +208,24 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
   );
   const move = useCallback(
     async (next: number) => {
-      if (busy) return;
+      if (busy || moving.current) return;
+      moving.current = true;
       setBusy(true);
       setError(null);
       let target = activeSetupStep(next, next < step ? 'back' : 'next');
       if (target === 10 && session.status === 'signedIn') target = next < step ? 9 : 11;
       try {
         await setup.save(record(target));
+        if (!mounted.current) return;
+        await questionContent.current?.fadeOut();
+        if (!mounted.current) return;
+        setReadyQuestion(null);
         setStep(target);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Could not save. Try again.');
       } finally {
-        setBusy(false);
+        moving.current = false;
+        if (mounted.current) setBusy(false);
       }
     },
     [busy, step, session.status, setup, record],
@@ -313,39 +335,6 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
       }
       return { ...current, [q.key]: current[q.key] === value ? undefined : value };
     });
-  const choice = (label: string, selected: boolean, action: () => void, multi = false) => (
-    <Pressable
-      key={label}
-      accessibilityRole={multi ? 'checkbox' : 'radio'}
-      accessibilityLabel={label}
-      accessibilityState={{ checked: selected, disabled: busy }}
-      disabled={busy}
-      onPress={action}
-      style={({ pressed }) => [
-        styles.choice,
-        {
-          backgroundColor: selected ? '#3C2C19' : '#171713',
-          borderColor: selected ? C.accent : '#24241E',
-          opacity: pressed ? 0.7 : 1,
-        },
-      ]}
-    >
-      <View
-        style={{
-          width: 18,
-          height: 18,
-          borderRadius: multi ? 4 : 9,
-          borderWidth: 1.5,
-          borderColor: selected ? C.accent : '#88897F',
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}
-      >
-        {selected && <Icon name="check" size={13} color={C.accent} />}
-      </View>
-      <T style={{ flex: 1, color: C.text, fontSize: 16 }}>{label}</T>
-    </Pressable>
-  );
   const title = (text: string) => (
     <T
       v="display"
@@ -357,11 +346,6 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
     >
       {text}
     </T>
-  );
-  const plain = (label: string, action: () => void) => (
-    <Pressable accessibilityRole="button" disabled={busy} onPress={action} style={styles.plain}>
-      <T style={{ textAlign: 'center', color: C.accent, fontWeight: '700' }}>{label}</T>
-    </Pressable>
   );
 
   if (step === 0) {
@@ -393,11 +377,15 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
         <T v="caption" style={{ color: C.muted, flex: 1 }}>
           {step > 0 && step <= 6 ? `${step} of 6` : step === 0 ? 'SCROLLSNOOZE' : ''}
         </T>
-        {step >= 10
-          ? plain('Need help?', () => router.push('/privacy'))
-          : step > 0 && step <= 6
-            ? plain('Skip', () => void move(9))
-            : null}
+        {step >= 10 ? (
+          <PlainSetupButton
+            label="Need help?"
+            busy={busy}
+            onPress={() => router.push('/privacy')}
+          />
+        ) : step > 0 && step <= 6 ? (
+          <PlainSetupButton label="Skip" busy={busy} onPress={() => void move(9)} />
+        ) : null}
       </View>
       <ScrollView
         ref={scroll}
@@ -417,50 +405,26 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
               alignItems: 'stretch',
               paddingTop: step === 12 && !layout.compact ? 24 : 0,
             },
-            transition,
+            question ? undefined : transition,
           ]}
         >
           {step > 0 && step <= 6 && question && (
-            <>
-              <View style={styles.questionHeader}>
-                <BrainCharacter size={64} />
-                <View
-                  style={{ flex: 1, borderRadius: 20, backgroundColor: '#F9F9ED', padding: 16 }}
-                >
-                  <T
-                    v="heading"
-                    style={{ color: '#191915', fontWeight: '700', fontSize: 17, lineHeight: 23 }}
-                  >
-                    {question.title}
-                  </T>
-                </View>
-              </View>
-              <T v="caption" style={{ textAlign: 'center', color: C.muted }}>
-                {question.multi ? 'Pick all that apply' : 'Optional · choose one'}
-              </T>
-              <View style={{ gap: 10 }}>
-                {question.options.map((o) =>
-                  choice(
-                    o.label,
-                    question.multi
-                      ? (answers[question.key] as string[]).includes(o.value)
-                      : answers[question.key] === o.value,
-                    () => select(question, o.value),
-                    question.multi,
-                  ),
-                )}
-              </View>
-              {question.key === 'apps' && (
-                <T v="caption" style={styles.small}>
-                  App minutes: Instagram, YouTube, Facebook, Snapchat, Moj &amp; ShareChat.
-                </T>
-              )}
-              {question.key === 'usage' && (
-                <T v="caption" style={styles.small}>
-                  Your estimate, not measured activity.
-                </T>
-              )}
-            </>
+            <QuestionContent
+              ref={questionContent}
+              questionKey={question.key}
+              title={question.title}
+              multi={question.multi}
+              options={question.options.map((option) => ({
+                ...option,
+                selected: question.multi
+                  ? (answers[question.key] as string[]).includes(option.value)
+                  : answers[question.key] === option.value,
+              }))}
+              busy={busy}
+              reducedMotion={reducedMotion}
+              onSelect={(value) => select(question, value)}
+              onReady={() => setReadyQuestion({ step, reducedMotion })}
+            />
           )}
           {step === 8 && (
             <>
@@ -616,7 +580,17 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
             <SetupButton
               label={step === 9 ? 'Start my plan' : 'Continue'}
               busy={busy}
-              onPress={() => void move(step + 1)}
+              animate={!!question}
+              reducedMotion={reducedMotion !== false}
+              disabled={
+                !!question &&
+                (readyQuestion?.step !== step ||
+                  readyQuestion.reducedMotion !== reducedMotion ||
+                  (question.multi
+                    ? (answers[question.key] as string[]).length === 0
+                    : !answers[question.key]))
+              }
+              onPress={() => move(step + 1)}
             />
           )}
           {step === 10 && (
@@ -633,7 +607,11 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
                 busy={busy}
                 onPress={() => void move(11)}
               />
-              {plain('Privacy policy', () => router.push('/privacy'))}
+              <PlainSetupButton
+                label="Privacy policy"
+                busy={busy}
+                onPress={() => router.push('/privacy')}
+              />
             </>
           )}
           {step === 11 && (
@@ -642,7 +620,11 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
           {step === 12 && (
             <>
               <PermissionHelpButton />
-              {plain(health?.serviceRunning ? 'Continue' : 'Not now', () => void move(13))}
+              <PlainSetupButton
+                label={health?.serviceRunning ? 'Continue' : 'Not now'}
+                busy={busy}
+                onPress={() => void move(13)}
+              />
             </>
           )}
           {step === 13 && (
@@ -652,13 +634,17 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
                 busy={busy}
                 onPress={() => (widgetRequested ? void move(14) : pin())}
               />
-              {plain('Not now', () => void move(14))}
+              <PlainSetupButton label="Not now" busy={busy} onPress={() => void move(14)} />
             </>
           )}
           {step === 14 && (
             <>
               <SetupButton label="Challenge your friend" busy={busy} onPress={() => void share()} />
-              {plain('I’ll do it later', () => void move(15))}
+              <PlainSetupButton
+                label="I’ll do it later"
+                busy={busy}
+                onPress={() => void move(15)}
+              />
             </>
           )}
           {step === 15 && (
@@ -668,7 +654,9 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
                 busy={busy}
                 onPress={() => void finish(!!app)}
               />
-              {app && plain('Go to Today', () => void finish())}
+              {app && (
+                <PlainSetupButton label="Go to Today" busy={busy} onPress={() => void finish()} />
+              )}
             </>
           )}
         </View>
@@ -676,6 +664,22 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
     </SafeAreaView>
   );
 }
+function PlainSetupButton({
+  label,
+  busy,
+  onPress,
+}: {
+  label: string;
+  busy: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable accessibilityRole="button" disabled={busy} onPress={onPress} style={styles.plain}>
+      <T style={{ textAlign: 'center', color: C.accent, fontWeight: '700' }}>{label}</T>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   header: {
     width: '100%',
@@ -712,16 +716,6 @@ const styles = StyleSheet.create({
     color: C.accent,
   },
   small: { color: C.muted, textAlign: 'center', fontSize: 13, lineHeight: 19 },
-  questionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 12 },
-  choice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    minHeight: 58,
-    borderRadius: 13,
-    padding: 14,
-    gap: 12,
-  },
   plain: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 4 },
   back: { minWidth: 48, minHeight: 48, justifyContent: 'center' },
   permissionRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },

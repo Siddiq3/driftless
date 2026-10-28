@@ -1,6 +1,13 @@
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { Share, TurboModuleRegistry } from 'react-native';
+import {
+  AccessibilityInfo,
+  Animated,
+  AppState,
+  Share,
+  TurboModuleRegistry,
+  type AppStateStatus,
+} from 'react-native';
 import * as Sharing from 'expo-sharing';
 import { WrapStories } from '@/wrapped/Stories';
 import type { Recap } from '@/wrapped/model';
@@ -12,7 +19,11 @@ jest.mock('expo-font', () => ({ useFonts: () => [false] }));
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
-jest.mock('@/ui/motion', () => ({ useReducedMotion: () => true, useDataMotion: () => ({}) }));
+let mockReduced = true;
+jest.mock('@/ui/motion', () => ({
+  useReducedMotion: () => mockReduced,
+  useDataMotion: () => ({}),
+}));
 jest.mock('@/ui/BrainCharacter', () => ({ BrainCharacter: () => null }));
 jest.mock('@/ui/Icon', () => ({ AppIcon: () => null, Icon: () => null }));
 jest.mock('@/onboarding/Visuals', () => ({ SetupButton: () => null }));
@@ -55,6 +66,7 @@ const button = (tree: ReactTestRenderer, label: string) =>
     (n) => n.props.accessibilityLabel === label && typeof n.props.onPress === 'function',
   )[0]!;
 afterEach(() => {
+  mockReduced = true;
   jest.restoreAllMocks();
   jest.clearAllMocks();
 });
@@ -138,5 +150,50 @@ test('image sharing releases temporary captures even if the share sheet fails', 
     'file:///temporary.png',
   );
   expect(JSON.stringify(tree.toJSON())).toContain('Sharing failed');
+  await act(async () => tree.unmount());
+});
+
+test('holding anywhere pauses playback and releasing resumes the remaining story time', async () => {
+  mockReduced = false;
+  jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockResolvedValue(false);
+  let onAppState: ((state: AppStateStatus) => void) | undefined;
+  jest.spyOn(AppState, 'addEventListener').mockImplementation((_event, callback) => {
+    onAppState = callback;
+    return { remove: jest.fn() };
+  });
+  let elapsed = 0;
+  jest.spyOn(Animated.Value.prototype, 'stopAnimation').mockImplementation((callback) => {
+    callback?.(elapsed);
+  });
+  const stop = jest.fn();
+  const timing = jest.spyOn(Animated, 'timing').mockReturnValue({
+    start: jest.fn(),
+    stop,
+    reset: jest.fn(),
+  });
+  const tree = await mount();
+  await act(async () => onAppState?.('active'));
+  const screen = tree.root.findByProps({ testID: 'wrapped-story-screen' });
+  expect(button(tree, 'Pause stories')).toBeUndefined();
+  expect(button(tree, 'Play stories')).toBeUndefined();
+  expect(timing).toHaveBeenLastCalledWith(
+    expect.anything(),
+    expect.objectContaining({ duration: 8000 }),
+  );
+  elapsed = 0.4;
+  await act(async () => screen.props.onTouchStart());
+  expect(stop).toHaveBeenCalledTimes(1);
+  const starts = timing.mock.calls.length;
+  // A second finger is still holding the screen.
+  await act(async () => screen.props.onTouchEnd({ nativeEvent: { touches: [{}] } }));
+  expect(timing).toHaveBeenCalledTimes(starts);
+  await act(async () => screen.props.onTouchEnd({ nativeEvent: { touches: [] } }));
+  expect(timing).toHaveBeenLastCalledWith(
+    expect.anything(),
+    expect.objectContaining({ duration: 4800 }),
+  );
+  await act(async () => screen.props.onTouchStart());
+  await act(async () => screen.props.onTouchCancel());
+  expect(timing).toHaveBeenCalledTimes(starts + 2);
   await act(async () => tree.unmount());
 });

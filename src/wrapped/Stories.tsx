@@ -32,16 +32,18 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
   const reduced = useReducedMotion();
   const [fonts] = useFonts({ LilitaOne: require('../../assets/fonts/LilitaOne-Regular.ttf') });
   const [index, setIndex] = useState(initialIndex);
-  const [paused, setPaused] = useState(false);
+  const [holding, setHolding] = useState(false);
   const [reader, setReader] = useState(true);
   const [focused, setFocused] = useState(true);
   useFocusEffect(
     useCallback(() => {
       setFocused(true);
-      return () => setFocused(false);
+      return () => {
+        setFocused(false);
+        setHolding(false);
+      };
     }, []),
   );
-  const [holding, setHolding] = useState(false);
   const [active, setActive] = useState(AppState.currentState === 'active');
   const [sharing, setSharing] = useState(false);
   const [note, setNote] = useState('');
@@ -361,7 +363,10 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
     };
   }, []);
   useEffect(() => {
-    const sub = AppState.addEventListener('change', (s) => setActive(s === 'active'));
+    const sub = AppState.addEventListener('change', (s) => {
+      setActive(s === 'active');
+      if (s !== 'active') setHolding(false);
+    });
     return () => sub.remove();
   }, []);
   useEffect(() => {
@@ -369,7 +374,6 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
   }, [current, progress]);
   useEffect(() => {
     if (
-      paused ||
       holding ||
       sharing ||
       reduced ||
@@ -396,18 +400,7 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
       cancelled = true;
       animation?.stop();
     };
-  }, [
-    current,
-    paused,
-    holding,
-    sharing,
-    reduced,
-    reader,
-    active,
-    focused,
-    progress,
-    stories.length,
-  ]);
+  }, [current, holding, sharing, reduced, reader, active, focused, progress, stories.length]);
   async function share() {
     if (shareLock.current) return;
     shareLock.current = true;
@@ -446,7 +439,13 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
         })
       : `${recap.from} – ${recap.to}`;
   return (
-    <View style={{ flex: 1, backgroundColor: story.colors[1] }}>
+    <View
+      testID="wrapped-story-screen"
+      onTouchStart={() => setHolding(true)}
+      onTouchEnd={({ nativeEvent }) => setHolding(nativeEvent.touches.length > 0)}
+      onTouchCancel={() => setHolding(false)}
+      style={{ flex: 1, backgroundColor: story.colors[1] }}
+    >
       <View
         style={{
           flex: 1,
@@ -508,13 +507,7 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
             <Text style={styles.control}>×</Text>
           </Pressable>
         </View>
-        <ScrollView
-          ref={scroll}
-          onTouchStart={() => setHolding(true)}
-          onTouchEnd={() => setHolding(false)}
-          onTouchCancel={() => setHolding(false)}
-          contentContainerStyle={styles.scroll}
-        >
+        <ScrollView ref={scroll} contentContainerStyle={styles.scroll}>
           <Animated.View style={[styles.content, transition]} key={story.id}>
             {label(story.label)}
             {story.content}
@@ -554,14 +547,6 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
           style={[styles.circle, { opacity: current === 0 ? 0.3 : 1 }]}
         >
           <Icon name="back" color="#FFFFFF" />
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={paused ? 'Play stories' : 'Pause stories'}
-          onPress={() => setPaused((p) => !p)}
-          style={styles.circle}
-        >
-          <Text style={styles.control}>{paused ? '▷' : 'Ⅱ'}</Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
