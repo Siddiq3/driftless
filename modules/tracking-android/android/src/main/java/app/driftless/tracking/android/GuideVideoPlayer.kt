@@ -34,7 +34,7 @@ class GuideVideoPlayer(context: Context) : FrameLayout(context), TextureView.Sur
         addView(texture,LayoutParams(-1,-1))
         addView(poster,LayoutParams(-1,-1))
         texture.surfaceTextureListener=this
-        contentDescription="Video tutorial: Downloaded apps, Driftless, enable the switch, then Allow."
+        contentDescription="Video tutorial: Downloaded apps, ScrollSnooze, enable the switch, then Allow."
         importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_YES
     }
     fun setSource(source:String) {
@@ -49,7 +49,7 @@ class GuideVideoPlayer(context: Context) : FrameLayout(context), TextureView.Sur
         videoResource=next
         posterResource=if(reels) R.drawable.onboarding_reels_poster else R.drawable.accessibility_guide_poster
         poster.setImageResource(posterResource)
-        contentDescription=if(reels) "Preview: six Reels scroll upward while the floating count increases." else "Video tutorial: Downloaded apps, Driftless, enable the switch, then Allow."
+        contentDescription=if(reels) "Preview: six Reels scroll upward while the floating count increases." else "Video tutorial: Downloaded apps, ScrollSnooze, enable the switch, then Allow."
         if(texture.isAvailable) texture.surfaceTexture?.let { prepare(it) }
     }
     private fun motionEnabled()=Build.VERSION.SDK_INT<26 || ValueAnimator.areAnimatorsEnabled()
