@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AppState, View, type ViewProps } from 'react-native';
+import { AppState, Platform, View, type ViewProps } from 'react-native';
 import { requireNativeView } from 'expo';
 import { useReducedMotion } from '@/ui/motion';
 import { T } from '@/ui/kit';
@@ -11,7 +11,10 @@ export const ACCESSIBILITY_STEPS = [
   'Turn on the toggle',
   'Select “Allow”',
 ] as const;
-const GuideVideo = requireNativeView<ViewProps & { playing: boolean }>('DriftlessTracking');
+const GuideVideo =
+  Platform.OS === 'android'
+    ? requireNativeView<ViewProps & { playing: boolean }>('DriftlessTracking')
+    : null;
 
 /** Silent local video footage: only the instructional panel, without recorded device chrome. */
 export function AccessibilityWalkthrough() {
@@ -21,6 +24,7 @@ export function AccessibilityWalkthrough() {
     const sub = AppState.addEventListener('change', (state) => setActive(state === 'active'));
     return () => sub.remove();
   }, []);
+  if (!GuideVideo) return null;
   return (
     <View>
       <View style={{ borderRadius: 18, overflow: 'hidden', backgroundColor: '#FFF0BD' }}>

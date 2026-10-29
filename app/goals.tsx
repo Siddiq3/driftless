@@ -1,4 +1,4 @@
-import { Platform , View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { AccountAllowanceNotice } from '@/sync/AccountAllowanceNotice';
 import type { v1 } from '@siddiq3/driftless-contracts';
 import { randomUUID } from 'expo-crypto';
@@ -173,7 +173,7 @@ function EveningReminder() {
                 setOn(result);
                 setNote(
                   v && !result
-                    ? 'Notifications are off for ScrollSnooze in Android settings.'
+                    ? `Notifications are off for ScrollSnooze in ${Platform.OS === 'ios' ? 'iPhone' : 'Android'} settings.`
                     : null,
                 );
               })

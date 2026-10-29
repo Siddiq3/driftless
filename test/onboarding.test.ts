@@ -6,6 +6,8 @@ import { loadGoals } from '../src/goals/store';
 import {
   EMPTY_ANSWERS,
   REEL_LIMITS,
+  platformSetupPlan,
+  platformSetupStep,
   reelsSetupPlan,
   SetupRecordSchema,
   estimateTime,
@@ -14,6 +16,25 @@ import {
 } from '../src/onboarding/model';
 import { finishSetup, readSetup, saveSetup, SETUP_KEY } from '../src/onboarding/store';
 import { appInviteMessage } from '../src/social/invite';
+
+it('restores platform-appropriate goals without interpreting reel counts as minutes', () => {
+  expect(platformSetupPlan('ios', { metric: 'views', dailyLimit: 150 })).toEqual({
+    metric: 'minutes',
+    dailyLimit: 30,
+  });
+  expect(platformSetupPlan('ios', { metric: 'minutes', dailyLimit: 45 })).toEqual({
+    metric: 'minutes',
+    dailyLimit: 45,
+  });
+  expect(platformSetupPlan('android', { metric: 'views', dailyLimit: 150 })).toEqual({
+    metric: 'views',
+    dailyLimit: 150,
+  });
+  expect(platformSetupStep('ios', 12)).toBe(12);
+  expect(platformSetupStep('ios', 13)).toBe(15);
+  expect(platformSetupStep('ios', 14)).toBe(15);
+  expect(platformSetupStep('android', 13)).toBe(13);
+});
 
 const initial = (): SetupRecord => ({
   version: 1,

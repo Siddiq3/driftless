@@ -6,12 +6,18 @@ export function homeCountMessage(
   state: 'loading' | 'error' | 'ok',
   count: number | null,
   countingActive: boolean,
+  platform = 'android',
 ) {
   if (state === 'loading')
     return { title: 'Getting today ready', detail: 'Checking your activity…' };
   if (state === 'error')
     return { title: 'Let’s reconnect', detail: 'Your activity couldn’t be loaded.' };
   if (count !== null && count > 0) return null;
+  if (platform === 'ios' && count === null)
+    return {
+      title: 'Make a little space',
+      detail: 'Choose apps and take a pause. iPhone activity charts are still being built.',
+    };
   if (count === 0) return { title: 'A fresh start', detail: 'No short videos recorded today.' };
   return countingActive
     ? { title: 'Ready when you are', detail: 'Your count will appear when activity is available.' }

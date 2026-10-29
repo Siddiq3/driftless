@@ -6,7 +6,14 @@ import UIKit
 
 public final class ScrollSnoozeScreenTimeModule: Module {
   private let defaults = UserDefaults.standard
-  private let settings = ManagedSettingsStore(named: .init("scrollsnooze"))
+  private lazy var settings = ManagedSettingsStore(named: .init("scrollsnooze"))
+  private var controlsAvailable: Bool {
+    #if SCROLLSNOOZE_UI_TEST
+    return false
+    #else
+    return true
+    #endif
+  }
   private var picker: UIViewController?
   private var scope: String { defaults.string(forKey: "scrollsnooze.screenTime.scope") ?? "guest:ios" }
   private func key(_ name: String) -> String { "scrollsnooze.screenTime.\(scope).\(name)" }
@@ -22,6 +29,11 @@ public final class ScrollSnoozeScreenTimeModule: Module {
     return value.applicationTokens.count + value.categoryTokens.count + value.webDomainTokens.count
   }
   private func apply(_ paused: Bool) throws {
+    guard controlsAvailable else {
+      if paused { throw ScreenTimeError("Screen Time is disabled in this UI-testing build.") }
+      defaults.set(false, forKey: key("paused"))
+      return
+    }
     if paused && AuthorizationCenter.shared.authorizationStatus != .approved {
       throw ScreenTimeError("Allow Screen Time access before pausing apps.")
     }
@@ -39,7 +51,18 @@ public final class ScrollSnoozeScreenTimeModule: Module {
 
   public func definition() -> ModuleDefinition {
     Name("ScrollSnoozeScreenTime")
+    Function("controlsAvailable") { self.controlsAvailable }
+    Function("isSimulator") { () -> Bool in
+      #if targetEnvironment(simulator)
+      return true
+      #else
+      return false
+      #endif
+    }
     Function("status") { () -> [String: Any] in
+      guard self.controlsAvailable else {
+        return ["authorization": "notDetermined", "selectedCount": 0, "paused": false]
+      }
       let auth = AuthorizationCenter.shared.authorizationStatus
       if auth != .approved { try? self.apply(false) }
       return ["authorization": auth == .approved ? "approved" : auth == .denied ? "denied" : "notDetermined",
@@ -47,6 +70,9 @@ public final class ScrollSnoozeScreenTimeModule: Module {
               "paused": auth == .approved && self.defaults.bool(forKey: self.key("paused"))]
     }
     AsyncFunction("authorize") { (promise: Promise) in
+      guard self.controlsAvailable else {
+        promise.reject("SCREEN_TIME_UNAVAILABLE", "Screen Time is disabled in this UI-testing build."); return
+      }
       Task { @MainActor in
         do {
           try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
@@ -55,6 +81,9 @@ public final class ScrollSnoozeScreenTimeModule: Module {
       }
     }
     AsyncFunction("chooseApps") { (promise: Promise) in
+      guard self.controlsAvailable else {
+        promise.reject("SCREEN_TIME_UNAVAILABLE", "Screen Time is disabled in this UI-testing build."); return
+      }
       guard AuthorizationCenter.shared.authorizationStatus == .approved else {
         promise.reject("SCREEN_TIME_AUTH", "Allow Screen Time access first."); return
       }
@@ -90,7 +119,7 @@ public final class ScrollSnoozeScreenTimeModule: Module {
       }
     }
     Function("reset") {
-      self.settings.clearAllSettings()
+      if self.controlsAvailable { self.settings.clearAllSettings() }
       for name in self.defaults.dictionaryRepresentation().keys where name.hasPrefix("scrollsnooze.screenTime.") && name != "scrollsnooze.screenTime.scope" {
         self.defaults.removeObject(forKey: name)
       }

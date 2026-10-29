@@ -1,5 +1,5 @@
 import { useResponsiveLayout } from '@/ui/responsive';
-import { ScrollView, View } from 'react-native';
+import { Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '@/ui/Icon';
 import { BrandMark } from '@/ui/BrandMark';
@@ -85,10 +85,14 @@ export function GetStartedScreen({
               marginTop: 4,
             }}
           >
-            See your reels count
+            {Platform.OS === 'ios' ? 'Make room for what matters' : 'See your reels count'}
           </T>
           <View
-            accessibilityLabel="Supports Instagram Reels and YouTube Shorts"
+            accessibilityLabel={
+              Platform.OS === 'ios'
+                ? 'Choose apps privately with Screen Time'
+                : 'Supports Instagram Reels and YouTube Shorts'
+            }
             style={{ flexDirection: 'row', gap: 20, marginTop: 22, opacity: 0.65 }}
           >
             <AppIcon name="Instagram" size={26} />

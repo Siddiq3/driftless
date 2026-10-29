@@ -26,6 +26,18 @@ export const PlanSchema = z.object({
 export type SetupPlan = z.infer<typeof PlanSchema>;
 
 export const REEL_LIMITS = [25, 50, 100, 150] as const;
+export const MINUTE_LIMITS = [15, 30, 45, 60] as const;
+
+/** iPhone intentions use minutes; Android video targets remain unchanged. */
+export function platformSetupPlan(platform: string, plan?: SetupPlan): SetupPlan {
+  if (platform !== 'ios') return reelsSetupPlan(plan);
+  return plan?.metric === 'minutes' ? { ...plan } : { metric: 'minutes', dailyLimit: 30 };
+}
+
+/** The Android count widget and usage competition have no iPhone implementation yet. */
+export function platformSetupStep(platform: string, target: number) {
+  return platform === 'ios' && (target === 13 || target === 14) ? 15 : target;
+}
 
 /** Legacy minutes drafts remain readable; new onboarding always sets a reels target. */
 export function reelsSetupPlan(plan?: SetupPlan): SetupPlan {

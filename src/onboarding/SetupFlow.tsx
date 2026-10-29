@@ -7,6 +7,7 @@ import {
   AppState,
   BackHandler,
   Pressable,
+  Platform,
   ScrollView,
   Share,
   StyleSheet,
@@ -23,6 +24,7 @@ import { AppIcon, Icon } from '@/ui/Icon';
 import { useDataMotion } from '@/ui/motion';
 import { appInviteMessage } from '@/social/invite';
 import { useOnboarding } from '@/onboarding/context';
+import { ScreenTimeScreen } from '@/ios/ScreenTimeScreen';
 import { GetStartedScreen } from './GetStartedScreen';
 import { QuestionContent, type QuestionContentHandle } from './QuestionContent';
 import { useMotionPreferences } from '@/ui/onboarding-motion/useMotionPreferences';
@@ -39,7 +41,9 @@ import {
   LAST_STEP,
   PRIORITY_LABELS,
   REEL_LIMITS,
-  reelsSetupPlan,
+  platformSetupPlan,
+  platformSetupStep,
+  MINUTE_LIMITS,
   estimateTime,
   activeSetupStep,
   type SetupAnswers,
@@ -134,9 +138,12 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
   const session = useSession();
   const setup = useOnboarding();
   const layout = useResponsiveLayout();
-  const [step, setStep] = useState(initial?.completed ? 0 : activeSetupStep(initial?.step ?? 0));
+  const ios = Platform.OS === 'ios';
+  const [step, setStep] = useState(
+    platformSetupStep(Platform.OS, initial?.completed ? 0 : activeSetupStep(initial?.step ?? 0)),
+  );
   const [answers, setAnswers] = useState<SetupAnswers>(initial?.answers ?? EMPTY_ANSWERS);
-  const [plan, setPlan] = useState<SetupPlan>(reelsSetupPlan(initial?.plan));
+  const [plan, setPlan] = useState<SetupPlan>(platformSetupPlan(Platform.OS, initial?.plan));
   const [health, setHealth] = useState<TrackingHealth | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -185,14 +192,14 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
     getDb()
       .then(loadGoals)
       .then((goals) => {
-        const current = goals.find((g) => g.enabled && g.metric === 'views');
+        const current = goals.find((g) => g.enabled && g.metric === (ios ? 'minutes' : 'views'));
         if (active && current) setPlan({ metric: current.metric, dailyLimit: current.dailyLimit });
       })
       .catch(() => undefined);
     return () => {
       active = false;
     };
-  }, []);
+  }, [ios]);
   useEffect(() => {
     scroll.current?.scrollTo({ y: 0, animated: false });
   }, [step]);
@@ -212,7 +219,10 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
       moving.current = true;
       setBusy(true);
       setError(null);
-      let target = activeSetupStep(next, next < step ? 'back' : 'next');
+      let target = platformSetupStep(
+        Platform.OS,
+        activeSetupStep(next, next < step ? 'back' : 'next'),
+      );
       if (target === 10 && session.status === 'signedIn') target = next < step ? 9 : 11;
       try {
         await setup.save(record(target));
@@ -455,32 +465,40 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
                   flexWrap: 'wrap',
                 }}
               >
-                {Array.from(new Set([...REEL_LIMITS, plan.dailyLimit])).map((n) => (
-                  <Pressable
-                    key={n}
-                    accessibilityRole="radio"
-                    accessibilityLabel={`${n} reels a day`}
-                    accessibilityState={{ checked: plan.dailyLimit === n }}
-                    onPress={() => setPlan({ ...plan, dailyLimit: n })}
-                    style={{
-                      borderRadius: 32,
-                      borderWidth: 2,
-                      borderColor: plan.dailyLimit === n ? C.accent : C.surface,
-                      minHeight: 64,
-                      minWidth: 56,
-                      padding: 12,
-                      backgroundColor: C.surface,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <T v="heading" style={{ color: plan.dailyLimit === n ? C.accent : C.text }}>
-                      {n}
-                    </T>
-                  </Pressable>
-                ))}
+                {Array.from(new Set([...(ios ? MINUTE_LIMITS : REEL_LIMITS), plan.dailyLimit])).map(
+                  (n) => (
+                    <Pressable
+                      key={n}
+                      accessibilityRole="radio"
+                      accessibilityLabel={`${n} ${ios ? 'minutes' : 'reels'} a day`}
+                      accessibilityState={{ checked: plan.dailyLimit === n }}
+                      onPress={() => setPlan({ ...plan, dailyLimit: n })}
+                      style={{
+                        borderRadius: 32,
+                        borderWidth: 2,
+                        borderColor: plan.dailyLimit === n ? C.accent : C.surface,
+                        minHeight: 64,
+                        minWidth: 56,
+                        padding: 12,
+                        backgroundColor: C.surface,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <T v="heading" style={{ color: plan.dailyLimit === n ? C.accent : C.text }}>
+                        {n}
+                      </T>
+                    </Pressable>
+                  ),
+                )}
               </View>
-              <T style={styles.small}>reels a day</T>
+              <T style={styles.small}>{ios ? 'minutes a day' : 'reels a day'}</T>
+              {ios && (
+                <T style={styles.small}>
+                  A saved intention for your day. Automatic usage measurement and minute limits are
+                  still being built.
+                </T>
+              )}
             </>
           )}
           {step === 10 && (
@@ -492,8 +510,9 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
                   : 'Create an account\nto save your progress',
               )}
               <T v="caption" style={styles.small}>
-                Sign in to save your goals and daily history to your account automatically. Skip to
-                keep progress on this phone.
+                {ios
+                  ? 'Sign in to save your goals. Screen Time activity stays private on your iPhone. You can also continue without an account.'
+                  : 'Sign in to save your goals and daily history to your account automatically. Skip to keep progress on this phone.'}
               </T>
               {session.status === 'signedOut' && session.error && (
                 <Notice title="Sign-in didn’t complete" body={session.error} tone="warn" />
@@ -502,7 +521,7 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
           )}
           {step === 11 && (
             <>
-              {title('Your scroll count.\nYour privacy.')}
+              {title(ios ? 'Your apps.\nYour privacy.' : 'Your scroll count.\nYour privacy.')}
               <T v="heading" style={{ ...styles.title, fontSize: 24, lineHeight: 32 }}>
                 No chats. No passwords.
               </T>
@@ -511,8 +530,12 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
           )}
           {step === 12 && (
             <>
-              {title('Enable permissions\nto start counting reels')}
-              <PermissionChecklist health={health} />
+              {title(
+                ios
+                  ? 'Choose your apps.\nTake a pause.'
+                  : 'Enable permissions\nto start counting reels',
+              )}
+              {ios ? <ScreenTimeScreen embedded /> : <PermissionChecklist health={health} />}
             </>
           )}
           {step === 13 && (
@@ -562,9 +585,11 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
                 )}
               </View>
               <T v="caption" style={styles.small}>
-                {health?.serviceRunning
-                  ? 'Your count updates on Today.'
-                  : 'Counting is off. Enable it later in Counter.'}
+                {ios
+                  ? 'Your minute intention is saved. Open app pauses whenever you need some space.'
+                  : health?.serviceRunning
+                    ? 'Your count updates on Today.'
+                    : 'Counting is off. Enable it later in Counter.'}
               </T>
             </>
           )}
@@ -619,9 +644,9 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
           )}
           {step === 12 && (
             <>
-              <PermissionHelpButton />
+              {!ios && <PermissionHelpButton />}
               <PlainSetupButton
-                label={health?.serviceRunning ? 'Continue' : 'Not now'}
+                label={ios ? 'Continue' : health?.serviceRunning ? 'Continue' : 'Not now'}
                 busy={busy}
                 onPress={() => void move(13)}
               />

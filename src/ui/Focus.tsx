@@ -74,7 +74,7 @@ export function FocusHero({ state, refresh }: { state: ProgressState; refresh: (
   const daily = state.state === 'ok' ? state.daily : null;
   const experimental = data?.today.views === null ? candidateCount(daily, health) : null;
   const total = data?.today.views ?? experimental;
-  const emptyCount = homeCountMessage(state.state, total, Boolean(active));
+  const emptyCount = homeCountMessage(state.state, total, Boolean(active), Platform.OS);
   return (
     <>
       <View style={[styles.hero, { gap: layout.gap }]}>
@@ -176,7 +176,7 @@ export function FocusHero({ state, refresh }: { state: ProgressState; refresh: (
                 style={styles.textAction}
               >
                 <T v="label" muted>
-                  Supported apps →
+                  {Platform.OS === 'ios' ? 'Choose apps →' : 'Supported apps →'}
                 </T>
               </Pressable>
             )}

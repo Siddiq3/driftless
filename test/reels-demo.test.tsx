@@ -1,7 +1,8 @@
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { AppState, type AppStateStatus } from 'react-native';
-import { ReelsDemo } from '@/onboarding/ReelsDemo';
+// Exercise the Android native video; Jest's default platform resolves .ios first.
+const { ReelsDemo } = require('../src/onboarding/ReelsDemo.tsx');
 import { useReducedMotion } from '@/ui/motion';
 
 jest.mock('expo-router', () => ({

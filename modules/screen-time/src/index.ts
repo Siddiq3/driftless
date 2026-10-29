@@ -5,6 +5,8 @@ export type ScreenTimeStatus = {
   paused: boolean;
 };
 type Native = {
+  controlsAvailable?(): boolean;
+  isSimulator?(): boolean;
   status(): ScreenTimeStatus;
   authorize(): Promise<void>;
   chooseApps(): Promise<void>;
@@ -15,10 +17,13 @@ type Native = {
 const native = requireOptionalNativeModule<Native>('ScrollSnoozeScreenTime');
 const ready = () => {
   if (!native) throw new Error('Install an iOS development build to use Screen Time.');
+  if (native.controlsAvailable?.() === false)
+    throw new Error('Screen Time is disabled in this UI-testing build.');
   return native;
 };
 export const ScreenTime = {
-  supported: () => native !== null,
+  isSimulator: () => native?.isSimulator?.() ?? false,
+  supported: () => native !== null && (native.controlsAvailable?.() ?? true),
   status: () => ready().status(),
   authorize: () => ready().authorize(),
   chooseApps: () => ready().chooseApps(),

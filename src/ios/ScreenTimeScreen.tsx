@@ -9,9 +9,11 @@ import { BrandMark } from '@/ui/BrandMark';
 export function ScreenTimeScreen({
   footer,
   introduction = false,
+  embedded = false,
 }: {
   footer?: React.ReactNode;
   introduction?: boolean;
+  embedded?: boolean;
 }) {
   const [status, setStatus] = useState<ScreenTimeStatus | null>(null);
   const [busy, setBusy] = useState(false);
@@ -44,13 +46,17 @@ export function ScreenTimeScreen({
     }
   };
   const approved = status?.authorization === 'approved';
+  const simulator = ScreenTime.isSimulator();
+  const Container = embedded ? View : Screen;
   return (
-    <Screen>
-      <View style={{ gap: 16, alignItems: 'flex-start', paddingVertical: 20 }}>
-        <BrandMark size={56} />
-        <T v="title">{introduction ? 'A little less scrolling.' : 'iPhone app pauses'}</T>
-        <T muted>Make room for what matters, with ScrollSnooze.</T>
-      </View>
+    <Container>
+      {!embedded && (
+        <View style={{ gap: 16, alignItems: 'flex-start', paddingVertical: 20 }}>
+          <BrandMark size={56} />
+          <T v="title">{introduction ? 'A little less scrolling.' : 'iPhone app pauses'}</T>
+          <T muted>Make room for what matters, with ScrollSnooze.</T>
+        </View>
+      )}
       <Section>
         <T v="heading">Your apps. Your choice.</T>
         <T>
@@ -68,8 +74,16 @@ export function ScreenTimeScreen({
           body="Use an iOS development build with the Family Controls capability to enable app pauses."
         />
       )}
-      {error && <Notice tone="warn" title="Screen Time needs attention" body={error} />}
-      {ScreenTime.supported() && (
+      {simulator && (
+        <Notice
+          title="Screen Time needs a real iPhone"
+          body="You can explore the app in this simulator. To allow Screen Time access, choose apps and test pauses, use a signed development build on a physical iPhone. Continue setup without access for now."
+        />
+      )}
+      {error && !simulator && (
+        <Notice tone="warn" title="Screen Time needs attention" body={error} />
+      )}
+      {ScreenTime.supported() && !simulator && (
         <Section>
           <T v="heading">Screen Time access</T>
           <T>
@@ -115,13 +129,14 @@ export function ScreenTimeScreen({
         title="More iPhone features are being built"
         body="Automatic daily minute limits, scheduled pauses and Screen Time charts are not available in this version. Android history saved to your account remains separate from iPhone activity."
       />
-      {footer ?? (
-        <Button
-          kind="secondary"
-          label="Back"
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-        />
-      )}
-    </Screen>
+      {!embedded &&
+        (footer ?? (
+          <Button
+            kind="secondary"
+            label="Back"
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+          />
+        ))}
+    </Container>
   );
 }

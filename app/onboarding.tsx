@@ -1,5 +1,3 @@
-import { Platform } from 'react-native';
-import { IOSSetup } from '@/ios/IOSSetup';
 import { useOnboarding } from '@/onboarding/context';
 import { SetupFlow } from '@/onboarding/SetupFlow';
 import { Button, LoadingState, Notice, Screen } from '@/ui/kit';
@@ -24,6 +22,5 @@ export default function Onboarding() {
         />
       </Screen>
     );
-  if (Platform.OS === 'ios') return <IOSSetup />;
   return <SetupFlow initial={setup.load.record} />;
 }

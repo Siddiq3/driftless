@@ -1,5 +1,8 @@
 # ScrollSnooze for iPhone
 
+For the current source inventory, Xcode checks and implementation sequence, see
+[iOS parity audit — 29 October 2026](IOS_PARITY_AUDIT_2026-10-29.md).
+
 The iOS app shares the Expo Router screens, branding, Google identity, backend, friends,
 account lifecycle and SQLite goal storage with Android. This is an initial port, not a
 feature-complete iPhone release. The generated `ios/` directory is ignored; source native
@@ -8,7 +11,10 @@ code lives in `modules/screen-time/ios/` and configuration in `app.config.ts`.
 ## Implemented in source
 
 - iPhone build configuration, bundle ID `com.siddiqkolimi.scrollsnooze`, app icon and deep links.
-- iPhone onboarding with optional Screen Time access and a saved 30-minute intention.
+- Shared illustrated Android/iPhone onboarding, with minute intentions on iPhone (15/30/45/60),
+  optional Screen Time access and the same questions, character and account flow.
+- Simulator detection explains physical-device Screen Time testing instead of offering a
+  permission action that fails with a helper-application error. Guest setup can continue.
 - Native Family Controls individual authorization and Apple's private activity picker.
 - Manual whole-app/category/website pauses using a named Managed Settings store. Pauses
   remain enabled until explicitly resumed. Selection is stored on this phone per account
@@ -34,14 +40,53 @@ pnpm ios --device
 ```
 
 The current Expo template targets iOS 16.4+. Select a development team in the generated
-Xcode workspace, enable Family Controls for the bundle ID and sign the app. The current
-Mac had only Command Line Tools installed when this port was created; Swift compilation,
-CocoaPods installation, signing, simulator launch and physical-device behavior have not
-been verified here. Use the custom dev client, not Expo Go.
+Xcode workspace, enable Family Controls for the bundle ID and sign the app. As of
+29 October 2026, this Mac has Xcode 27.1 and an iPhone 16 simulator running iOS 26.0. The terminal still
+selects Command Line Tools globally. To use Xcode for one terminal session:
+
+```sh
+export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+```
+
+An unsigned simulator build compiled and launched the iPhone onboarding screen.
+A Personal Team UI-only build also launched onboarding on an iPhone 14 Pro Max
+running iOS 27.0.1. Screen Time behavior still requires paid-capability signing and validation.
+See the dated audit for dependency installation and build results. Use the custom dev
+client, not Expo Go.
 
 Alternatively, `eas.json` provides `development` (physical device), `simulator` (UI testing)
 and `production` profiles. An EAS project, signing credentials and Apple account must be
 configured before starting remote builds. No remote build, upload or release was started.
+
+## UI testing with a free Personal Team
+
+The Personal Team build can test layout, onboarding, local goals and navigation on a
+connected iPhone. It does not include Family Controls, associated domains or APNs.
+`SCROLLSNOOZE_UI_TEST` disables native Screen Time APIs and the UI hides those controls.
+The `withIOSSceneLifecycle.cjs` plugin configures Expo’s scene delegate for iOS 27.
+Normal builds keep Family Controls enabled; never use this variant for enforcement testing.
+
+Connect/trust the iPhone, enable Developer Mode and confirm after restarting, then add
+an Apple Account in Xcode. For the generated workspace, the local test build uses an empty
+entitlements plist and these **temporary command-line overrides** (not production settings):
+
+```sh
+export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+plutil -create xml1 /private/tmp/scrollsnooze-ui-only.entitlements
+xcodebuild -workspace ios/ScrollSnooze.xcworkspace -scheme ScrollSnooze \
+  -configuration Debug -sdk iphoneos -destination 'id=YOUR_IPHONE_UDID' \
+  -derivedDataPath /private/tmp/scrollsnooze-iphone-ui-build \
+  -allowProvisioningUpdates -allowProvisioningDeviceRegistration \
+  DEVELOPMENT_TEAM=YOUR_TEAM_ID CODE_SIGN_STYLE=Automatic \
+  CODE_SIGN_IDENTITY='Apple Development' \
+  CODE_SIGN_ENTITLEMENTS=/private/tmp/scrollsnooze-ui-only.entitlements \
+  'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) DEBUG SCROLLSNOOZE_UI_TEST' \
+  ARCHS=arm64 ONLY_ACTIVE_ARCH=YES build
+```
+
+Run Metro with `pnpm start --lan --port 8081 --scheme driftless`. The phone and Mac must
+be on the same Wi-Fi. Open the development client using the Mac's LAN address, and allow
+Local Network access if iOS asks. This is a development `.app`, not a TestFlight/store IPA.
 
 ## Google sign-in
 

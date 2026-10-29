@@ -84,6 +84,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-notifications',
     './plugins/withDriftlessBrand.cjs',
     './plugins/withAndroidRelease.cjs',
+    './plugins/withIOSSceneLifecycle.cjs',
     ['expo-build-properties', { android: { usesCleartextTraffic: false } }],
   ],
   experiments: { typedRoutes: true },

@@ -6,6 +6,7 @@ import { ScreenTimeScreen } from '../src/ios/ScreenTimeScreen';
 jest.mock('../modules/screen-time/src', () => ({
   ScreenTime: {
     supported: () => true,
+    isSimulator: jest.fn(() => false),
     status: jest.fn(),
     authorize: jest.fn(),
     chooseApps: jest.fn(),
@@ -42,6 +43,7 @@ async function tap(label: string) {
 }
 beforeEach(async () => {
   jest.clearAllMocks();
+  jest.mocked(ScreenTime.isSimulator).mockReturnValue(false);
   status = { authorization: 'notDetermined', selectedCount: 0, paused: false };
   jest.mocked(ScreenTime.status).mockImplementation(() => ({ ...status }));
   jest.mocked(ScreenTime.authorize).mockImplementation(async () => {
@@ -79,4 +81,13 @@ test('authorization failure is visible and does not reveal pause controls', asyn
   expect(JSON.stringify(tree.toJSON())).toContain('Access denied');
   expect(button('Pause selected apps')).toBeUndefined();
   expect(ScreenTime.chooseApps).not.toHaveBeenCalled();
+});
+
+test('simulator explains physical-device testing without offering a failing permission prompt', async () => {
+  jest.mocked(ScreenTime.isSimulator).mockReturnValue(true);
+  await act(async () => tree.update(<ScreenTimeScreen embedded />));
+  expect(button('Allow Screen Time access')).toBeUndefined();
+  expect(button('Back')).toBeUndefined();
+  expect(JSON.stringify(tree.toJSON())).toContain('physical iPhone');
+  expect(ScreenTime.authorize).not.toHaveBeenCalled();
 });

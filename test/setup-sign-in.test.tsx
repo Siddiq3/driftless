@@ -1,7 +1,8 @@
 import React from 'react';
+import { Platform } from 'react-native';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { SetupFlow } from '../src/onboarding/SetupFlow';
-import { EMPTY_ANSWERS, type SetupRecord } from '../src/onboarding/model';
+import { EMPTY_ANSWERS, platformSetupPlan, type SetupRecord } from '../src/onboarding/model';
 
 const mockSave = jest.fn().mockResolvedValue(undefined);
 const mockSetup = { save: mockSave };
@@ -53,21 +54,37 @@ beforeEach(() => {
   mockSave.mockClear();
   mockSession = { status: 'signedOut', googleSupported: true, signIn: jest.fn() };
 });
-it('advances only when sign-in succeeds, preserving setup answers', async () => {
-  await act(async () => {
-    tree = create(<SetupFlow initial={initial} />);
-  });
-  expect(mockSave).not.toHaveBeenCalled();
-  mockSession = { ...mockSession, status: 'signedIn' };
-  await act(async () => tree.update(<SetupFlow initial={initial} />));
-  expect(mockSave).toHaveBeenCalledWith({ ...initial, step: 11 });
-  expect(JSON.stringify(tree.toJSON())).not.toContain('Your account');
-});
-it('skips a restored account step for an already signed-in user', async () => {
-  mockSession = { ...mockSession, status: 'signedIn' };
-  await act(async () => {
-    tree = create(<SetupFlow initial={initial} />);
-  });
-  expect(mockSave).toHaveBeenCalledTimes(1);
-  expect(mockSave).toHaveBeenCalledWith({ ...initial, step: 11 });
-});
+it.each(['android', 'ios'])(
+  '%s advances only when sign-in succeeds, preserving setup answers',
+  async (platform) => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: platform });
+    await act(async () => {
+      tree = create(<SetupFlow initial={initial} />);
+    });
+    expect(mockSave).not.toHaveBeenCalled();
+    mockSession = { ...mockSession, status: 'signedIn' };
+    await act(async () => tree.update(<SetupFlow initial={initial} />));
+    expect(mockSave).toHaveBeenCalledWith({
+      ...initial,
+      plan: platformSetupPlan(platform, initial.plan),
+      step: 11,
+    });
+    expect(JSON.stringify(tree.toJSON())).not.toContain('Your account');
+  },
+);
+it.each(['android', 'ios'])(
+  '%s skips a restored account step for an already signed-in user',
+  async (platform) => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: platform });
+    mockSession = { ...mockSession, status: 'signedIn' };
+    await act(async () => {
+      tree = create(<SetupFlow initial={initial} />);
+    });
+    expect(mockSave).toHaveBeenCalledTimes(1);
+    expect(mockSave).toHaveBeenCalledWith({
+      ...initial,
+      plan: platformSetupPlan(platform, initial.plan),
+      step: 11,
+    });
+  },
+);
