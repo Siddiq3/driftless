@@ -59,6 +59,7 @@ let state: { state: string; incarnation: string | null };
 let root: ReactTestRenderer;
 const discovery = { accountState: jest.fn(), registerAccount: jest.fn(), getMe: jest.fn() };
 const bound = {
+  primeStartupReads: jest.fn(),
   getMe: jest.fn(),
   deleteAccount: jest.fn(),
   getAccountUsage: jest.fn(),
@@ -422,5 +423,17 @@ test('does not postpone allowance verification while a slow profile read is in f
   expect(bound.getAccountUsage).toHaveBeenCalledTimes(1);
   expect(resolvePersonalAccount).not.toHaveBeenCalled();
   await act(async () => finish({ data: { userId: 'stable-user', incarnation } }));
+  expect(visible()).toContain('private screens');
+});
+
+test('hands startup reads to the verified bound account only after allowance installation', async () => {
+  state = { state: 'active', incarnation };
+  jest.mocked(accountReady).mockResolvedValue(true);
+  await mount();
+  expect(bound.primeStartupReads).toHaveBeenCalledWith(
+    expect.objectContaining({ data: expect.objectContaining({ incarnation }) }),
+    expect.objectContaining({ policy: expect.objectContaining({ incarnation }) }),
+    expect.any(Number),
+  );
   expect(visible()).toContain('private screens');
 });

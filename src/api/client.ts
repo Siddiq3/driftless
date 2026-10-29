@@ -49,10 +49,18 @@ export type ApiClientOptions = {
   appVersion: string;
 };
 
-const sharedReads = new WeakMap<
-  (forceRefresh?: boolean) => Promise<string | null>,
-  Map<string, Promise<unknown>>
->();
+/** A brief handoff window joins startup, screen and backup reads; never an offline cache. */
+export const READ_REUSE_MS = 2000;
+export const WAR_READ_REUSE_MS = 15_000;
+type ReadEntry = { value: unknown; savedAt: number; once: boolean; maxAge?: number };
+type ReadState = {
+  pending: Map<string, Promise<unknown>>;
+  recent: Map<string, ReadEntry>;
+  revision: number;
+  writes: number;
+};
+const sharedReads = new WeakMap<(forceRefresh?: boolean) => Promise<string | null>, ReadState>();
+const copyResponse = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 /** Thin typed client. Every response is validated against the shared contract. */
 export function createApiClient(o: ApiClientOptions) {
@@ -61,36 +69,105 @@ export function createApiClient(o: ApiClientOptions) {
   const base = o.baseUrl.replace(/\/+$/, '');
   if (!/^https:\/\//.test(base)) throw new Error('API base URL must be https');
 
-  let inFlight = sharedReads.get(o.getAccessToken);
-  if (!inFlight) {
-    inFlight = new Map();
-    sharedReads.set(o.getAccessToken, inFlight);
+  let shared = sharedReads.get(o.getAccessToken);
+  if (!shared) {
+    shared = { pending: new Map(), recent: new Map(), revision: 0, writes: 0 };
+    sharedReads.set(o.getAccessToken, shared);
   }
-  const reads = inFlight;
+  const reads = shared;
+  const readKey = (path: string) =>
+    `${base}:${credentialGeneration}:${o.incarnation ?? 'unbound'}:${path}`;
+  const profilePath = `/v1/me?platform=${o.platform}&appVersion=${encodeURIComponent(o.appVersion)}`;
+  const battlePath = (date: string) => `/v1/battles/daily?date=${encodeURIComponent(date)}`;
+  const readLifetime = (path: string) =>
+    path.startsWith('/v1/battles/daily?') ? WAR_READ_REUSE_MS : READ_REUSE_MS;
+  const reusable = (path: string) =>
+    path === profilePath || path === '/v1/goals' || path.startsWith('/v1/battles/daily?');
+  const cachedRead = (path: string) => {
+    if (credentialGeneration !== entitlementGeneration() || reads.writes > 0) return undefined;
+    const key = readKey(path);
+    const entry = reads.recent.get(key);
+    if (!entry) return undefined;
+    const age = Date.now() - entry.savedAt;
+    if (age < 0 || age >= (entry.maxAge ?? READ_REUSE_MS)) {
+      reads.recent.delete(key);
+      return undefined;
+    }
+    return copyResponse(entry.value);
+  };
+  const invalidateReads = () => {
+    reads.revision++;
+    reads.recent.clear();
+  };
   async function request<S extends z.ZodType>(
     method: string,
     path: string,
     schema: S,
-    init: { body?: unknown; headers?: Record<string, string>; allowed?: () => boolean } = {},
+    init: {
+      body?: unknown;
+      headers?: Record<string, string>;
+      allowed?: () => boolean;
+      fresh?: boolean;
+    } = {},
   ): Promise<{ data: z.infer<S>; etag: string | null }> {
     // Share transport for the same credential getter/query; each caller checks its own cancellation.
     if (credentialGeneration !== entitlementGeneration() || (init.allowed && !init.allowed()))
       throw new ApiError(409, 'sync_cancelled', 'Request cancelled');
-    if (method !== 'GET') return send(method, path, schema, init);
-    const key = `${base}:${credentialGeneration}:${o.incarnation ?? 'unbound'}:${path}`;
-    const previous = reads.get(key);
+    if (method !== 'GET') {
+      // Fence both ends: a GET started before/during a mutation must never seed a stale cache.
+      reads.writes++;
+      invalidateReads();
+      try {
+        return await send(method, path, schema, init);
+      } finally {
+        reads.writes--;
+        invalidateReads();
+      }
+    }
+    const key = readKey(path);
+    const recent = reads.recent.get(key);
+    if (recent) {
+      const age = Date.now() - recent.savedAt;
+      if (!init.fresh && reads.writes === 0 && age >= 0 && age < (recent.maxAge ?? READ_REUSE_MS)) {
+        if (recent.once) reads.recent.delete(key);
+        return copyResponse(recent.value) as { data: z.infer<S>; etag: string | null };
+      }
+      reads.recent.delete(key);
+    }
+    const revision = reads.revision;
+    const pendingKey = `${revision}:${key}`;
+    const previous = reads.pending.get(pendingKey);
     if (previous) {
       const result = (await previous) as { data: z.infer<S>; etag: string | null };
       if (credentialGeneration !== entitlementGeneration() || (init.allowed && !init.allowed()))
         throw new ApiError(409, 'sync_cancelled', 'Request cancelled');
-      return result;
+      return copyResponse(result);
     }
-    const task = send(method, path, schema, init).finally(() => {
-      if (reads.get(key) === task) reads.delete(key);
-    });
-    reads.set(key, task);
+    const task = send(method, path, schema, init)
+      .then((result) => {
+        if (reads.writes === 0 && revision === reads.revision && reusable(path)) {
+          // Expired entries are discarded on every successful reusable read, keeping memory bounded.
+          const now = Date.now();
+          for (const [entryKey, entry] of reads.recent) {
+            if (now < entry.savedAt || now - entry.savedAt >= (entry.maxAge ?? READ_REUSE_MS))
+              reads.recent.delete(entryKey);
+          }
+          reads.recent.set(key, {
+            value: copyResponse(result),
+            savedAt: now,
+            once: false,
+            maxAge: readLifetime(path),
+          });
+        }
+        return result;
+      })
+      .finally(() => {
+        if (reads.pending.get(pendingKey) === task) reads.pending.delete(pendingKey);
+      });
+    reads.pending.set(pendingKey, task);
     return task;
   }
+
   async function send<S extends z.ZodType>(
     method: string,
     path: string,
@@ -170,6 +247,31 @@ export function createApiClient(o: ApiClientOptions) {
 
   return {
     incarnation: o.incarnation,
+    clearReadReuse: invalidateReads,
+    /** Only AccountBoundary calls this after lifecycle, ownership and allowance installation. */
+    primeStartupReads: (
+      me: { data: z.infer<typeof AccountMe>; etag: string | null },
+      usage: z.infer<typeof AccountUsageResponse>,
+      readStartedAt: number,
+    ) => {
+      if (
+        !o.incarnation ||
+        me.data.incarnation !== o.incarnation ||
+        usage.policy?.incarnation !== o.incarnation ||
+        credentialGeneration !== entitlementGeneration() ||
+        reads.writes > 0 ||
+        Date.now() < readStartedAt ||
+        Date.now() - readStartedAt >= READ_REUSE_MS
+      )
+        return;
+      const savedAt = readStartedAt;
+      reads.recent.set(readKey(profilePath), { value: copyResponse(me), savedAt, once: false });
+      reads.recent.set(readKey('/v1/usage/account'), {
+        value: { data: copyResponse(usage), etag: null },
+        savedAt,
+        once: true,
+      });
+    },
     accountUsageHistory: async (
       from: string,
       to: string,
@@ -269,15 +371,12 @@ export function createApiClient(o: ApiClientOptions) {
           { body: { scoreConsent: true }, allowed },
         )
       ).data,
-    battleDaily: async (date: string, allowed?: () => boolean) =>
-      (
-        await request(
-          'GET',
-          `/v1/battles/daily?date=${encodeURIComponent(date)}`,
-          v1.FriendsDailyResponse,
-          { allowed },
-        )
-      ).data,
+    cachedBattleDaily: (date: string): v1.FriendsDailyResponse | null => {
+      const cached = cachedRead(battlePath(date)) as { data: v1.FriendsDailyResponse } | undefined;
+      return cached?.data ?? null;
+    },
+    battleDaily: async (date: string, allowed?: () => boolean, fresh = false) =>
+      (await request('GET', battlePath(date), v1.FriendsDailyResponse, { allowed, fresh })).data,
     friends: async () => (await request('GET', '/v1/friends', v1.FriendsResponse)).data.friends,
     friendsDaily: async (date: string) => {
       v1.FriendsDailyQuery.parse({ date });

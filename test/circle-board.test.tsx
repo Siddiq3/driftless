@@ -6,7 +6,12 @@ import { CircleBoard } from '@/social/CircleBoard';
 import { ApiError } from '@/api/client';
 let mockSignedIn = true;
 let mockBackupStatus = { state: 'local' };
-const mockApi = { incarnation: 'account-a', battleDaily: jest.fn(), createBattleInvite: jest.fn() };
+const mockApi = {
+  incarnation: 'account-a',
+  battleDaily: jest.fn(),
+  cachedBattleDaily: jest.fn(),
+  createBattleInvite: jest.fn(),
+};
 jest.mock('@/api/useApi', () => ({ useApi: () => (mockSignedIn ? mockApi : null) }));
 jest.mock('@/auth/session', () => ({
   useSession: () => ({ status: mockSignedIn ? 'signedIn' : 'signedOut', displayName: 'Kolimi' }),
@@ -104,7 +109,8 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockSignedIn = true;
   mockBackupStatus = { state: 'local' };
-  mockApi.battleDaily.mockImplementation(async (date: string) => daily(date));
+  mockApi.cachedBattleDaily.mockReset().mockReturnValue(null);
+  mockApi.battleDaily.mockReset().mockImplementation(async (date: string) => daily(date));
   mockApi.createBattleInvite.mockResolvedValue({ code: 'ABCDEFGHJK' });
   jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
   jest.spyOn(Clipboard, 'setString').mockImplementation(() => undefined);
@@ -139,11 +145,12 @@ it('shares only after explicit invitation creation and a share tap', async () =>
     ),
   });
 });
-it('missing server observations stay unavailable rather than falling back to a local candidate count', async () => {
+it('displays missing counts as zero without ranking them or using local candidates', async () => {
   mockApi.battleDaily.mockImplementation(async (date: string) => daily(date, null, null));
   await mount();
-  expect(text()).toContain('Your daily count: unavailable');
-  expect(text()).toContain('Daily count for garage: unavailable');
+  expect(text()).toContain('Your daily count: 0 (count unavailable)');
+  expect(text()).toContain('Daily count for garage: 0 (count unavailable)');
+  expect(text()).toContain('Counts awaiting an update show 0 and remain unranked.');
   expect(text()).not.toContain('92');
   expect(text()).not.toContain('Rank 1');
 });
@@ -197,4 +204,19 @@ it('keeps stale data labeled on network failure and clears it on access loss', a
     await jest.advanceTimersByTimeAsync(60000);
   });
   expect(text()).not.toContain('Daily count for garage: 6');
+});
+
+it('renders the cached War immediately on remount without forcing a saved-backup refresh', async () => {
+  mockBackupStatus = { state: 'saved' };
+  mockApi.cachedBattleDaily.mockImplementation((date: string) => daily(date, 24));
+  mockApi.battleDaily.mockImplementation(() => new Promise(() => {}));
+  await mount();
+  expect(text()).toContain('Your daily count: 24');
+  expect(mockApi.battleDaily).toHaveBeenCalledTimes(1);
+  expect(mockApi.battleDaily.mock.calls[0][2]).toBe(false);
+  await act(async () => tree.unmount());
+  await mount();
+  expect(text()).toContain('Your daily count: 24');
+  expect(mockApi.battleDaily).toHaveBeenCalledTimes(2);
+  expect(mockApi.battleDaily.mock.calls[1][2]).toBe(false);
 });

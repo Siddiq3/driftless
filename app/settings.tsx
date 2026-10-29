@@ -4,14 +4,22 @@ import { Tracking, type TrackingHealth } from 'tracking-android';
 import { capabilityReport } from '@/capabilities/model';
 import { Redirect, router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, Platform } from 'react-native';
+import { ActivityIndicator, AppState, Platform, Pressable, View } from 'react-native';
 import { ApiError, createApiClient } from '@/api/client';
 import { useSession } from '@/auth/session';
 import { APP_VERSION, readEnv } from '@/config/env';
 import { cacheEntitlement } from '@/billing/pro';
 import { entitlementGeneration } from '@/billing/cache';
-import { useAccountBackup } from '@/sync/AccountBackupProvider';
-import { Details, Button, Section, Notice, Screen, T, Toggle } from '@/ui/kit';
+import { Details, Notice, Screen } from '@/ui/kit';
+import { Icon } from '@/ui/Icon';
+import {
+  SettingsCanvas,
+  SettingsText,
+  SettingsSection,
+  SettingsRow,
+  SettingsDivider,
+} from '@/settings/SettingsControls';
+import { settingsTheme as t, settingsStyles as styles } from '@/settings/theme';
 
 const CAPABILITY_LABELS: Record<keyof v1.Capabilities, string> = {
   videoCounting: 'Reels & Shorts counting',
@@ -29,11 +37,8 @@ type Load =
 
 export default function Settings() {
   const s = useSession();
-  const backup = useAccountBackup();
   const env = readEnv();
   const incarnation = useAccountIncarnation();
-  const [sharingBusy, setSharingBusy] = useState(false);
-  const [sharingError, setSharingError] = useState<string | null>(null);
   const api = useMemo(
     () =>
       s.status === 'signedIn' && env
@@ -140,92 +145,106 @@ export default function Settings() {
 
   if (s.status !== 'signedIn') return <Redirect href="/welcome" />;
 
+  const name =
+    s.displayName || (load.state === 'ok' ? load.me.profile.displayName : null) || 'Welcome';
   return (
-    <Screen>
-      {load.state === 'loading' && <ActivityIndicator accessibilityLabel="Loading your profile" />}
-      {load.state === 'error' && (
-        <>
-          <Notice
-            tone="warn"
-            title={load.offline ? "You're offline" : 'Could not load your profile'}
-            body={
-              load.offline
-                ? 'Cloud features are unavailable. Local tracking depends on the permissions shown below.'
-                : load.message
-            }
-          />
-          <Button kind="secondary" label="Try again" onPress={retry} />
-        </>
-      )}
-      {load.state === 'ok' && (
-        <>
-          <Section>
-            <T v="heading">{s.displayName || load.me.profile.displayName || 'Welcome'}</T>
-            <T muted>All features included · No subscription needed</T>
-          </Section>
-          <Details title="Progress sharing" icon="shield">
-            <T muted>Share daily totals with all friends</T>
-            <Toggle
-              accessibilityLabel="Share my progress with friends"
-              value={load.me.profile.consent.shareWithFriends}
-              disabled={sharingBusy}
-              onValueChange={(value) => {
-                if (!api || sharingBusy) return;
-                const generation = requestGeneration.current;
-                setSharingBusy(true);
-                setSharingError(null);
-                void api
-                  .patchMe(
-                    {
-                      consent: value
-                        ? { cloudSync: true, shareWithFriends: true }
-                        : { shareWithFriends: false },
-                    },
-                    load.me.profile.rev,
-                  )
-                  .then(({ data }) => {
-                    if (generation === requestGeneration.current)
-                      setLoad({ state: 'ok', me: data });
-                  })
-                  .catch(() => {
-                    if (generation === requestGeneration.current)
-                      setSharingError('Sharing settings could not be saved. Please retry.');
-                  })
-                  .finally(() => setSharingBusy(false));
-              }}
+    <SettingsCanvas>
+      <Screen
+        hideHeader
+        hideTabs
+        backgroundColor={t.color.transparent}
+        contentStyle={styles.screen}
+      >
+        <View style={styles.header}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/welcome'))}
+            style={({ pressed }) => [styles.back, { opacity: pressed ? t.opacity.pressed : 1 }]}
+          >
+            <Icon name="back" size={t.size.icon} color={t.color.text} />
+          </Pressable>
+          <SettingsText variant="title" accessibilityRole="header">
+            Settings
+          </SettingsText>
+        </View>
+        <View style={styles.profile}>
+          <View style={styles.avatar} accessible={false}>
+            <SettingsText variant="state">{name.slice(0, 1).toLocaleUpperCase()}</SettingsText>
+          </View>
+          <View style={styles.copy}>
+            <SettingsText variant="state">{name}</SettingsText>
+            <SettingsText muted>All features included · No subscription needed</SettingsText>
+          </View>
+        </View>
+        {load.state === 'loading' && (
+          <View style={styles.loading}>
+            <ActivityIndicator color={t.color.accent} accessibilityLabel="Loading your profile" />
+            <SettingsText muted>Checking your account…</SettingsText>
+          </View>
+        )}
+        {load.state === 'error' && (
+          <View style={styles.section}>
+            <Notice
+              tone="warn"
+              title={load.offline ? "You're offline" : 'Could not load your profile'}
+              body={
+                load.offline
+                  ? 'Cloud features are unavailable. Local tracking depends on the permissions shown below.'
+                  : load.message
+              }
             />
-            <T v="caption" muted>
-              General friend sharing is separate from War invitations. To stop sharing in a battle,
-              remove that friend from Friends.
-            </T>
-            {sharingError && <Notice title="Sharing not updated" body={sharingError} tone="warn" />}
+            <SettingsRow title="Try again" icon="cloud" onPress={retry} />
+          </View>
+        )}
+        <SettingsSection title="Your app">
+          <SettingsRow
+            title="Focus & app pauses"
+            subtitle="Apps, daily limits and focus times"
+            icon="shield"
+            onPress={() => router.push('/blocking')}
+          />
+          <SettingsDivider />
+          <SettingsRow
+            title="Privacy & data"
+            subtitle="Your information and account controls"
+            icon="lock"
+            onPress={() => router.push('/privacy')}
+          />
+        </SettingsSection>
+        <SettingsSection title="On this device">
+          <Details title="Device support" icon="help">
+            {(Object.keys(CAPABILITY_LABELS) as (keyof v1.Capabilities)[]).map((key) => (
+              <View key={key} style={styles.section}>
+                <View style={styles.header}>
+                  <Icon
+                    name={report[key].available ? 'check' : 'minus'}
+                    size={t.size.smallIcon}
+                    color={t.color.muted}
+                  />
+                  <SettingsText variant="row">{CAPABILITY_LABELS[key]}</SettingsText>
+                </View>
+                <SettingsText muted>{report[key].detail}</SettingsText>
+              </View>
+            ))}
           </Details>
-          <Section>
-            <T v="heading">Account</T>
-            <T v="caption" muted>
-              {backup.status.message}
-            </T>
-            {backup.status.state === 'pending' && (
-              <Button kind="secondary" label="Retry backup" onPress={() => void backup.retry()} />
-            )}
-          </Section>
-        </>
-      )}
-      <Details title="Device support" icon="help">
-        <T v="heading">Current availability</T>
-        {(Object.keys(CAPABILITY_LABELS) as (keyof v1.Capabilities)[]).map((k) => (
-          <T key={k} muted>
-            {report[k].available ? '✓' : '—'} {CAPABILITY_LABELS[k]} · {report[k].detail}
-          </T>
-        ))}
-      </Details>
-      <Button kind="secondary" label="Privacy & data" onPress={() => router.push('/privacy')} />
-      <Button
-        kind="secondary"
-        label="Focus & app pauses"
-        onPress={() => router.push('/blocking')}
-      />
-      <Button kind="secondary" label="Sign out" onPress={() => void s.signOut()} />
-    </Screen>
+        </SettingsSection>
+        <View style={styles.section}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Sign out"
+            onPress={() => void s.signOut()}
+            style={({ pressed }) => [styles.signOut, { opacity: pressed ? t.opacity.pressed : 1 }]}
+          >
+            <SettingsText variant="label" style={{ color: t.color.danger }}>
+              Sign out
+            </SettingsText>
+          </Pressable>
+          <SettingsText muted style={styles.version}>
+            ScrollSnooze · {APP_VERSION}
+          </SettingsText>
+        </View>
+      </Screen>
+    </SettingsCanvas>
   );
 }

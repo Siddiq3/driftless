@@ -78,6 +78,7 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
     };
     const load = async () => {
       progress('account');
+      const readStartedAt = Date.now();
       // /me accepts an unbound request, but the response is never trusted until lifecycle
       // discovery confirms the same active incarnation. Settle speculation to avoid an
       // unhandled rejection for deleted/new accounts, which still use registration below.
@@ -122,10 +123,11 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
                   : measureStartup('account-profile-bound', () => bound.getMe(allowed));
               })
             : measureStartup('account-profile-bound', () => bound.getMe(allowed));
-        const [{ data: me }, existingUsage] = await Promise.all([
+        const [profileResult, existingUsage] = await Promise.all([
           profileForAccount,
           measureStartup('account-allowance', () => bound.getAccountUsage(allowed)),
         ]);
+        const me = profileResult.data;
         if (!alive) return;
         if (me.incarnation !== state.incarnation)
           throw new Error('Account incarnation response mismatch');
@@ -149,6 +151,9 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
           await measureStartup('account-install-allowance', () =>
             installAccountUsage(usage, me.incarnation, allowed),
           );
+          // Seed the bound client only after ownership and native allowance installation.
+          // A first restore consumes it; returning users hand it to the first background backup.
+          bound.primeStartupReads(profileResult, usage, readStartedAt);
           if (!(await accountReady(db, allowed))) {
             progress('restore');
             const backup = await measureStartup('account-first-restore', () =>

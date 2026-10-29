@@ -19,6 +19,7 @@ import { shuffledInvitePrompts } from './invitePrompts';
 import { Avatar } from './battleVisuals';
 import { rankBattle } from './ranking';
 import { parseInvite, rememberInvite } from './pendingInvite';
+import { warHeaderTheme as header } from './warTheme';
 const C = { bg: '#0B0B08', header: '#301A06', row: '#2C2116', muted: '#A49E90', accent: '#FFD09D' };
 export function CircleBoard(_props: { friendsPanel?: ReactNode; openFriends?: boolean }) {
   const api = useApi();
@@ -30,7 +31,9 @@ function WarBoard({ api }: { api: ApiClient | null }) {
   const [fonts] = useFonts({ LilitaOne: require('../../assets/fonts/LilitaOne-Regular.ttf') });
   const [today, setToday] = useState(() => localDateOf(Date.now(), currentTimeZone()));
   const [date, setDate] = useState(today),
-    [data, setData] = useState<v1.FriendsDailyResponse | null>(null);
+    [data, setData] = useState<v1.FriendsDailyResponse | null>(
+      () => api?.cachedBattleDaily?.(today) ?? null,
+    );
   const [guestViews, setGuestViews] = useState<number | null>(null);
   const [issue, setIssue] = useState<string | null>(null),
     [inviteOpen, setInviteOpen] = useState(false),
@@ -40,6 +43,7 @@ function WarBoard({ api }: { api: ApiClient | null }) {
     [codeError, setCodeError] = useState<string | null>(null);
   const [prompts, setPrompts] = useState(() => shuffledInvitePrompts([]));
   const refresh = useRef<() => void>(() => {});
+  const previousBackup = useRef(backup.status);
   useFocusEffect(
     useCallback(() => {
       setPrompts((previous) => shuffledInvitePrompts(previous));
@@ -49,9 +53,12 @@ function WarBoard({ api }: { api: ApiClient | null }) {
     useCallback(() => {
       let alive = true,
         loading = false;
-      setData(null);
+      setData(
+        (previous) =>
+          api?.cachedBattleDaily?.(date) ?? (previous?.localDate === date ? previous : null),
+      );
       setIssue(null);
-      const read = async () => {
+      const read = async (fresh = false) => {
         if (!alive || loading) return;
         loading = true;
         const nextToday = localDateOf(Date.now(), currentTimeZone());
@@ -60,7 +67,7 @@ function WarBoard({ api }: { api: ApiClient | null }) {
         if (date === today && date !== nextToday) setDate(nextToday);
         try {
           if (api) {
-            const result = await api.battleDaily(date, () => alive);
+            const result = await api.battleDaily(date, () => alive, fresh);
             if (alive) {
               setData(result);
               setIssue(null);
@@ -79,13 +86,13 @@ function WarBoard({ api }: { api: ApiClient | null }) {
           loading = false;
         }
       };
-      refresh.current = () => void read();
+      refresh.current = () => void read(true);
       void read();
       const timer = setInterval(() => {
-        if (AppState.currentState === 'active') void read();
+        if (AppState.currentState === 'active') void read(true);
       }, 60000);
       const app = AppState.addEventListener('change', (s) => {
-        if (s === 'active') void read();
+        if (s === 'active') void read(true);
       });
       return () => {
         alive = false;
@@ -96,7 +103,9 @@ function WarBoard({ api }: { api: ApiClient | null }) {
     }, [api, date, today]),
   );
   useEffect(() => {
-    if (backup.status?.state === 'saved') refresh.current();
+    const changed = previousBackup.current !== backup.status;
+    previousBackup.current = backup.status;
+    if (changed && backup.status?.state === 'saved') refresh.current();
   }, [backup.status]);
   const selfName = session.status === 'signedIn' ? session.displayName || 'You' : 'You';
   const rows = rankBattle([
@@ -156,11 +165,10 @@ function WarBoard({ api }: { api: ApiClient | null }) {
           </Pressable>
           <T
             style={{
-              flexGrow: 1,
-              flexBasis: 160,
-              minWidth: 160,
-              fontSize: 21,
-              lineHeight: 28,
+              flex: 1,
+              minWidth: 0,
+              fontSize: header.titleSize,
+              lineHeight: header.titleLine,
               fontFamily: fonts ? 'LilitaOne' : undefined,
               fontWeight: fonts ? '400' : '900',
               color: '#FFE4AB',
@@ -174,33 +182,41 @@ function WarBoard({ api }: { api: ApiClient | null }) {
             onPress={() => (api ? router.push('/friend-list') : setSignIn(true))}
             style={styles.friends}
           >
-            <Icon name="friends" size={19} />
-            <T style={{ fontWeight: '700' }}>Friends</T>
+            <Icon name="friends" size={header.friendIcon} />
+            <T
+              style={{
+                fontWeight: '700',
+                fontSize: header.friendSize,
+                lineHeight: header.friendLine,
+              }}
+            >
+              Friends
+            </T>
           </Pressable>
         </View>
-        <View style={styles.dateNav}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Previous day"
-            onPress={() => setDate(addDays(date, -1))}
-            style={styles.arrow}
-          >
-            <Icon name="back" color={C.muted} />
-          </Pressable>
-          <T style={{ fontWeight: '700', fontSize: 17, minWidth: 100, textAlign: 'center' }}>
-            {dateLabel}
-          </T>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Next day"
-            accessibilityState={{ disabled: date >= today }}
-            disabled={date >= today}
-            onPress={() => setDate(addDays(date, 1))}
-            style={[styles.arrow, { opacity: date >= today ? 0.3 : 1 }]}
-          >
-            <Icon name="chevron" color={C.muted} />
-          </Pressable>
-        </View>
+      </View>
+      <View style={styles.dateNav}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Previous day"
+          onPress={() => setDate(addDays(date, -1))}
+          style={styles.arrow}
+        >
+          <Icon name="back" color={C.muted} />
+        </Pressable>
+        <T style={{ fontWeight: '700', fontSize: 17, minWidth: 100, textAlign: 'center' }}>
+          {dateLabel}
+        </T>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Next day"
+          accessibilityState={{ disabled: date >= today }}
+          disabled={date >= today}
+          onPress={() => setDate(addDays(date, 1))}
+          style={[styles.arrow, { opacity: date >= today ? 0.3 : 1 }]}
+        >
+          <Icon name="chevron" color={C.muted} />
+        </Pressable>
       </View>
       {rows.map((row) => (
         <View key={row.id} style={[styles.row, row.self && { backgroundColor: C.row }]}>
@@ -218,12 +234,12 @@ function WarBoard({ api }: { api: ApiClient | null }) {
           <T
             accessibilityLabel={
               row.self
-                ? `Your daily count: ${row.views ?? 'unavailable'}`
-                : `Daily count for ${row.handle}: ${row.views ?? 'unavailable'}`
+                ? `Your daily count: ${row.views ?? 0}${row.views === null ? ' (count unavailable)' : ''}`
+                : `Daily count for ${row.handle}: ${row.views ?? 0}${row.views === null ? ' (count unavailable)' : ''}`
             }
             style={styles.count}
           >
-            {row.views?.toLocaleString() ?? '—'}
+            {row.views?.toLocaleString() ?? '0'}
           </T>
         </View>
       ))}
@@ -247,9 +263,9 @@ function WarBoard({ api }: { api: ApiClient | null }) {
             </View>
           ))}
         {issue && <Notice title="War not updated" body={issue} tone="warn" />}
-        {!!data?.friends.some((f) => f.daily.views === null) && (
+        {rows.some((row) => row.views === null) && (
           <T v="caption" muted style={{ paddingTop: 18 }}>
-            — means no count is available yet. Missing activity isn’t ranked as zero.
+            Counts awaiting an update show 0 and remain unranked.
           </T>
         )}
         <Pressable
@@ -315,22 +331,21 @@ function WarBoard({ api }: { api: ApiClient | null }) {
   );
 }
 const styles = StyleSheet.create({
-  header: { backgroundColor: C.header, paddingTop: 20 },
+  header: { backgroundColor: C.header, paddingVertical: header.space.sm },
   topbar: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     alignItems: 'center',
-    gap: 14,
-    paddingHorizontal: 20,
+    gap: header.space.sm,
+    paddingHorizontal: header.space.lg,
   },
   friends: {
     flexDirection: 'row',
-    gap: 8,
+    gap: header.space.sm,
     alignItems: 'center',
-    backgroundColor: '#402B13',
-    borderRadius: 32,
-    paddingHorizontal: 16,
-    minHeight: 48,
+    paddingHorizontal: header.space.sm,
+    minHeight: header.touch,
+    flexShrink: 0,
+    marginLeft: 'auto',
   },
   dateNav: {
     flexDirection: 'row',
@@ -338,8 +353,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 16,
-    paddingTop: 25,
-    paddingBottom: 20,
+    paddingVertical: header.space.xs,
   },
   arrow: { minHeight: 48, minWidth: 48, alignItems: 'center', justifyContent: 'center' },
   row: {

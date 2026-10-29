@@ -123,19 +123,16 @@ afterEach(async () => {
   jest.restoreAllMocks();
   jest.useRealTimers();
 });
-it('shows the root backup status and retries through the shared coordinator', async () => {
+it('keeps backup and sharing controls out of Settings', async () => {
   mockBackup = { state: 'pending', message: 'Offline; progress is safe on this phone' };
   await mount();
-  expect(contents()).toContain(mockBackup.message);
-  await act(async () =>
-    tree.root
-      .findAll(
-        (n) =>
-          n.props.accessibilityLabel === 'Retry backup' && typeof n.props.onPress === 'function',
-      )[0]!
-      .props.onPress(),
-  );
-  expect(mockRetry).toHaveBeenCalledTimes(1);
+  expect(contents()).not.toContain(mockBackup.message);
+  expect(contents()).not.toContain('Progress sharing');
+  expect(contents()).not.toContain('Account backup');
+  expect(tree.root.findAll((n) => n.props.accessibilityLabel === 'Retry backup')).toHaveLength(0);
+  expect(
+    tree.root.findAll((n) => n.props.accessibilityLabel === 'Share my progress with friends'),
+  ).toHaveLength(0);
 });
 it('reports local readiness during a backend outage, and refreshes revoked permissions on return', async () => {
   getMe.mockRejectedValue(new ApiError(null, 'network', 'offline'));
@@ -178,7 +175,7 @@ it('a missing entitlement bridge does not misreport a working backend as offline
 
 it('has no backup switch or separate enable action', async () => {
   await mount();
-  expect(contents()).toContain('Saved to your account');
+  expect(contents()).not.toContain('Saved to your account');
   expect(tree.root.findAll((n) => n.props.accessibilityLabel === 'Cloud backup')).toHaveLength(0);
   expect(tree.root.findAll((n) => n.props.accessibilityLabel === 'Manage backup')).toHaveLength(0);
 });

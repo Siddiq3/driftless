@@ -1,8 +1,8 @@
 jest.mock('tracking-android', () => ({ Tracking: { setEntitlement: jest.fn() } }));
-import { ApiError, createApiClient } from '../src/api/client';
+import { ApiError, createApiClient, type ApiClient } from '../src/api/client';
 import { invalidateEntitlement } from '../src/billing/cache';
 
-const me = {
+const me: Awaited<ReturnType<ApiClient['getMe']>>['data'] = {
   userId: 'u1',
   incarnation: '00000000-0000-4000-8000-000000000099',
   profile: {
@@ -446,4 +446,238 @@ describe('link-based battle API', () => {
       ],
     ]);
   });
+});
+
+const sharedClientPair = (f: jest.Mock, incarnation = me.incarnation) => {
+  const options = {
+    baseUrl: 'https://api.example.test',
+    getAccessToken: async () => 'same-token',
+    fetchImpl: f,
+    platform: 'android' as const,
+    appVersion: '1',
+    incarnation,
+  };
+  return [createApiClient(options), createApiClient(options)] as const;
+};
+const allowance = {
+  policy: { incarnation: me.incarnation, tz: 'UTC', activeFromMs: 1, rev: 1, policies: [] },
+  snapshot: null,
+  serverTimeMs: 1,
+};
+
+it('reuses sequential profile and goal GETs across clients only for the brief freshness window', async () => {
+  const f = jest
+    .fn()
+    .mockImplementation(async (url: string) =>
+      resp(200, url.includes('/goals') ? { goals: [] } : me),
+    );
+  const [a, b] = sharedClientPair(f);
+  const now = jest.spyOn(Date, 'now').mockReturnValue(1000);
+  try {
+    const first = await a.getMe();
+    first.data.profile.displayName = 'caller mutation';
+    expect((await b.getMe()).data.profile.displayName).toBeNull();
+    await a.getGoals();
+    await b.getGoals();
+    expect(f).toHaveBeenCalledTimes(2);
+    now.mockReturnValue(3000);
+    await b.getMe();
+    await b.getGoals();
+    expect(f).toHaveBeenCalledTimes(4);
+    now.mockReturnValue(500);
+    await b.getMe();
+    expect(f).toHaveBeenCalledTimes(5);
+  } finally {
+    now.mockRestore();
+  }
+});
+
+it('hands verified startup reads to backup once, without caching subsequent allowance reads', async () => {
+  const f = jest.fn().mockResolvedValue(resp(200, allowance));
+  const [a, b] = sharedClientPair(f);
+  a.primeStartupReads({ data: me, etag: '"1"' }, allowance, Date.now());
+  await b.getMe();
+  await b.getAccountUsage();
+  expect(f).not.toHaveBeenCalled();
+  await b.getAccountUsage();
+  await b.getAccountUsage();
+  expect(f).toHaveBeenCalledTimes(2);
+});
+
+it('does not reuse lifecycle reads or seed allowance data for another incarnation', async () => {
+  const f = jest
+    .fn()
+    .mockResolvedValue(resp(200, { state: 'active', incarnation: me.incarnation }));
+  const [a] = sharedClientPair(f);
+  await a.accountState();
+  await a.accountState();
+  expect(f).toHaveBeenCalledTimes(2);
+  a.primeStartupReads(
+    { data: me, etag: null },
+    {
+      ...allowance,
+      policy: { ...allowance.policy, incarnation: '00000000-0000-4000-8000-000000000098' },
+    },
+    Date.now(),
+  );
+  f.mockResolvedValue(resp(200, me));
+  await a.getMe();
+  expect(f).toHaveBeenCalledTimes(3);
+});
+
+it('invalidates reusable reads on successful writes and conflict responses', async () => {
+  const f = jest.fn().mockResolvedValue(resp(200, me));
+  const [a, b] = sharedClientPair(f);
+  await a.getMe();
+  await b.patchMe({ displayName: 'New' }, 1);
+  await a.getMe();
+  expect(f).toHaveBeenCalledTimes(3);
+  f.mockResolvedValueOnce(
+    resp(412, {
+      title: 'Conflict',
+      status: 412,
+      code: 'conflict',
+      type: 'https://fixture.invalid/conflict',
+    }),
+  );
+  await expect(b.patchMe({ displayName: 'Other' }, 1)).rejects.toMatchObject({ status: 412 });
+  await a.getMe();
+  expect(f).toHaveBeenCalledTimes(5);
+});
+
+it('does not let a pre-mutation GET repopulate reusable data or join the post-mutation GET', async () => {
+  let finish!: (response: Response) => void;
+  const f = jest
+    .fn()
+    .mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          finish = resolve;
+        }),
+    )
+    .mockResolvedValue(resp(200, me));
+  const [a, b] = sharedClientPair(f);
+  const old = a.getMe();
+  // Wait until its transport is running before starting the mutation.
+  while (!finish) await Promise.resolve();
+  await b.patchMe({ displayName: 'New' }, 1);
+  finish(resp(200, me));
+  await old;
+  await b.getMe();
+  expect(f).toHaveBeenCalledTimes(3);
+});
+
+it('still checks cancellation and signed-in generation before serving reusable data', async () => {
+  const f = jest.fn().mockResolvedValue(resp(200, me));
+  const [a, b] = sharedClientPair(f);
+  await a.getMe();
+  await expect(b.getMe(() => false)).rejects.toMatchObject({ code: 'sync_cancelled' });
+  invalidateEntitlement();
+  await expect(a.getMe()).rejects.toMatchObject({ code: 'sync_cancelled' });
+  expect(f).toHaveBeenCalledTimes(1);
+});
+
+it('expires startup handoffs from their original read time and never extends old allowance data', async () => {
+  const f = jest.fn().mockResolvedValue(resp(200, allowance));
+  const [a] = sharedClientPair(f);
+  a.primeStartupReads({ data: me, etag: null }, allowance, Date.now() - 2000);
+  await a.getAccountUsage();
+  expect(f).toHaveBeenCalledTimes(1);
+  a.primeStartupReads({ data: me, etag: null }, allowance, Date.now() + 1000);
+  await a.getAccountUsage();
+  expect(f).toHaveBeenCalledTimes(2);
+});
+
+it('mutation invalidates startup allowance handoff before post-write refresh', async () => {
+  const f = jest.fn().mockResolvedValue(resp(200, me));
+  const [a, b] = sharedClientPair(f);
+  a.primeStartupReads({ data: me, etag: null }, allowance, Date.now());
+  await b.patchMe({ displayName: 'New name' }, 1);
+  f.mockResolvedValue(resp(200, allowance));
+  await a.getAccountUsage();
+  expect(f).toHaveBeenCalledTimes(2);
+});
+
+it('manual refresh clears recent reads across clients sharing the same account', async () => {
+  const f = jest.fn().mockResolvedValue(resp(200, me));
+  const [a, b] = sharedClientPair(f);
+  await a.getMe();
+  await b.getMe();
+  expect(f).toHaveBeenCalledTimes(1);
+  b.clearReadReuse();
+  await a.getMe();
+  expect(f).toHaveBeenCalledTimes(2);
+});
+
+it('never caches rejected responses and retries them on the next read', async () => {
+  const f = jest
+    .fn()
+    .mockResolvedValueOnce(
+      resp(503, {
+        title: 'Unavailable',
+        status: 503,
+        code: 'unavailable',
+        type: 'https://fixture.invalid/unavailable',
+      }),
+    )
+    .mockResolvedValue(resp(200, me));
+  const [a, b] = sharedClientPair(f);
+  await expect(a.getMe()).rejects.toMatchObject({ status: 503 });
+  await b.getMe();
+  expect(f).toHaveBeenCalledTimes(2);
+});
+
+const warDay = (localDate = '2026-10-29', views = 12) => ({
+  localDate,
+  self: { status: 'eligible', views, updatedAt: '2026-10-29T00:00:00Z' },
+  friends: [],
+});
+it('reuses War across new clients for 15 seconds, isolates dates, and forces fresh reads', async () => {
+  const clock = jest.spyOn(Date, 'now').mockReturnValue(100_000);
+  try {
+    const f = jest.fn().mockResolvedValue(resp(200, warDay()));
+    const [a, b] = sharedClientPair(f);
+    expect(a.cachedBattleDaily('2026-10-29')).toBeNull();
+    const first = await a.battleDaily('2026-10-29');
+    first.self.views = 999;
+    clock.mockReturnValue(114_999);
+    expect(b.cachedBattleDaily('2026-10-29')?.self.views).toBe(12);
+    expect((await b.battleDaily('2026-10-29')).self.views).toBe(12);
+    expect(f).toHaveBeenCalledTimes(1);
+    expect(b.cachedBattleDaily('2026-10-28')).toBeNull();
+    await expect(b.battleDaily('2026-10-29', () => false)).rejects.toMatchObject({
+      code: 'sync_cancelled',
+    });
+    expect(f).toHaveBeenCalledTimes(1);
+    clock.mockReturnValue(115_000);
+    expect(b.cachedBattleDaily('2026-10-29')).toBeNull();
+    await b.battleDaily('2026-10-29');
+    expect(f).toHaveBeenCalledTimes(2);
+    await a.battleDaily('2026-10-29', undefined, true);
+    expect(f).toHaveBeenCalledTimes(3);
+  } finally {
+    clock.mockRestore();
+  }
+});
+it('invalidates War snapshots on writes, access loss and signed-in generation changes', async () => {
+  const f = jest.fn().mockResolvedValue(resp(200, warDay()));
+  const [a, b] = sharedClientPair(f);
+  await a.battleDaily('2026-10-29');
+  f.mockResolvedValueOnce(resp(200, { ok: true }));
+  await b.removeFriend('friend');
+  expect(a.cachedBattleDaily('2026-10-29')).toBeNull();
+  await b.battleDaily('2026-10-29');
+  f.mockResolvedValueOnce(
+    resp(403, {
+      title: 'Forbidden',
+      status: 403,
+      code: 'forbidden',
+      type: 'https://fixture.invalid/forbidden',
+    }),
+  );
+  await expect(a.battleDaily('2026-10-29', undefined, true)).rejects.toMatchObject({ status: 403 });
+  expect(b.cachedBattleDaily('2026-10-29')).toBeNull();
+  await b.battleDaily('2026-10-29');
+  invalidateEntitlement();
+  expect(a.cachedBattleDaily('2026-10-29')).toBeNull();
 });

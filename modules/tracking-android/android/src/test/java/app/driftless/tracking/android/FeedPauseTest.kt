@@ -74,8 +74,8 @@ class FeedPauseTest {
         assertEquals(0, oldCalls)
         assertEquals(1, newCalls)
         overlay.hide()
-        assertNull(field("floatAnimation"))
-        assertNull(field("mascot"))
+        assertNull(field("root"))
+        assertNull(field("summary"))
         controller.destroy()
     }
 

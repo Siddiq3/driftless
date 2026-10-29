@@ -12,6 +12,7 @@ import { brainPresentation, countBrainMood } from './brainState';
 import { useDataMotion } from './motion';
 import { trackingState } from '@/tracking/state';
 import { candidateCount, homeAppCount } from '@/tracking/candidateCount';
+import { homeCountMessage, homeCountStyles } from './homeCount';
 
 export function AnimatedCount({
   value,
@@ -72,6 +73,8 @@ export function FocusHero({ state, refresh }: { state: ProgressState; refresh: (
             : 'Small break. Big brain energy.';
   const daily = state.state === 'ok' ? state.daily : null;
   const experimental = data?.today.views === null ? candidateCount(daily, health) : null;
+  const total = data?.today.views ?? experimental;
+  const emptyCount = homeCountMessage(state.state, total, Boolean(active));
   return (
     <>
       <View style={[styles.hero, { gap: layout.gap }]}>
@@ -82,15 +85,26 @@ export function FocusHero({ state, refresh }: { state: ProgressState; refresh: (
           size={layout.mascotSize}
           still={brain.mood === 'unavailable'}
         />
-        <View style={{ alignItems: 'center', gap: 10 }}>
-          <AnimatedCount
-            value={data?.today.views ?? experimental}
-            approximate={experimental !== null || data?.today.measurementStatus === 'experimental'}
-          />
-          <T v="label" muted style={{ textAlign: 'center', fontSize: 14 }}>
-            Short videos today
-          </T>
-        </View>
+        {emptyCount ? (
+          <View style={homeCountStyles.empty}>
+            <T style={homeCountStyles.title}>{emptyCount.title}</T>
+            <T muted style={homeCountStyles.detail}>
+              {emptyCount.detail}
+            </T>
+          </View>
+        ) : (
+          <View style={{ alignItems: 'center', gap: 10 }}>
+            <AnimatedCount
+              value={total}
+              approximate={
+                experimental !== null || data?.today.measurementStatus === 'experimental'
+              }
+            />
+            <T v="label" muted style={{ textAlign: 'center', fontSize: 14 }}>
+              Short videos today
+            </T>
+          </View>
+        )}
       </View>
       {state.state === 'error' && (
         <>
@@ -141,7 +155,17 @@ export function FocusHero({ state, refresh }: { state: ProgressState; refresh: (
                     })}
                   >
                     <AppIcon name={app.label} size={26} />
-                    <T v="heading">{count === null ? '—' : count.toLocaleString()}</T>
+                    <T
+                      v="heading"
+                      muted={count === null || count === 0}
+                      style={count === null || count === 0 ? homeCountStyles.appEmpty : undefined}
+                    >
+                      {count === null
+                        ? 'Pending'
+                        : count === 0
+                          ? 'Not yet'
+                          : count.toLocaleString()}
+                    </T>
                   </Pressable>
                 );
               })}

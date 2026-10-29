@@ -16,6 +16,7 @@ import { backupAccount } from './accountBackup';
 import { Tracking } from 'tracking-android';
 import { storageGeneration, observeStorage } from '@/db/scope';
 import { nextDelayMs } from '@/db/outbox';
+import { READ_REUSE_MS } from '@/api/client';
 
 export type BackupStatus = {
   state: 'local' | 'saving' | 'saved' | 'pending' | 'paused';
@@ -37,7 +38,7 @@ export function AccountBackupProvider({ children }: { children: ReactNode }) {
   const session = useSession();
   const displayName = session.status === 'signedIn' ? session.displayName : null;
   const worker = useRef<Worker | null>(null);
-  const [workerRevision,setWorkerRevision]=useState(0);
+  const [workerRevision, setWorkerRevision] = useState(0);
   const [result, setResult] = useState<{ api: ApiClient; status: BackupStatus } | null>(null);
   useEffect(() => {
     if (!api) return;
@@ -49,21 +50,35 @@ export function AccountBackupProvider({ children }: { children: ReactNode }) {
       nextAttempt = 0,
       failures = 0;
     let failed = false;
+    let lastCompleted: number | null = null;
     const accountGeneration = entitlementGeneration();
     const allowed = () =>
       alive &&
       !paused &&
       AppState.currentState === 'active' &&
       accountGeneration === entitlementGeneration();
-    const run = (force = false): Promise<boolean> => {
+    const run = (force = false, manual = false): Promise<boolean> => {
       if (!allowed()) return Promise.resolve(false);
       if (task) return task;
       const now = Date.now();
       const nativeAtStart = Tracking.dataRevision?.() ?? 0;
       const jsAtStart = storageGeneration();
+      // Foreground/interval callbacks can arrive just after a successful startup backup.
+      // Coalesce that burst, but never suppress explicit Retry, changed data or failed work.
+      const age = lastCompleted === null ? Infinity : now - lastCompleted;
+      if (
+        !manual &&
+        !failed &&
+        age >= 0 &&
+        age < READ_REUSE_MS &&
+        nativeAtStart === lastNative &&
+        jsAtStart === lastJs
+      )
+        return Promise.resolve(true);
       if (!force && now < nextAttempt) return Promise.resolve(false);
       if (!force && !failed && nativeAtStart === lastNative && storageGeneration() === lastJs)
         return Promise.resolve(true);
+      if (manual) api.clearReadReuse?.();
       task = Promise.resolve()
         .then(async () => {
           if (!allowed()) return false;
@@ -79,6 +94,7 @@ export function AccountBackupProvider({ children }: { children: ReactNode }) {
             else {
               failures = 0;
               nextAttempt = 0;
+              lastCompleted = Date.now();
               lastNative = nativeAtStart;
               lastJs = jsAtStart;
             }
@@ -107,7 +123,7 @@ export function AccountBackupProvider({ children }: { children: ReactNode }) {
     };
     const current = {
       api,
-      run: () => run(true),
+      run: () => run(true, true),
       pause: () => {
         paused = true;
         setResult({
@@ -143,7 +159,7 @@ export function AccountBackupProvider({ children }: { children: ReactNode }) {
   }, [api]);
   // Start a new worker rather than reviving the captured cancellation predicate of an
   // in-flight pre-reset request. The old worker remains permanently paused/dead.
-  const resume = useCallback(() => setWorkerRevision(r=>r+1), []);
+  const resume = useCallback(() => setWorkerRevision((r) => r + 1), []);
   const status = api && result?.api === api ? result.status : LOCAL;
   return <Context.Provider value={{ status, retry, pause, resume }}>{children}</Context.Provider>;
 }
