@@ -57,7 +57,7 @@ jest.mock('@/ui/kit', () => {
 const incarnation = '00000000-0000-4000-8000-000000000001';
 let state: { state: string; incarnation: string | null };
 let root: ReactTestRenderer;
-const discovery = { accountState: jest.fn(), registerAccount: jest.fn() };
+const discovery = { accountState: jest.fn(), registerAccount: jest.fn(), getMe: jest.fn() };
 const bound = {
   getMe: jest.fn(),
   deleteAccount: jest.fn(),
@@ -85,6 +85,7 @@ beforeEach(() => {
     serverTimeMs: Date.now(),
   });
   bound.getMe.mockResolvedValue({ data: { userId: 'stable-user', incarnation } });
+  discovery.getMe.mockImplementation((...args: unknown[]) => bound.getMe(...args));
   bound.deleteAccount.mockImplementation(async () => {
     state = { state: 'deleted', incarnation };
     return { state: 'completed' };
@@ -372,5 +373,54 @@ test('incomplete timezone setup stays retryable instead of leaving an empty scre
   expect(resolvePersonalAccount).not.toHaveBeenCalled();
   await press('Retry');
   expect(discovery.registerAccount).toHaveBeenCalledTimes(1);
+  expect(visible()).toContain('private screens');
+});
+
+test('starts profile and lifecycle reads together but never opens private data before verification', async () => {
+  state = { state: 'active', incarnation };
+  let finish!: (value: typeof state) => void;
+  discovery.accountState.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  await mount();
+  expect(discovery.getMe).toHaveBeenCalledTimes(1);
+  expect(resolvePersonalAccount).not.toHaveBeenCalled();
+  expect(visible()).not.toContain('private screens');
+  await act(async () => finish(state));
+  expect(visible()).toContain('private screens');
+  expect(bound.getMe).toHaveBeenCalledTimes(1);
+});
+
+test('does not reuse a speculative profile from an older incarnation', async () => {
+  state = { state: 'active', incarnation };
+  discovery.getMe.mockResolvedValueOnce({
+    data: { userId: 'old-user', incarnation: '00000000-0000-4000-8000-000000000099' },
+  });
+  await mount();
+  expect(resolvePersonalAccount).toHaveBeenCalledWith(
+    'stable-user',
+    incarnation,
+    expect.any(Function),
+    true,
+  );
+  expect(visible()).toContain('private screens');
+});
+
+test('does not postpone allowance verification while a slow profile read is in flight', async () => {
+  state = { state: 'active', incarnation };
+  let finish!: (value: unknown) => void;
+  discovery.getMe.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  await mount();
+  expect(bound.getAccountUsage).toHaveBeenCalledTimes(1);
+  expect(resolvePersonalAccount).not.toHaveBeenCalled();
+  await act(async () => finish({ data: { userId: 'stable-user', incarnation } }));
   expect(visible()).toContain('private screens');
 });

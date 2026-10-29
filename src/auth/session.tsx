@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { Env } from '../config/env';
+import { measureStartup } from '@/startup/timing';
 import { googleIdentity, googleDisplayName } from './google';
 import { invalidateEntitlement } from '@/billing/cache';
 import { selectPersonalSession } from '@/data/session';
@@ -123,9 +124,14 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
     });
     (async () => {
       // Existing Cognito sessions must never be reused as Google credentials.
-      await SecureStore.deleteItemAsync(LEGACY_KEY);
-      const staySignedIn = await SecureStore.getItemAsync(ENABLED_KEY);
-      const token = staySignedIn === 'true' ? await googleIdentity(GoogleSignin, false) : null;
+      const [, staySignedIn] = await Promise.all([
+        SecureStore.deleteItemAsync(LEGACY_KEY),
+        SecureStore.getItemAsync(ENABLED_KEY),
+      ]);
+      const token =
+        staySignedIn === 'true'
+          ? await measureStartup('google-session', () => googleIdentity(GoogleSignin, false))
+          : null;
       const owner = token ? GoogleSignin.getCurrentUser()?.user.id : null;
       if (active) {
         invalidateEntitlement();

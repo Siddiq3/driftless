@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { AppState, BackHandler, Modal } from 'react-native';
+import { AppState, BackHandler, Modal, View } from 'react-native';
 import { AppUpdates, type UpdateState } from '../../modules/app-updates-android/src';
 import { StartupScreen } from '@/ui/StartupScreen';
+import { UPDATE_STARTUP_BUDGET_MS, measureStartup } from '@/startup/timing';
 import { useReducedMotion } from '@/ui/motion';
 import { UpdateRequiredScreen } from './UpdateRequiredScreen';
 
@@ -41,7 +42,7 @@ export function AppUpdateBoundary({ children }: { children: ReactNode }) {
       running = true;
       // Keep an unknown/offline Play check from trapping an otherwise current app at startup.
       // A cached required version remains blocking even if this check fails or times out.
-      const request = AppUpdates.check()
+      const request = measureStartup('play-update', () => AppUpdates.check())
         .then((next) => {
           apply(next);
         })
@@ -52,7 +53,7 @@ export function AppUpdateBoundary({ children }: { children: ReactNode }) {
       await Promise.race([
         request,
         new Promise<void>((resolve) => {
-          timer = setTimeout(resolve, 8000);
+          timer = setTimeout(resolve, UPDATE_STARTUP_BUDGET_MS);
           timeouts.add(timer);
         }),
       ]);
@@ -112,6 +113,23 @@ export function AppUpdateBoundary({ children }: { children: ReactNode }) {
         />
       </Modal>
     );
-  if (!checked) return <StartupScreen />;
-  return children;
+  // Keep the same children mounted as the check completes: Google and local storage can
+  // prepare behind the blocking modal instead of waiting for Play before they even start.
+  return (
+    <View style={{ flex: 1 }}>
+      <View
+        style={{ flex: 1 }}
+        pointerEvents={checked ? 'auto' : 'none'}
+        accessibilityElementsHidden={!checked}
+        importantForAccessibility={checked ? 'auto' : 'no-hide-descendants'}
+      >
+        {children}
+      </View>
+      {!checked && (
+        <Modal visible animationType="none" onRequestClose={() => {}}>
+          <StartupScreen message="Opening ScrollSnooze…" />
+        </Modal>
+      )}
+    </View>
+  );
 }

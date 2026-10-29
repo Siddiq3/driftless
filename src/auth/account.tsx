@@ -21,6 +21,7 @@ import { resolvePersonalAccount, selectPersonalSession } from '@/data/session';
 import { invalidateEntitlement } from '@/billing/cache';
 import { StartupScreen } from '@/ui/StartupScreen';
 import { dark } from '@/design-tokens';
+import { measureStartup } from '@/startup/timing';
 import { Button, Notice, Screen } from '@/ui/kit';
 
 const Context = createContext<string | null>(null);
@@ -53,6 +54,7 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
     state: z.infer<typeof AccountState>;
     usageReady: boolean;
   } | null>(null);
+  const [stage, setStage] = useState('account');
   const [error, setError] = useState<string | null>(null);
   const [retryable, setRetryable] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -72,15 +74,26 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
     let failedStage = 'account';
     const progress = (value: string) => {
       failedStage = value;
+      if (alive) setStage(value);
     };
     const load = async () => {
       progress('account');
-      let state = await api.accountState();
+      // /me accepts an unbound request, but the response is never trusted until lifecycle
+      // discovery confirms the same active incarnation. Settle speculation to avoid an
+      // unhandled rejection for deleted/new accounts, which still use registration below.
+      const profileRequest = measureStartup('account-profile', () => api.getMe(allowed)).then(
+        (value) => ({ ok: true as const, value }),
+        (error: unknown) => ({ ok: false as const, error }),
+      );
+      const discovery = await measureStartup('account-lifecycle', () => api.accountState());
+      let state = discovery;
       if (!alive) return;
       if (state.state === 'deleted' || state.state === 'legacy_quarantined') {
         progress('registration');
         try {
-          state = await api.registerAccount(registrationId.current, state.incarnation);
+          state = await measureStartup('account-registration', () =>
+            api.registerAccount(registrationId.current, state.incarnation),
+          );
         } catch (e) {
           // Another device may have finished registration. Discover its account; never reset it.
           if (!(e instanceof ApiError) || e.code !== 'registration_conflict') throw e;
@@ -99,9 +112,19 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
           incarnation: state.incarnation,
         });
         progress('profile');
+        const profileForAccount =
+          discovery.state === 'active'
+            ? profileRequest.then((profile) => {
+                if (!alive) throw new Error('Account initialization cancelled');
+                if (!profile.ok) throw profile.error;
+                return profile.value.data.incarnation === state.incarnation
+                  ? profile.value
+                  : measureStartup('account-profile-bound', () => bound.getMe(allowed));
+              })
+            : measureStartup('account-profile-bound', () => bound.getMe(allowed));
         const [{ data: me }, existingUsage] = await Promise.all([
-          bound.getMe(allowed),
-          bound.getAccountUsage(allowed),
+          profileForAccount,
+          measureStartup('account-allowance', () => bound.getAccountUsage(allowed)),
         ]);
         if (!alive) return;
         if (me.incarnation !== state.incarnation)
@@ -117,14 +140,20 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
         if (!alive) return;
         if (!usage.policy) throw new Error('Account timezone setup did not finish');
         progress('storage');
-        const db = await resolvePersonalAccount(me.userId, me.incarnation, allowed, true);
+        const db = await measureStartup('account-storage', () =>
+          resolvePersonalAccount(me.userId, me.incarnation, allowed, true),
+        );
         if (!alive) return;
         progress('usage');
         if (usage.policy) {
-          await installAccountUsage(usage, state.incarnation, allowed);
+          await measureStartup('account-install-allowance', () =>
+            installAccountUsage(usage, me.incarnation, allowed),
+          );
           if (!(await accountReady(db, allowed))) {
             progress('restore');
-            const backup = await backupAccount(bound, allowed, undefined, me);
+            const backup = await measureStartup('account-first-restore', () =>
+              backupAccount(bound, allowed, undefined, me),
+            );
             if (backup.state !== 'saved') throw new Error(backup.message);
             await markAccountReady(db, allowed);
           }
@@ -210,6 +239,15 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
   if (!current && !error)
     return (
       <StartupScreen
+        message={
+          stage === 'restore'
+            ? 'Restoring your account progress…'
+            : stage === 'storage'
+              ? 'Opening saved progress…'
+              : stage === 'usage' || stage === 'timezone'
+                ? 'Preparing your app limits…'
+                : 'Checking your account…'
+        }
         onSignOut={
           session.status === 'signedIn'
             ? () => {

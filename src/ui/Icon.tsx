@@ -2,6 +2,8 @@ import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { Image, View } from 'react-native';
 
 export type IconName =
+  | 'plus'
+  | 'minus'
   | 'home'
   | 'counter'
   | 'flame'
@@ -22,6 +24,8 @@ export type IconName =
   | 'cloud'
   | 'trash';
 const paths: Partial<Record<IconName, string>> = {
+  plus: 'M12 5v14M5 12h14',
+  minus: 'M5 12h14',
   home: 'M3 10 12 3l9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z',
   counter: 'M5 4v4M5 12v8M12 4v9M12 17v3M19 4v2M19 10v10M3 8h4M10 13h4M17 6h4',
   flame:

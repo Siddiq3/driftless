@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { UPDATE_STARTUP_BUDGET_MS } from '@/startup/timing';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { AppState, BackHandler, Modal, Text } from 'react-native';
 import { AppUpdateBoundary } from '@/updates/AppUpdateBoundary';
@@ -52,7 +53,7 @@ async function mount() {
 }
 const screen = () => root.root.findByType(UpdateRequiredScreen);
 
-test('current Play installs open after checking and unsupported installs skip Play checks', async () => {
+test('current Play installs finish checking and unsupported installs skip Play checks', async () => {
   await mount();
   expect(visible()).toContain('App navigation');
   await act(async () => root.unmount());
@@ -141,7 +142,7 @@ test('an unknown offline check allows use after timeout but a late detected upda
   );
   await mount();
   expect(visible()).toContain('Preparing app');
-  await act(async () => jest.advanceTimersByTime(8000));
+  await act(async () => jest.advanceTimersByTime(UPDATE_STARTUP_BUDGET_MS));
   expect(visible()).toContain('App navigation');
   await act(async () => finish(required));
   expect(screen()).toBeDefined();
@@ -169,4 +170,34 @@ test('double taps start only one Play flow', async () => {
   });
   expect(AppUpdates.startUpdate).toHaveBeenCalledTimes(1);
   await act(async () => finish('cancelled'));
+});
+
+test('starts preparation behind the Play check without remounting when its budget expires', async () => {
+  let mounts = 0,
+    unmounts = 0;
+  function Preparation() {
+    useEffect(() => {
+      mounts++;
+      return () => {
+        unmounts++;
+      };
+    }, []);
+    return <Text>Local preparation</Text>;
+  }
+  jest.mocked(AppUpdates.check).mockImplementation(() => new Promise(() => {}));
+  await act(async () => {
+    root = create(
+      <AppUpdateBoundary>
+        <Preparation />
+      </AppUpdateBoundary>,
+    );
+  });
+  expect(mounts).toBe(1);
+  expect(visible()).toContain('Preparing app');
+  await act(async () => jest.advanceTimersByTime(UPDATE_STARTUP_BUDGET_MS - 1));
+  expect(visible()).toContain('Preparing app');
+  await act(async () => jest.advanceTimersByTime(1));
+  expect(visible()).not.toContain('Preparing app');
+  expect(mounts).toBe(1);
+  expect(unmounts).toBe(0);
 });

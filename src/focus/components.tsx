@@ -5,6 +5,7 @@ import { Button, LoadingState, Screen, T, Toggle, useTheme } from '@/ui/kit';
 import { Icon, type IconName } from '@/ui/Icon';
 import { protectionStatus } from '@/billing/protectionStatus';
 import type { FocusSettings } from './useFocusSettings';
+import { focusTheme, focusType } from './theme';
 
 export const layout = StyleSheet.create({
   page: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 32, gap: 24 },
@@ -173,7 +174,13 @@ export function TextLink({ label, onPress }: { label: string; onPress: () => voi
     </Pressable>
   );
 }
-export function ProtectionStatus({ settings }: { settings: FocusSettings }) {
+export function ProtectionStatus({
+  settings,
+  inline = false,
+}: {
+  settings: FocusSettings;
+  inline?: boolean;
+}) {
   const t = useTheme();
   const { cfg, health, goal, goalLoaded, saving, error } = settings;
   if (!cfg) return null;
@@ -213,6 +220,30 @@ export function ProtectionStatus({ settings }: { settings: FocusSettings }) {
             : status.title;
   const color =
     saving || !cfg.enabled ? t.textMuted : status.tone === 'info' ? t.success : t.warning;
+  // The Focus hero owns the status heading; show only actionable readiness details inline.
+  if (inline) {
+    if (!saving && !error && health && (!cfg.enabled || status.tone === 'info')) return null;
+    return (
+      <View accessibilityLiveRegion="polite" style={{ gap: focusTheme.space.sm }}>
+        {title !== 'Protection needs attention' && (
+          <T style={{ ...focusType.label, color: focusTheme.color.text }}>{title}</T>
+        )}
+        <T style={{ ...focusType.body, color: focusTheme.color.muted }}>
+          {saving
+            ? 'Applying your settings on this phone.'
+            : status.body.startsWith(`${title}. `)
+              ? status.body.slice(title.length + 2)
+              : status.body}
+        </T>
+        {permission && cfg.enabled && (
+          <TextLink label="Review counting permissions" onPress={() => router.push('/tracking')} />
+        )}
+        {cfg.enabled && cfg.enforceVideoGoal && goalLoaded && goal === null && (
+          <TextLink label="Set a daily video goal" onPress={() => router.push('/goals')} />
+        )}
+      </View>
+    );
+  }
   return (
     <View
       style={[layout.surface, { backgroundColor: t.surface, gap: 8 }]}
