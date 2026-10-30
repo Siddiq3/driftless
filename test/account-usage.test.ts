@@ -207,3 +207,24 @@ test('an APNs token is never registered with the Android FCM delivery service', 
   expect(await registerPush(api as unknown as ApiClient)).toBe(false);
   expect(api.registerDevice).not.toHaveBeenCalled();
 });
+
+it('reserves the full available daily balance before the foreground worker stops in a feed app', async () => {
+  await sync();
+  expect(api.reserveAccountUsage.mock.calls[0][0].requested).toEqual({ views: 20 });
+});
+
+it('only requests unallocated credit when another device holds part of the daily allowance', async () => {
+  const value = response();
+  value.snapshot.allocated = { views: 12 };
+  api.getAccountUsage.mockResolvedValue(value);
+  await sync();
+  expect(api.reserveAccountUsage.mock.calls[0][0].requested).toEqual({ views: 8 });
+});
+
+it('does not request more credit when the full day is already allocated', async () => {
+  const value = response();
+  value.snapshot.allocated = { views: 20 };
+  api.getAccountUsage.mockResolvedValue(value);
+  await sync();
+  expect(api.reserveAccountUsage).not.toHaveBeenCalled();
+});

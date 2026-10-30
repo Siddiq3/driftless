@@ -21,7 +21,9 @@ class PauseActivity : Activity() {
             val pkg=intent.getStringExtra(EXTRA_PKG).orEmpty()
             val reason=intent.getStringExtra(EXTRA_REASON)
             if(reason=="ACCOUNT_CREDIT") {
-                if(!store.account.active() || !store.account.blocked(pkg)) {finish();return}
+                val prefs=TrackingPrefs(this@PauseActivity)
+                if(!store.account.shouldPause(pkg,prefs.blockConfig,prefs.entitlement,
+                    intent.getBooleanExtra(EXTRA_SHORT_VIDEO,true))) {finish();return}
             } else {
                 val prefs=TrackingPrefs(this@PauseActivity)
                 val saved=prefs.blockConfig
@@ -56,6 +58,7 @@ class PauseActivity : Activity() {
         setIntent(next)
         main.removeCallbacks(refresh)
         renderPause()
+        if (!isFinishing) main.postDelayed(refresh,DriftlessAccessibilityService.TICK_MS)
     }
 
     private fun renderPause() {
@@ -66,6 +69,8 @@ class PauseActivity : Activity() {
         ownerScope=intent.getStringExtra(EXTRA_SCOPE) ?: store.activeScope()
         ownerDate=store.account.date()
         if(ownerScope!=store.activeScope()) {finish();return}
+        if(reason=="ACCOUNT_CREDIT" && !store.account.shouldPause(pkg,prefs.blockConfig,prefs.entitlement,
+            intent.getBooleanExtra(EXTRA_SHORT_VIDEO,true))) {finish();return}
         val renderScope=ownerScope
         val renderDate=ownerDate
         val label = RulesLoader.load(this).apps[pkg]?.label ?: "this app"
@@ -116,6 +121,7 @@ class PauseActivity : Activity() {
     }
 
     companion object {
+        const val EXTRA_SHORT_VIDEO = "short_video"
         const val EXTRA_SCOPE = "scope"
         const val EXTRA_PKG = "pkg"
         const val EXTRA_REASON = "reason"

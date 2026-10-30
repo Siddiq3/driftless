@@ -207,11 +207,15 @@ class AccountUsage(private val store: SqliteStore, private val context: Context)
     }
     /** Global snapshot plus this device's unacknowledged delta; its own reservation also caps
      * consumption. Never add local usage to a server total that already includes it. */
-    fun status(pkg: String? = null, shortVideo: Boolean = true): String = synchronized(store) {
+    fun status(pkg: String? = null, shortVideo: Boolean = true, enforceViews: Boolean = true, enforceMinutes: Boolean = true): String = synchronized(store) {
         if (!active()) return@synchronized "transition"
         val limits=JSONObject(limits().toString())
-        if(!shortVideo) for(k in limits.keys().asSequence().toList()) if(k.startsWith("views")) limits.remove(k)
+        if(!shortVideo || !enforceViews) for(k in limits.keys().asSequence().toList()) if(k.startsWith("views")) limits.remove(k)
         if(pkg!=null) for(k in limits.keys().asSequence().toList()) if(k.contains(':') && k.substringAfter(':')!=pkg) limits.remove(k)
+        if(!enforceMinutes) for(k in limits.keys().asSequence().toList()) if(k.startsWith("minutes")) limits.remove(k)
+        // A disabled rule cannot require credit; the unfiltered accounting status
+        // still verifies the clock even if its current policy cannot be selected.
+        if(limits.length()==0 && (!enforceViews || !enforceMinutes)) return@synchronized "unlimited"
         if(!trustedClock()) return@synchronized "clock_unverified"
         val snap=meta("snapshot:${date()}") ?: return@synchronized "credit_required"
         if(now() >= snap.getLong("endMs")) return@synchronized "credit_required"
@@ -291,6 +295,17 @@ class AccountUsage(private val store: SqliteStore, private val context: Context)
         mapOf("localDate" to date,"views" to views,"minutes" to minutes,"status" to if(views==null && minutes==null) "unavailable" else "experimental","tz" to zone().id,"scope" to scope(),"source" to "account")
     }
     fun blocked(pkg: String, shortVideo: Boolean = true): Boolean = active() && status(pkg,shortVideo) !in listOf("reserved", "reserved_stale", "unlimited")
+    /** Accounting remains active for backup even when the user turns pauses off. */
+    fun shouldPause(pkg: String, config: app.driftless.tracking.core.BlockConfig,
+                    entitlement: app.driftless.tracking.core.CachedEntitlement,
+                    shortVideo: Boolean): Boolean {
+        if (!active() || !config.enabled || pkg !in config.apps ||
+            (config.feedOnly && !shortVideo) ||
+            ((!config.feed.enforceGoal || !shortVideo) && config.dailyMinutes == null) ||
+            !app.driftless.tracking.core.FeatureAccess.focusAllowed(entitlement, now())) return false
+        return status(pkg, shortVideo, enforceViews = config.feed.enforceGoal,
+            enforceMinutes = config.dailyMinutes != null) !in listOf("reserved", "reserved_stale", "unlimited")
+    }
     companion object {
         fun create(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE account_intervals(scope TEXT NOT NULL,start_ms INTEGER NOT NULL,end_ms INTEGER)")

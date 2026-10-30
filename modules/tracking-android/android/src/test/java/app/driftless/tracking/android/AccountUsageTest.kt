@@ -230,4 +230,29 @@ class AccountUsageTest {
         assertEquals(5L,store.account.effectiveUsage("views",date))
     }
 
+    @Test fun accountCreditPausesRespectMasterSwitchSelectedAppsAndVideoGoalOptIn() {
+        install(response(2,10,3))
+        store.account.observeViews(date,setOf(pkg))
+        val entitlement=app.driftless.tracking.core.CachedEntitlement(true,null)
+        val config=app.driftless.tracking.core.BlockConfig(true,setOf(pkg),null,emptyList(),true,
+            app.driftless.tracking.core.FeedSettings(enforceGoal=true))
+        assertTrue(store.account.shouldPause(pkg,config,entitlement,true))
+        assertFalse(store.account.shouldPause(pkg,config.copy(enabled=false),entitlement,true))
+        assertFalse(store.account.shouldPause(pkg,config.copy(apps=emptySet()),entitlement,true))
+        assertFalse(store.account.shouldPause(pkg,config.copy(feed=config.feed.copy(enforceGoal=false)),entitlement,true))
+        assertFalse(store.account.shouldPause(pkg,config,entitlement,false))
+        assertTrue(store.account.blocked(pkg)) // Accounting is still exhausted, not erased.
+    }
+    @Test fun unlimitedMetricsDoNotRequireFreshCreditAfterMidnightOrReboot() {
+        install(); store.account.observeViews(date,setOf(pkg))
+        val entitlement=app.driftless.tracking.core.CachedEntitlement(true,null)
+        val scheduleOnly=app.driftless.tracking.core.BlockConfig(true,setOf(pkg),null,emptyList())
+        ShadowSystemClock.advanceBy(Duration.ofMillis(bounds.second-store.account.now()))
+        assertFalse(store.account.shouldPause(pkg,scheduleOnly,entitlement,true))
+        Settings.Global.putInt(context.contentResolver,Settings.Global.BOOT_COUNT,2)
+        assertFalse(store.account.shouldPause(pkg,scheduleOnly,entitlement,true))
+        val minuteOnly=scheduleOnly.copy(dailyMinutes=30)
+        assertFalse(store.account.shouldPause(pkg,minuteOnly,entitlement,true)) // Only a view allowance is configured.
+    }
+
 }

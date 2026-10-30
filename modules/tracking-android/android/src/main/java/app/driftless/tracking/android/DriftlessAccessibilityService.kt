@@ -230,7 +230,8 @@ class DriftlessAccessibilityService : AccessibilityService() {
         if (::wrapReady.isInitialized) wrapReady.hide()
         startActivity(Intent(this,PauseActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             .putExtra(PauseActivity.EXTRA_PKG,pkg).putExtra(PauseActivity.EXTRA_REASON,reason)
-            .putExtra(PauseActivity.EXTRA_SCOPE,store.activeScope()))
+            .putExtra(PauseActivity.EXTRA_SCOPE,store.activeScope())
+            .putExtra(PauseActivity.EXTRA_SHORT_VIDEO,badgeSurface==Surface.SHORT_VIDEO))
         lastPauseMs=now;lastPauseToken=token
     }
 
@@ -239,11 +240,11 @@ class DriftlessAccessibilityService : AccessibilityService() {
         runCatching {
             val store=SqliteStore.get(this)
             val accounting=store.account.active()
-            if(accounting && store.account.blocked(pkg,badgeSurface==Surface.SHORT_VIDEO)) {
+            val saved = prefs.blockConfig
+            if(store.account.shouldPause(pkg,saved,prefs.entitlement,badgeSurface==Surface.SHORT_VIDEO)) {
                 showPause(pkg,"ACCOUNT_CREDIT",now)
                 feedPause.hide(); return
             }
-            val saved = prefs.blockConfig
             val cfg = if(accounting) saved.copy(dailyMinutes=null,feed=saved.feed.copy(enforceGoal=false)) else saved
             if (!cfg.enabled || pkg !in cfg.apps || !app.driftless.tracking.core.FeatureAccess.focusAllowed(prefs.entitlement, now)) {
                 feedPause.hide(); return

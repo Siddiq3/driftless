@@ -40,15 +40,17 @@ export function activityData(
   const views = total('views');
   const minutes = total('minutes');
   const hourly = details.days.find((d) => d.localDate === bounds.from)?.hourlyViews;
+  // Hourly records belong to this phone; restored/account totals can be larger.
+  const localViews = rows.length === 1 ? recordedMeasurement(rows[0]!.raw, health).views : null;
   const hours =
     period === 'daily' &&
     details.available &&
-    views.value !== null &&
+    localViews !== null &&
     hourly?.length === 24 &&
     hourly.every((v) => Number.isInteger(v) && v >= 0) &&
-    hourly.reduce((a, b) => a + b, 0) === views.value
+    hourly.reduce((a, b) => a + b, 0) === localViews
       ? hourly
-      : period === 'daily' && details.available && views.value === 0
+      : period === 'daily' && details.available && localViews === 0
         ? Array<number>(24).fill(0)
         : null;
   const bars =

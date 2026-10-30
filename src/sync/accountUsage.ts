@@ -151,15 +151,13 @@ export async function syncAccountUsage(api: ApiClient, allowed: () => boolean): 
       reservation = undefined;
     }
     if (!reservation) {
-      const mine = snapshot.devices[device];
       const requested: Record<string, number> = {};
+      // The foreground worker stops while a feed app is open. Reserve the available
+      // day balance now rather than forcing a return after ten views/five minutes.
+      // The server atomically caps grants against credit held by other devices.
       for (const [k, limit] of Object.entries(snapshot.limits)) {
-        const chunk = Math.min(limit, k.startsWith('minutes') ? 300000 : 10);
-        if (
-          (mine?.granted[k] ?? 0) - (mine?.used[k] ?? 0) <= chunk / 2 &&
-          (snapshot.allocated[k] ?? 0) < limit
-        )
-          requested[k] = chunk;
+        const available = Math.max(0, limit - (snapshot.allocated[k] ?? 0));
+        if (available > 0) requested[k] = available;
       }
       if (Object.keys(requested).length) {
         reservation = JSON.stringify({

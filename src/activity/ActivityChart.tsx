@@ -27,6 +27,11 @@ export function ActivityChart({ data, period }: { data: ActivityData; period: Ac
         </View>
       ) : (
         <>
+          {period === 'daily' && (
+            <T v="caption" style={{ color: '#B0ACA0', marginBottom: 12 }}>
+              Hourly activity on this phone
+            </T>
+          )}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator

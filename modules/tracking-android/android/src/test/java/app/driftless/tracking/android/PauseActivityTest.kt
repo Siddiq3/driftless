@@ -118,9 +118,18 @@ class PauseActivityTest {
     }
     @Test fun singleTaskIntentReplacesOldBypassUiWithAccountCreditRecovery() {
         val controller=launch()
+        val store=SqliteStore.get(context)
+        val scope="account:phase3-credit"
+        store.selectScope(scope)
+        store.account.install("""{"policy":{"incarnation":"phase3-credit","tz":"UTC","activeFromMs":0,"rev":1,"policies":[{"effectiveDate":"2020-01-01","limits":{"minutes":60000}}]}}""",scope)
         controller.newIntent(Intent(context,PauseActivity::class.java).putExtra(PauseActivity.EXTRA_PKG,pkg).putExtra(PauseActivity.EXTRA_REASON,"ACCOUNT_CREDIT"))
         find(controller.get(),"Account credit is exhausted")
+        assertFalse(controller.get().isFinishing)
         assertFalse(views(controller.get().window.decorView).filterIsInstance<TextView>().any {it.text.startsWith("5 more minutes")})
+        val prefs=TrackingPrefs(context)
+        prefs.blockConfig=prefs.blockConfig.copy(enabled=false)
+        shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(2))
+        assertTrue(controller.get().isFinishing)
         controller.pause().stop().destroy()
     }
 }

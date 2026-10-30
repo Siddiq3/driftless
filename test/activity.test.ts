@@ -163,3 +163,39 @@ test('mixed validated and unvalidated apps share local buckets without promoting
   expect(result.apps.map((app) => app.views)).toEqual([3, 2]);
   expect(aggregateDay(raw, mixed, 'phone', 'UTC').views).toBe(2);
 });
+
+test('yesterday local hours remain visible when account totals include other devices or restored history', () => {
+  const hourlyViews = Array<number>(24).fill(0);
+  hourlyViews[21] = 3;
+  const result = activityData(
+    'daily',
+    1,
+    '2026-10-30',
+    health,
+    (date) => daily(date, 3),
+    {
+      available: true,
+      days: [{ localDate: '2026-10-29', hourlyViews, sessions: [] }],
+    },
+    () => ({ views: 53, minutes: 27 }),
+  );
+  expect(result.from).toBe('2026-10-29');
+  expect(result.views.value).toBe(53);
+  expect(result.minutes.value).toBe(27);
+  expect(result.hourlyAvailable).toBe(true);
+  expect(result.bars[21]!.value).toBe(3);
+});
+
+test('restored totals alone cannot invent local hourly detail or a zero day', () => {
+  const result = activityData(
+    'daily',
+    1,
+    '2026-10-30',
+    health,
+    (localDate) => ({ localDate, heartbeatMinutes: 0, coverage: 0, apps: [] }),
+    { available: true, days: [] },
+    () => ({ views: 50, minutes: 20 }),
+  );
+  expect(result.views.value).toBe(50);
+  expect(result.hourlyAvailable).toBe(false);
+});
