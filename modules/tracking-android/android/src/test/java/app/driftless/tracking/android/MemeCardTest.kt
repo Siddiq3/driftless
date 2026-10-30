@@ -99,4 +99,46 @@ class MemeCardTest {
         assertTrue(card.show(CountBadgeValue("~100","On this phone"),100,"en") {})
         card.hide(); controller.destroy()
     }
+    @Test fun languageCyclesPersistIndependentlyAndWipeClearsAllPools() {
+        val prefs=TrackingPrefs(ApplicationProvider.getApplicationContext<Context>())
+        prefs.clearMemeHistory()
+        prefs.rememberMemeReaction("te-a",35,setOf("te-a","te-b"),"te")
+        prefs.rememberMemeReaction("hi-a",47,setOf("hi-a","hi-b"),"hi")
+        val recreated=TrackingPrefs(ApplicationProvider.getApplicationContext<Context>())
+        assertEquals(setOf("te-a"),recreated.usedMemeReactions("te"))
+        assertEquals(setOf("hi-a"),recreated.usedMemeReactions("hi"))
+        assertEquals(35,recreated.previousMemeCaption("te-a"))
+        recreated.rememberMemeReaction("te-b",2,setOf("te-a","te-b"),"te")
+        recreated.rememberMemeReaction("te-a",3,setOf("te-a","te-b"),"te")
+        assertEquals(setOf("te-a"),recreated.usedMemeReactions("te"))
+        assertEquals(setOf("hi-a"),recreated.usedMemeReactions("hi"))
+        recreated.clearMemeHistory()
+        assertTrue(recreated.usedMemeReactions("te").isEmpty())
+        assertTrue(recreated.usedMemeReactions("hi").isEmpty())
+    }
+
+    @Test fun displayedCaptionAndButtonsFollowSelectedReactionIncludingMissingLanguageFallback() {
+        val controller=Robolectric.buildService(MemeTestService::class.java).create()
+        val prefs=TrackingPrefs(controller.get());prefs.clearMemeHistory()
+        val card=MemeMilestoneCard(controller.get())
+        fun descendants(view: android.view.View): List<android.view.View> = listOf(view) +
+            if(view is android.view.ViewGroup) (0 until view.childCount).flatMap {descendants(view.getChildAt(it))} else emptyList()
+        try {
+            for(language in listOf("te","hi","kn")) {
+                assertTrue(card.show(CountBadgeValue("50","On this phone"),50,language) {})
+                val chosen=app.driftless.tracking.core.MemeCollection.all.single{it.id==prefs.lastMemeReaction()}
+                if(language!="kn") assertEquals(language,chosen.language)
+                val root=MemeMilestoneCard::class.java.getDeclaredField("root").apply {isAccessible=true}.get(card) as android.view.View
+                val nodes=descendants(root)
+                val copy=app.driftless.tracking.core.memeCopy(chosen.language,50)
+                val buttons=nodes.filterIsInstance<android.widget.Button>().map {it.text.toString()}
+                assertTrue(copy.pause in buttons);assertTrue(copy.continueWatching in buttons)
+                assertTrue(nodes.any{it.contentDescription==copy.close})
+                val expected=chosen.caption(prefs.previousMemeCaption(chosen.id),50,false)
+                assertTrue(nodes.filterIsInstance<android.widget.TextView>().any{it.text.toString()==expected})
+                card.hide()
+            }
+        } finally {card.hide();prefs.clearMemeHistory();controller.destroy()}
+    }
+
 }

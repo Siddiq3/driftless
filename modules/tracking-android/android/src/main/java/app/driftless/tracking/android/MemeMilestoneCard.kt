@@ -39,10 +39,12 @@ class MemeMilestoneCard(private val service: AccessibilityService) {
 
     fun show(value: CountBadgeValue, milestone: Int, language: String, shorts: Boolean = false, onBreak: () -> Unit): Boolean {
         if (isShowing) return false
-        val reaction = MemeCollection.choose(availableMemes, prefs.usedMemeReactions(), prefs.lastMemeReaction())
+        val pool = MemeCollection.poolForLanguage(availableMemes, language)
+        val poolLanguage = if (pool.all { it.language == language }) language else "mixed"
+        val reaction = MemeCollection.choose(pool, prefs.usedMemeReactions(poolLanguage), prefs.lastMemeReaction())
             ?: return false
         val captionIndex = MemeCollection.captionIndex(reaction, prefs.previousMemeCaption(reaction.id))
-        val copy = memeCopy(language, milestone)
+        val copy = memeCopy(reaction.language, milestone)
         val backdrop = FrameLayout(service).apply {
             setBackgroundColor(Color.parseColor("#B5000000"))
             setOnClickListener { hide() }
@@ -108,7 +110,7 @@ class MemeMilestoneCard(private val service: AccessibilityService) {
         }
         return try {
             wm.addView(backdrop,params); root=backdrop
-            prefs.rememberMemeReaction(reaction.id, captionIndex, availableMemes.map { it.id }.toSet())
+            prefs.rememberMemeReaction(reaction.id, captionIndex, pool.map { it.id }.toSet(), poolLanguage)
             if(Build.VERSION.SDK_INT < 26 || ValueAnimator.areAnimatorsEnabled()) {
                 column.alpha=0f; column.translationY=dp(20).toFloat(); column.scaleX=0.94f; column.scaleY=0.94f
                 column.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f).setDuration(280).start()

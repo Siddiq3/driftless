@@ -3,7 +3,7 @@ package app.driftless.tracking.core
 /**
  * Minimal read-only view of an accessibility node. The Android adapter wraps
  * AccessibilityNodeInfo; tests use [FakeNode]. Text and descriptions are only ever read here, in
- * memory, to compute a fingerprint or match an ad label — they are never stored or logged.
+ * memory, to compute a fingerprint, match an ad label or optionally derive a script hint — they are never stored or logged.
  */
 interface UiNode {
     /** Resource name without the package prefix, e.g. "reel_recycler". */
@@ -43,15 +43,18 @@ data class RuleSet(val version: Int, val apps: Map<String, AppRules>)
 
 data class Classification(val surface: Surface, val fingerprint: String?, val isAd: Boolean, val nodesVisited: Int, val itemContainerPresent: Boolean = true,
     /** Salted hashes of the same metadata already used for identity; never raw text. */
-    val identitySignals: Set<String> = emptySet())
+    val identitySignals: Set<String> = emptySet(),
+    /** Transient, local-only hint. Never part of events, fingerprints, exports or sync. */
+    val contentLanguage: String? = null)
 
 class Classifier(private val maxNodes: Int = MAX_NODES, private val maxDepth: Int = MAX_DEPTH) {
 
-    fun classify(root: UiNode?, rules: AppRules, salt: ByteArray): Classification {
+    fun classify(root: UiNode?, rules: AppRules, salt: ByteArray, detectLanguage: Boolean = false): Classification {
         if (root == null) return Classification(Surface.UNKNOWN, null, isAd = false, nodesVisited = 0)
         var surface = false
         var ad = false
         val parts = HashMap<ItemPart, String>()
+        val scriptTexts = mutableListOf<CharSequence>()
         var visited = 0
         val containers = HashSet<String>()
         var playerControlsPresent = false
@@ -77,13 +80,17 @@ class Classifier(private val maxNodes: Int = MAX_NODES, private val maxDepth: In
             // likes/playback labels. Never use those controls or content outside the player.
             if (!controls && scopes.isNotEmpty()) {
                 val text = n.text?.trim()?.take(512)
-                if (!text.isNullOrEmpty()) scopes.forEach { captions.getOrPut(it) { linkedSetOf() }.add(text) }
+                if (!text.isNullOrEmpty()) {
+                    scopes.forEach { captions.getOrPut(it) { linkedSetOf() }.add(text) }
+                    if (detectLanguage && cls != "EditText") scriptTexts.add(text)
+                }
                 // Some YouTube layouts expose captions as descriptions. Only read them
                 // inside the configured metadata panel, never sidebar metrics/progress.
                 if (metadata) {
                     val desc = n.contentDesc?.trim()?.take(512)
                     if (!desc.isNullOrEmpty()) {
                         scopes.forEach { descriptions.getOrPut(it) { linkedSetOf() }.add(desc) }
+                        if (detectLanguage && cls != "EditText") scriptTexts.add(desc)
                         playerControlsPresent = true
                     }
                 }
@@ -99,7 +106,10 @@ class Classifier(private val maxNodes: Int = MAX_NODES, private val maxDepth: In
                             Field.TEXT -> n.text
                             Field.CAPTION_TEXT -> null
                         }
-                        if (!v.isNullOrBlank()) parts[p] = v.trim()
+                        if (!v.isNullOrBlank()) {
+                            parts[p] = v.trim()
+                            if (detectLanguage && !controls && cls != "EditText") scriptTexts.add(v.take(512))
+                        }
                     }
                 }
             }
@@ -134,7 +144,8 @@ class Classifier(private val maxNodes: Int = MAX_NODES, private val maxDepth: In
         }.map { Fingerprint.of(salt, listOf(it)) }.toSet()
         return Classification(Surface.SHORT_VIDEO, fp, ad, visited,
             if (rules.itemParts.any { it.field == Field.CAPTION_TEXT }) playerControlsPresent
-            else rules.itemParts.isNotEmpty() && rules.itemParts.all { it.viewId in containers }, signals)
+            else rules.itemParts.isNotEmpty() && rules.itemParts.all { it.viewId in containers }, signals,
+            if (detectLanguage && !ad) detectContentLanguage(scriptTexts) else null)
     }
 
     companion object {

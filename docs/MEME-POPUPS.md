@@ -1,4 +1,55 @@
-# Curated milestone meme popups
+# Meme language matching and composed taglines
+
+The implementation described in the historical notes below has been updated. Memes now prefer a
+transient native-script hint from the same bounded player metadata already inspected by the
+classifier, then fall back to configured phone languages. There is no audio or topic recognition.
+The implementation does not read an entire feed or save the inspected text or language hint.
+
+Supported hints are Telugu, Tamil, Kannada, Malayalam and Devanagari (mapped to Hindi copy, though
+other languages also use Devanagari). At least four script letters and a 60% share of recognized
+script letters are required; ambiguous mixtures, Latin-only/romanized content and unsupported
+scripts use phone fallback. Language inspection is disabled when meme breaks are disabled, and
+unrecognized surfaces/ads do not produce a hint. Counting selectors, fingerprints, ad detection,
+deduplication and milestone thresholds are unchanged.
+
+The card filters available bundled assets by the preferred language before no-repeat sampling.
+If that language has no bundled asset, the existing mixed-pool fallback is used. Caption and action
+button language both follow the actual selected reaction, keeping the card consistent. No Kannada
+GIF has been added: Kannada feed words, first-view greetings and compositional copy are supported
+for future supplied assets. Malayalam still has one available GIF, so its artwork must repeat.
+More language-specific GIFs require actual supplied/curated assets rather than fake catalog IDs.
+
+Each reaction now combines four openers, its three existing count lines, and four closers: 48
+variants, generated offline. First-count cards combine first-view greetings instead of high-count
+roasts. A reaction's previous combination index is excluded next time. This avoids an immediate
+caption repeat; it does not promise infinite unique text. Reaction cycles are stored independently
+for each selected-language pool (and the mixed fallback); last-reaction/caption preferences still
+belong to the current dataset. No text from the feed is persisted in preferences.
+
+Buttons and the close accessibility label now use the reaction's language. Native-speaker review
+of colloquial Telugu, Hindi, Tamil, Kannada and Malayalam copy remains recommended. Home mascot
+quotes are separate and remain English-only.
+
+The app accessibility disclosure and privacy-policy draft now describe this local script hint.
+No live site, production service, permission setting or user database was modified.
+
+## Current validation
+
+- Android unit/Robolectric suite: **233 tests passed**, no failures, errors or skips.
+- App suite: **534 tests passed across 62 suites**.
+- TypeScript type checking, lint and `git diff --check` passed.
+- Coverage includes script thresholds and metadata boundaries, unchanged classification/counting,
+  language-pool rotation, caption variation, preference cleanup, and matching caption/button language
+  including the missing-language fallback.
+
+This change has not been installed or checked on a physical device. A native rebuild is required;
+native-speaker review and physical-device popup readability remain outstanding.
+
+---
+
+## Historical implementation notes (superseded where noted above)
+
+### Curated milestone meme popups
 
 The milestone card now appears at count **1**, then **50, 100, 150…**, and uses an offline mixed-language collection instead of its two static artwork choices. Recorded milestones still suppress restart duplicates; first-count greetings replace high-count roasts at count 1. The opt-out, close/continue/break controls, tracking, quotas and lifecycle behavior are retained. Reels/Shorts context comes from the foreground package; no reel audio, captions, topic or language is classified or uploaded.
 

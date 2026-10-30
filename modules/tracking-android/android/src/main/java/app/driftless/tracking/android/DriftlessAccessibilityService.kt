@@ -45,6 +45,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
     private lateinit var wrapReady: WrapReadyOverlay
     private var wrapPromptedThisVisit = false
     private var wrapCheckedAt = 0L
+    private var memeContentLanguage: String? = null
     private var memeDate: String? = null
     private var memeCount: Int? = null
     private lateinit var floatingBadge: FloatingCountBadge
@@ -172,7 +173,8 @@ class DriftlessAccessibilityService : AccessibilityService() {
             playerTransition.reset();lastPauseToken=null
             return
         }
-        val c = classifier.classify(A11yNode(root), appRules, saltFor(now))
+        val c = classifier.classify(A11yNode(root), appRules, saltFor(now), detectLanguage = prefs.memeCardsEnabled)
+        memeContentLanguage = c.contentLanguage
         val replaced = playerTransition.observe(pkg, if (pkg == "com.google.android.youtube") c
             else c.copy(identitySignals = emptySet()), now)
         if (::feedPause.isInitialized && feedPause.isShowing) {
@@ -367,6 +369,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
 
     private fun hideFloatingCount() {
         badgeSurface = Surface.UNKNOWN; badgeIdentity = false; badgePackage = null
+        memeContentLanguage = null
         if (::floatingBadge.isInitialized) floatingBadge.hide()
         if (::memeCard.isInitialized) memeCard.hide()
         if (::feedPause.isInitialized) feedPause.hide()
@@ -444,7 +447,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
                 val locales = resources.configuration.locales
                 val language = app.driftless.tracking.core.MemeLanguages.resolve(
                     (0 until locales.size()).map { locales[it].language })
-                if (memeCard.show(badge,milestone,language, shorts = pkg == "com.google.android.youtube") {
+                if (memeCard.show(badge,milestone,memeContentLanguage ?: language, shorts = pkg == "com.google.android.youtube") {
                     packageManager.getLaunchIntentForPackage(packageName)?.let {
                         it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); startActivity(it)
                     }

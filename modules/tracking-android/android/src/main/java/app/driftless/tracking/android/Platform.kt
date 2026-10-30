@@ -117,14 +117,14 @@ class TrackingPrefs(private val context: Context) {
         p.edit().putString("meme_date", date).putInt("meme_milestone", milestone).commit()
     }
 
-    fun usedMemeReactions(): Set<String> = p.getStringSet(scoped("meme_reactions"), emptySet())!!.toSet()
+    fun usedMemeReactions(language: String? = null): Set<String> = p.getStringSet(scoped("meme_reactions" + (language?.let { "_$it" } ?: "")), emptySet())!!.toSet()
     fun lastMemeReaction(): String? = p.getString(scoped("meme_last_reaction"), null)
     fun previousMemeCaption(id: String): Int = p.getInt(scoped("meme_caption_$id"), -1)
 
-    fun rememberMemeReaction(id: String, caption: Int, available: Set<String>) {
-        val used = usedMemeReactions().intersect(available)
+    fun rememberMemeReaction(id: String, caption: Int, available: Set<String>, language: String? = null) {
+        val used = usedMemeReactions(language).intersect(available)
         val next = (if (used.containsAll(available)) emptySet() else used) + id
-        p.edit().putStringSet(scoped("meme_reactions"), next)
+        p.edit().putStringSet(scoped("meme_reactions" + (language?.let { "_$it" } ?: "")), next)
             .putString(scoped("meme_last_reaction"), id)
             .putInt(scoped("meme_caption_$id"), caption).apply()
     }
@@ -133,7 +133,7 @@ class TrackingPrefs(private val context: Context) {
         p.edit().remove("meme_date").remove("meme_milestone").remove("meme_language")
             .remove("meme_cards_enabled").apply()
         p.edit().also { editor ->
-            p.all.keys.filter { it.startsWith("meme_reactions|") || it.startsWith("meme_last_reaction|") || it.startsWith("meme_caption_") }
+            p.all.keys.filter { it.startsWith("meme_reactions") || it.startsWith("meme_last_reaction|") || it.startsWith("meme_caption_") }
                 .forEach { editor.remove(it) }
         }.apply()
     }

@@ -2,18 +2,21 @@ package app.driftless.tracking.core
 
 import kotlin.random.Random
 
-/** Curated reactions, not language/topic inference from watched content. */
+/** Curated offline reactions, selected using a transient native-script hint or phone language. */
 data class MemeReaction(val id: String, val language: String, val description: String, val captions: List<String>) {
+    val captionVariantCount get() = memeTaglineParts(language, captions).size
     fun caption(index: Int, count: Int, shorts: Boolean): String {
-        if (count == 1) return firstCountCaptions(language, shorts)[index % 3]
+        val lines = if (count == 1) firstCountCaptions(language, shorts) else captions
+        val combined = memeTaglineParts(language, lines).render(index)
         val feed = when (language) {
             "te" -> if (shorts) "షార్ట్స్" else "రీల్స్"
             "hi" -> if (shorts) "शॉर्ट्स" else "रील्स"
             "ta" -> if (shorts) "ஷார்ட்ஸ்" else "ரீல்ஸ்"
+            "kn" -> if (shorts) "ಶಾರ್ಟ್ಸ್" else "ರೀಲ್ಸ್"
             "ml" -> if (shorts) "ഷോർട്സ്" else "റീൽസ്"
             else -> if (shorts) "Shorts" else "Reels"
         }
-        return captions[index].replace("{count}", count.toString()).replace("{feed}", feed)
+        return combined.replace("{count}", count.toString()).replace("{feed}", feed)
     }
 }
 
@@ -23,6 +26,7 @@ private fun firstCountCaptions(language: String, shorts: Boolean): List<String> 
         "te" -> if (shorts) "1 షార్ట్" else "1 రీల్"
         "hi" -> if (shorts) "1 शॉर्ट" else "1 रील"
         "ta" -> if (shorts) "1 ஷார்ட்" else "1 ரீல்"
+        "kn" -> if (shorts) "1 ಶಾರ್ಟ್" else "1 ರೀಲ್"
         "ml" -> if (shorts) "1 ഷോർട്ട്" else "1 റീൽ"
         else -> if (shorts) "1 Short" else "1 Reel"
     }
@@ -30,6 +34,7 @@ private fun firstCountCaptions(language: String, shorts: Boolean): List<String> 
         "te" -> listOf("$one చూశావ్! ‘ఇంకొక్కటి’ కథ మొదలైందా?", "$one అయింది! అల్గారిథమ్ హాయ్ అంటోంది.", "$one మాత్రమే… టైమ్ మీద కాస్త కన్నేసి ఉంచు బ్రో!")
         "hi" -> listOf("$one देख ली! ‘बस एक और’ की कहानी शुरू?", "$one हुई! अल्गोरिदम ने हाज़िरी लगा ली।", "$one ही अभी… टाइम पर भी नज़र रखना बॉस!")
         "ta" -> listOf("$one பார்த்தாச்சு! ‘இன்னும் ஒண்ணு’ கதை ஆரம்பமா?", "$one முடிஞ்சது! அல்காரிதம் ஹாய் சொல்லுது.", "$one தான்… நேரத்தையும் கொஞ்சம் பாரு பாஸ்!")
+        "kn" -> listOf("$one ನೋಡಿದೆ! ‘ಇನ್ನೊಂದೇ’ ಕಥೆ ಶುರುವಾಯ್ತಾ?", "$one ಆಯ್ತು! ಅಲ್ಗಾರಿದಮ್ ಹಾಯ್ ಹೇಳುತ್ತಿದೆ.", "$one ಮಾತ್ರ… ಸಮಯದ ಮೇಲೂ ಸ್ವಲ್ಪ ಗಮನ ಇರಲಿ ಗುರು!")
         "ml" -> listOf("$one കണ്ടു! ‘ഒരെണ്ണം കൂടി’ കഥ തുടങ്ങുകയാണോ?", "$one ആയി! അൽഗോരിതം ഹായ് പറയുന്നു.", "$one മാത്രം… സമയവും ഒന്ന് നോക്കണേ ബ്രോ!")
         else -> listOf("$one in. The ‘just one more’ origin story?", "$one down. The algorithm says hey, bestie.", "$one so far. Keep this side quest short.")
     }
@@ -59,6 +64,10 @@ object MemeCollection {
         MemeReaction("18754360", "hi", "Amrish Puri — चुप", listOf("{count} {feed}! अब “बस एक और” बोलना बंद!", "{count} {feed} हो गईं… अब अंगूठे को चुप कराओ!", "{count} {feed}! अल्गोरिदम बोले “और”, हम बोले “ब्रेक”!"))
     )
 
+    /** Prefer matching assets; an unavailable language retains the existing mixed-pool fallback. */
+    fun poolForLanguage(pool: List<MemeReaction>, language: String?): List<MemeReaction> =
+        pool.filter { it.language == language }.ifEmpty { pool }
+
     /** Sample without replacement; also prevent the last item repeating across cycle boundaries. */
     fun choose(pool: List<MemeReaction>, used: Set<String>, last: String?, random: Random = Random.Default): MemeReaction? {
         if (pool.isEmpty()) return null
@@ -68,5 +77,5 @@ object MemeCollection {
     }
 
     fun captionIndex(meme: MemeReaction, previous: Int, random: Random = Random.Default): Int =
-        meme.captions.indices.filter { it != previous }.ifEmpty { meme.captions.indices.toList() }.random(random)
+        (0 until meme.captionVariantCount).filter { it != previous }.random(random)
 }

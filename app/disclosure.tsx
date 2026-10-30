@@ -1,4 +1,4 @@
-import { Platform , Pressable, ScrollView, View } from 'react-native';
+import { Platform, Pressable, ScrollView, View } from 'react-native';
 import { ScreenTimeScreen } from '@/ios/ScreenTimeScreen';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -49,10 +49,12 @@ function AndroidDisclosure() {
               ShareChat. Experimental short-video detection covers Instagram and YouTube only; video
               counts are not set up for Facebook, Snapchat, Moj or ShareChat. Where a video rule is
               active, limited player labels become one-way codes and only counts and times are saved
-              on this phone. No messages, passwords or screenshots. Signing in backs up daily totals
-              and goals automatically; guest progress stays on this phone. Optional feed pauses
-              cover a detected Reels or Shorts player. The Leave feed button performs Android Back
-              only when you press it. You can always leave using system navigation.
+              on this phone. Meme breaks can use the script of visible player labels to choose a
+              language on-device; that text and language hint are not saved or uploaded. No
+              messages, passwords or screenshots. Signing in backs up daily totals and goals
+              automatically; guest progress stays on this phone. Optional feed pauses cover a
+              detected Reels or Shorts player. The Leave feed button performs Android Back only when
+              you press it. You can always leave using system navigation.
             </T>
           )}
           {error && <Notice tone="warn" title="Please try again" body={error} />}

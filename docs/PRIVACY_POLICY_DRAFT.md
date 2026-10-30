@@ -102,3 +102,15 @@ ScrollSnooze's intended age audience must be confirmed in the Play Console listi
 publication. Do not infer a children's offering from school/study examples. Material changes
 to this policy will be reflected in its published effective date and relevant in-app notices.
 For privacy questions, contact **siddiqkolimi.dev@gmail.com**.
+
+
+### On-device meme language hints
+
+When meme breaks are enabled, the accessibility classifier can derive a native-script hint from
+its existing bounded, visible player metadata. This chooses from bundled meme/caption languages.
+Inspected text is transient and is not saved, logged or uploaded; the language hint is not added
+to viewing events, exports, account history or analytics. There is no audio processing, translation
+service, location lookup or network language API. Unrecognized or ambiguous scripts use the phone
+language fallback. A script hint is not a determination of a video's spoken language. Meme rotation
+stores only the chosen asset/caption indices in per-dataset local preferences. This is draft source
+copy; no hosted privacy page or production policy was published by this change.
