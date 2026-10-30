@@ -1,4 +1,4 @@
-import { Platform , Alert, AppState, View } from 'react-native';
+import { Platform, Alert, AppState, View } from 'react-native';
 import { ScreenTimeScreen } from '@/ios/ScreenTimeScreen';
 import { useFocusEffect } from 'expo-router';
 import * as Sharing from 'expo-sharing';
@@ -10,6 +10,7 @@ import { AppIcon, Icon } from '@/ui/Icon';
 import { personalRawDay, refreshPersonalData } from '@/data/personal';
 import { localDateOf } from '@siddiq3/driftless-contracts/domain';
 import { currentAccountTime, currentTimeZone } from '@/sync/run';
+import { homeAppCount } from '@/tracking/candidateCount';
 import { CountingPermissionBanner } from '@/permissions/CountingPermissionBanner';
 
 const minutes = (ms: number) => Math.round(ms / 60_000);
@@ -77,6 +78,16 @@ function AndroidTrackingScreen() {
 
   const state = trackingState(health);
   const copy = STATE_COPY[state];
+  const appRows = health.apps
+    .filter(
+      (app) =>
+        daily.apps.some((row) => row.package === app.package) ||
+        daily.personalAppViews?.[app.package] != null,
+    )
+    .map((app) => ({
+      package: app.package,
+      local: daily.apps.find((row) => row.package === app.package),
+    }));
   const label = (pkg: string) => health.apps.find((a) => a.package === pkg)?.label ?? pkg;
 
   return (
@@ -199,15 +210,15 @@ function AndroidTrackingScreen() {
       </Section>
 
       <Section>
-        <T v="heading">Today on this phone</T>
-        {daily.apps.length === 0 ? (
+        <T v="heading">Today’s activity</T>
+        {appRows.length === 0 ? (
           <EmptyState
             mark="▥"
             title="A fresh start"
             body="Your app totals will appear here as tracking records activity."
           />
         ) : (
-          daily.apps.map((a) => (
+          appRows.map((a) => (
             <View key={a.package} style={{ gap: 8, paddingVertical: 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <AppIcon name={label(a.package)} />
@@ -215,23 +226,29 @@ function AndroidTrackingScreen() {
               </View>
               <View style={{ flexDirection: 'row', gap: 24 }}>
                 <View style={{ flex: 1 }}>
-                  <T v="display">{a.views}</T>
+                  <T v="display">{homeAppCount(daily, health, a.package) ?? '—'}</T>
                   <T v="caption" muted>
                     Videos
                   </T>
                 </View>
                 <View style={{ flex: 1 }}>
                   <T v="display">
-                    {minutes(health.usageAccessGranted ? a.usageMs : a.surfaceMs + a.unknownMs)}
+                    {a.local
+                      ? minutes(
+                          health.usageAccessGranted
+                            ? a.local.usageMs
+                            : a.local.surfaceMs + a.local.unknownMs,
+                        )
+                      : '—'}
                   </T>
                   <T v="caption" muted>
-                    Minutes
+                    Minutes on this phone
                   </T>
                 </View>
               </View>
-              {a.adViews > 0 && (
+              {a.local && a.local.adViews > 0 && (
                 <T v="caption" muted>
-                  {a.adViews} ads counted separately
+                  {a.local.adViews} ads counted separately
                 </T>
               )}
             </View>

@@ -1,6 +1,7 @@
 jest.mock('tracking-android', () => ({
   Tracking: {
     health: jest.fn(),
+    personalMeasurement: jest.fn(),
     daily: jest.fn(),
     refreshUsage: jest.fn(),
     localActivityDetails: jest.fn(),
@@ -18,6 +19,7 @@ import {
   resolveWrapEnd,
 } from '@/wrapped/model';
 import { Tracking, type Daily, type TrackingHealth } from 'tracking-android';
+import { invalidatePersonalData } from '@/data/personal';
 import { aggregateDay } from '@/sync/aggregate';
 import { latestWrapEnd, summarizeWrap, wrapBounds } from '@siddiq3/driftless-contracts/domain';
 const day = (localDate: string, views: number | null, deviceId = 'phone') => ({
@@ -222,3 +224,46 @@ test('announced wrap dates survive midnight while invalid and unfinished periods
     jest.useRealTimers();
   }
 });
+
+test.each(['daily', 'weekly'] as const)(
+  '%s recap uses merged platform counts rather than just this phone',
+  (period) => {
+    invalidatePersonalData();
+    const date = '2026-10-29';
+    const ig = 'com.instagram.android',
+      yt = 'com.google.android.youtube';
+    jest.mocked(Tracking.health).mockReturnValue({
+      usageAccessGranted: true,
+      apps: [
+        { package: ig, label: 'Instagram', installed: true },
+        { package: yt, label: 'YouTube', installed: true },
+      ],
+    } as TrackingHealth);
+    jest.mocked(Tracking.daily).mockImplementation((localDate) => ({
+      localDate: localDate!,
+      apps: [],
+      heartbeatMinutes: 0,
+      coverage: 0,
+    }));
+    jest.mocked(Tracking.personalMeasurement).mockImplementation((localDate) => ({
+      localDate,
+      views: localDate === date ? 115 : null,
+      minutes: localDate === date ? 20 : null,
+      appViews: { [ig]: localDate === date ? 70 : null, [yt]: localDate === date ? 45 : null },
+      status: 'synced',
+      scope: 'account:a',
+      source: 'account',
+      tz: 'UTC',
+    }));
+    jest.mocked(Tracking.localActivityDetails).mockReturnValue({ available: true, days: [] });
+    const recap = readPhoneWrap(period, date);
+    expect(recap.views.value).toBe(115);
+    expect(recap.apps.map((app) => [app.package, app.views])).toEqual([
+      [ig, 70],
+      [yt, 45],
+    ]);
+    expect(recap.hours).toBeNull(); // Cloud totals cannot invent raw hourly events.
+    jest.mocked(Tracking.personalMeasurement).mockReset();
+    invalidatePersonalData();
+  },
+);

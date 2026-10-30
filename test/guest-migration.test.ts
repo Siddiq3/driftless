@@ -53,33 +53,29 @@ beforeEach(async () => {
   jest.mocked(Tracking.selectDataScope).mockImplementation((s) => {
     native = s;
   });
-  jest
-    .mocked(Tracking.health)
-    .mockReturnValue({
-      usageAccessGranted: true,
-      apps: [{ package: 'com.instagram.android', installed: true, validated: false }],
-    } as never);
+  jest.mocked(Tracking.health).mockReturnValue({
+    usageAccessGranted: true,
+    apps: [{ package: 'com.instagram.android', installed: true, validated: false }],
+  } as never);
   jest.mocked(Tracking.storedDates).mockReturnValue([today()]);
-  jest
-    .mocked(Tracking.daily)
-    .mockImplementation((d) => ({
-      localDate: d!,
-      coverage: 1,
-      heartbeatMinutes: 5,
-      apps:
-        d === today()
-          ? [
-              {
-                package: 'com.instagram.android',
-                views: 50,
-                adViews: 0,
-                usageMs: 120000,
-                surfaceMs: 120000,
-                unknownMs: 0,
-              },
-            ]
-          : [],
-    }));
+  jest.mocked(Tracking.daily).mockImplementation((d) => ({
+    localDate: d!,
+    coverage: 1,
+    heartbeatMinutes: 5,
+    apps:
+      d === today()
+        ? [
+            {
+              package: 'com.instagram.android',
+              views: 50,
+              adViews: 0,
+              usageMs: 120000,
+              surfaceMs: 120000,
+              unknownMs: 0,
+            },
+          ]
+        : [],
+  }));
   failUpload = false;
   failRead = false;
   serverDays = [];
@@ -209,4 +205,46 @@ it('reopens its durable import journal after process termination and finishes re
   expect(serverDays).toHaveLength(1);
   expect(serverGoals).toHaveLength(1);
   expect(await db.getFirstAsync('SELECT state FROM guest_imports')).toEqual({ state: 'verified' });
+});
+
+it('keeps auth-window recording in the current guest source while JS remains quarantined', async () => {
+  await selectPersonalSession(null);
+  const guest = native;
+  await selectPersonalSession('google-fixture');
+  expect(storageScope()).toMatch(/^pending:/);
+  expect(native).toBe(guest);
+  const pending = await db.getFirstAsync<{ source_scope: string }>(
+    'SELECT source_scope FROM data_scopes WHERE scope=?',
+    storageScope(),
+  );
+  expect(pending?.source_scope).toBe(guest);
+  const beforeSelections = jest.mocked(Tracking.selectDataScope).mock.calls.length;
+  await resolvePersonalAccount('fixture-owner', incarnation, () => true, true);
+  expect(Tracking.importGuestScope).toHaveBeenCalledWith(guest, target, false);
+  const selections = jest.mocked(Tracking.selectDataScope).mock.invocationCallOrder;
+  const imports = jest.mocked(Tracking.importGuestScope).mock.invocationCallOrder;
+  const targetSelection = jest
+    .mocked(Tracking.selectDataScope)
+    .mock.calls.findIndex(([scope], index) => index >= beforeSelections && scope === target);
+  expect(targetSelection).toBeGreaterThanOrEqual(0);
+  expect(selections[targetSelection]).toBeLessThan(imports.at(-1)!);
+});
+
+it('does not verify a migration if server readback loses its platform breakdown', async () => {
+  jest.mocked(Tracking.health).mockReturnValue({
+    usageAccessGranted: true,
+    apps: [
+      { package: 'com.instagram.android', installed: true, validated: false },
+      { package: 'com.google.android.youtube', installed: true, validated: false },
+    ],
+  } as never);
+  jest.mocked(api.usageHistory).mockImplementation(async () => ({
+    days: serverDays.map(({ personalAppViews: _omitted, ...rest }) => rest),
+  }));
+  await expect(backupAccount(api, () => true)).rejects.toThrow('awaiting server verification');
+  expect(await db.getFirstAsync('SELECT state FROM guest_imports')).toEqual({ state: 'copied' });
+  jest.mocked(api.usageHistory).mockImplementation(async () => ({ days: serverDays }));
+  await backupAccount(api, () => true);
+  expect(await db.getFirstAsync('SELECT state FROM guest_imports')).toEqual({ state: 'verified' });
+  expect(serverDays).toHaveLength(1);
 });

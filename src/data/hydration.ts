@@ -18,11 +18,15 @@ export function hydratePersonalHistory(
 ): Promise<void> {
   const scope = scopeOf(db);
   const reset = () => {
-    try { return Tracking.accountUsageInfo(); } catch { return {cutoffMs:0,resetGeneration:0}; }
+    try {
+      return Tracking.accountUsageInfo();
+    } catch {
+      return { cutoffMs: 0, resetGeneration: 0 };
+    }
   };
-  const generation=reset().resetGeneration;
-  const originallyAllowed=allowed;
-  allowed=()=>originallyAllowed() && generation===reset().resetGeneration;
+  const generation = reset().resetGeneration;
+  const originallyAllowed = allowed;
+  allowed = () => originallyAllowed() && generation === reset().resetGeneration;
   const key = `${userId}:${scope}`;
   const existing = pending.get(key);
   if (existing) return existing;
@@ -45,26 +49,28 @@ export function hydratePersonalHistory(
         : retentionFrom;
     const result = await api.usageHistory(from, to, allowed);
     if (!allowed()) throw new Error('History restore cancelled');
-    const cutoff=reset().cutoffMs;
-    const cutoffDate=cutoff ? localDateOf(cutoff,currentTimeZone()) : null;
+    const cutoff = reset().cutoffMs;
+    const cutoffDate = cutoff ? localDateOf(cutoff, currentTimeZone()) : null;
     // Daily cloud snapshots cannot distinguish before/after reset within a day. Suppress the
     // cutoff day and earlier; never fabricate an after-reset portion of a remote day total.
-    const retained = result.days.filter((d) => d.localDate >= from && d.localDate <= to && (!cutoffDate || d.localDate>cutoffDate));
+    const retained = result.days.filter(
+      (d) => d.localDate >= from && d.localDate <= to && (!cutoffDate || d.localDate > cutoffDate),
+    );
     // Both caches serve personal screens only. Never write these totals to the recorder or
     // to the competitive `views` upload field. Legacy server rows fall back to approved views.
     const personalDays = retained.map((day) => ({ ...day, views: day.personalViews ?? day.views }));
     const source = await deviceId(db, randomUUID);
-    if(api.accountUsageHistory && scope.startsWith('account:')) {
-      const accounting=await api.accountUsageHistory(from,to,source,allowed);
-      if(!allowed()) throw new Error('History restore cancelled');
-      Tracking.installAccountHistory(JSON.stringify(accounting.days),scope);
+    if (api.accountUsageHistory && scope.startsWith('account:')) {
+      const accounting = await api.accountUsageHistory(from, to, source, allowed);
+      if (!allowed()) throw new Error('History restore cancelled');
+      Tracking.installAccountHistory(JSON.stringify(accounting.days), scope);
     }
     Tracking.setSourceDevice(source);
     await db.withExclusiveTransactionAsync(async (tx) => {
       for (const d of personalDays) {
         if (d.localDate < from || d.localDate > to) continue;
         await tx.runAsync(
-          `INSERT INTO daily_cache(scope,local_date,device_id,platform,tz,views,ad_views,minutes,coverage,rev) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(scope,local_date,device_id) DO UPDATE SET platform=excluded.platform,tz=excluded.tz,views=excluded.views,ad_views=excluded.ad_views,minutes=excluded.minutes,coverage=excluded.coverage,rev=excluded.rev WHERE excluded.rev>=daily_cache.rev`,
+          `INSERT INTO daily_cache(scope,local_date,device_id,platform,tz,views,ad_views,minutes,coverage,rev,app_views_json) VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(scope,local_date,device_id) DO UPDATE SET platform=excluded.platform,tz=excluded.tz,views=excluded.views,ad_views=excluded.ad_views,minutes=excluded.minutes,coverage=excluded.coverage,rev=excluded.rev,app_views_json=excluded.app_views_json WHERE excluded.rev>=daily_cache.rev`,
           scope,
           d.localDate,
           d.deviceId,
@@ -75,6 +81,7 @@ export function hydratePersonalHistory(
           d.minutes,
           d.coverage,
           d.rev,
+          d.personalAppViews ? JSON.stringify(d.personalAppViews) : null,
         );
       }
       if (!allowed()) throw new Error('History restore cancelled');

@@ -23,7 +23,7 @@ import { stage, flush } from '@/sync/engine';
 import { sqliteSyncRepo } from '@/sync/sqliteRepo';
 import { getStorageDb } from '@/db';
 import { migrate, MIGRATIONS } from '@/db/migrations';
-import { selectStorageScope, scopedDatabase } from '@/db/scope';
+import { storageScope, selectStorageScope, scopedDatabase } from '@/db/scope';
 import { selectPersonalSession, resolvePersonalAccount } from '@/data/session';
 import { hydratePersonalHistory } from '@/data/hydration';
 import {
@@ -98,13 +98,15 @@ it('sign-in quarantines legacy and guest data; only the verified incarnation sel
     3,
   );
   await selectPersonalSession('google-a');
-  expect(nativeScope).toMatch(/^pending:/);
+  expect(storageScope()).toMatch(/^pending:/);
+  expect(nativeScope).toMatch(/^guest:/);
   const account = await resolvePersonalAccount('a', firstIncarnation, () => true);
   expect(await loadGoals(account)).toEqual([]);
   await saveGoal(account, { goalId: id, metric: 'views', dailyLimit: 10, enabled: true });
   await selectPersonalSession(null);
   await selectPersonalSession('google-a');
-  expect(nativeScope).toMatch(/^pending:/);
+  expect(storageScope()).toMatch(/^pending:/);
+  expect(nativeScope).toMatch(/^guest:/);
   const same = await resolvePersonalAccount('a', firstIncarnation, () => true);
   expect(await loadGoals(same)).toHaveLength(1);
   const fresh = await resolvePersonalAccount('a', secondIncarnation, () => true);

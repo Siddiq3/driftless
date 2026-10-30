@@ -24,6 +24,11 @@ export function ActivityChart({ data, period }: { data: ActivityData; period: Ac
           <T v="label" style={{ color: '#B0ACA0', textAlign: 'center' }}>
             {period === 'daily' ? 'Hourly detail unavailable' : 'No confirmed counts yet'}
           </T>
+          {data.hourlyUnavailableReason && (
+            <T v="caption" style={{ color: '#B0ACA0', textAlign: 'center' }}>
+              {data.hourlyUnavailableReason}
+            </T>
+          )}
         </View>
       ) : (
         <>

@@ -106,6 +106,13 @@ export function FocusHero({ state, refresh }: { state: ProgressState; refresh: (
           </View>
         )}
       </View>
+      {state.state === 'ok' && state.error && (
+        <Notice
+          tone="warn"
+          title="Activity not updated"
+          body="Your saved counts are shown. Refresh will retry when you return."
+        />
+      )}
       {state.state === 'error' && (
         <>
           <Button label="Try again" onPress={refresh} />

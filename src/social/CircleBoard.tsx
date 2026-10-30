@@ -6,7 +6,7 @@ import { addDays, localDateOf } from '@siddiq3/driftless-contracts/domain';
 import type { v1 } from '@siddiq3/driftless-contracts';
 import { AppState, Clipboard, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useApi } from '@/api/useApi';
-import { ApiError, type ApiClient } from '@/api/client';
+import { type ApiClient } from '@/api/client';
 import { useSession } from '@/auth/session';
 import { useAccountBackup } from '@/sync/AccountBackupProvider';
 import { FriendInviteSheet } from './FriendInviteSheet';
@@ -32,8 +32,10 @@ function WarBoard({ api }: { api: ApiClient | null }) {
   const [today, setToday] = useState(() => localDateOf(Date.now(), currentTimeZone()));
   const [date, setDate] = useState(today),
     [data, setData] = useState<v1.FriendsDailyResponse | null>(
-      () => api?.cachedBattleDaily?.(today) ?? null,
+      () => api?.staleBattleDaily?.(today) ?? api?.cachedBattleDaily?.(today) ?? null,
     );
+  const [requestRunning, setRequestRunning] = useState(false);
+  const [guestLoaded, setGuestLoaded] = useState(false);
   const [guestViews, setGuestViews] = useState<number | null>(null);
   const [issue, setIssue] = useState<string | null>(null),
     [inviteOpen, setInviteOpen] = useState(false),
@@ -55,12 +57,16 @@ function WarBoard({ api }: { api: ApiClient | null }) {
         loading = false;
       setData(
         (previous) =>
-          api?.cachedBattleDaily?.(date) ?? (previous?.localDate === date ? previous : null),
+          (previous?.localDate === date ? previous : null) ??
+          api?.staleBattleDaily?.(date) ??
+          api?.cachedBattleDaily?.(date) ??
+          null,
       );
       setIssue(null);
       const read = async (fresh = false) => {
         if (!alive || loading) return;
         loading = true;
+        setRequestRunning(true);
         const nextToday = localDateOf(Date.now(), currentTimeZone());
         setToday(nextToday);
         // A board left on Today follows midnight; explicitly chosen historical dates stay put.
@@ -74,16 +80,18 @@ function WarBoard({ api }: { api: ApiClient | null }) {
             }
           } else {
             refreshPersonalData(1);
-            if (alive) setGuestViews(personalDay(date).views);
+            if (alive) {
+              setGuestViews(personalDay(date).views);
+              setGuestLoaded(true);
+            }
           }
-        } catch (e) {
+        } catch {
           if (alive) {
-            if (e instanceof ApiError && [401, 403, 404, 409].includes(e.status ?? 0))
-              setData(null);
             setIssue('Counts could not be updated. Previously loaded counts may be out of date.');
           }
         } finally {
           loading = false;
+          if (alive) setRequestRunning(false);
         }
       };
       refresh.current = () => void read(true);
@@ -107,16 +115,20 @@ function WarBoard({ api }: { api: ApiClient | null }) {
     previousBackup.current = backup.status;
     if (changed && backup.status?.state === 'saved') refresh.current();
   }, [backup.status]);
+  const visibleData = data?.localDate === date ? data : null;
+  const hasData = api ? Boolean(visibleData) : guestLoaded;
+  const initialLoading = !issue && !hasData;
+  const refreshing = requestRunning && hasData;
   const selfName = session.status === 'signedIn' ? session.displayName || 'You' : 'You';
   const rows = rankBattle([
     {
       id: 'self',
       name: 'You',
       handle: 'You',
-      views: api ? (data?.self.views ?? null) : guestViews,
+      views: api ? (visibleData?.self.views ?? null) : guestViews,
       self: true,
     },
-    ...(data?.friends ?? []).map((friend) => ({
+    ...(visibleData?.friends ?? []).map((friend) => ({
       id: friend.userId,
       name: friend.displayName || `@${friend.handle}`,
       handle: friend.handle,
@@ -218,34 +230,49 @@ function WarBoard({ api }: { api: ApiClient | null }) {
           <Icon name="chevron" color={C.muted} />
         </Pressable>
       </View>
-      {rows.map((row) => (
-        <View key={row.id} style={[styles.row, row.self && { backgroundColor: C.row }]}>
-          <T accessibilityLabel={row.rank ? `Rank ${row.rank}` : 'Unranked'} style={styles.rank}>
-            {row.rank === 1
-              ? '🥇'
-              : row.rank === 2
-                ? '🥈'
-                : row.rank === 3
-                  ? '🥉'
-                  : (row.rank ?? '—')}
-          </T>
-          <Avatar name={row.self ? selfName : row.name} color={row.self ? '#008E80' : '#009EAC'} />
-          <T style={styles.person}>{row.name}</T>
-          <T
-            accessibilityLabel={
-              row.self
-                ? `Your daily count: ${row.views ?? 0}${row.views === null ? ' (count unavailable)' : ''}`
-                : `Daily count for ${row.handle}: ${row.views ?? 0}${row.views === null ? ' (count unavailable)' : ''}`
-            }
-            style={styles.count}
-          >
-            {row.views?.toLocaleString() ?? '0'}
-          </T>
+      {initialLoading && (
+        <View
+          accessibilityRole="progressbar"
+          accessible
+          accessibilityLabel="Loading your counts"
+          style={{ padding: 24 }}
+        >
+          <T>Loading your counts…</T>
         </View>
-      ))}
+      )}
+      <View accessibilityState={{ busy: refreshing }}>
+        {(!initialLoading ? rows : []).map((row) => (
+          <View key={row.id} style={[styles.row, row.self && { backgroundColor: C.row }]}>
+            <T accessibilityLabel={row.rank ? `Rank ${row.rank}` : 'Unranked'} style={styles.rank}>
+              {row.rank === 1
+                ? '🥇'
+                : row.rank === 2
+                  ? '🥈'
+                  : row.rank === 3
+                    ? '🥉'
+                    : (row.rank ?? '—')}
+            </T>
+            <Avatar
+              name={row.self ? selfName : row.name}
+              color={row.self ? '#008E80' : '#009EAC'}
+            />
+            <T style={styles.person}>{row.name}</T>
+            <T
+              accessibilityLabel={
+                row.self
+                  ? `Your daily count: ${row.views ?? 0}${row.views === null ? ' (count unavailable)' : ''}`
+                  : `Daily count for ${row.handle}: ${row.views ?? 0}${row.views === null ? ' (count unavailable)' : ''}`
+              }
+              style={styles.count}
+            >
+              {row.views?.toLocaleString() ?? '0'}
+            </T>
+          </View>
+        ))}
+      </View>
       <View style={{ paddingHorizontal: 24 }}>
         {prompts
-          .slice(0, Math.max(0, 4 - (data?.friends.length ?? 0)))
+          .slice(0, Math.max(0, 4 - (visibleData?.friends.length ?? 0)))
           .map(({ label, emoji }, index) => (
             <View key={label} style={styles.inviteRow}>
               <T style={{ width: 30, color: '#FFF9ED', fontSize: 16 }}>{rows.length + index + 1}</T>

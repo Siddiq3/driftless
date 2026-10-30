@@ -74,6 +74,29 @@ export function aggregateDay(
     platform: 'android',
     deviceId,
     personalViews,
+    ...(personalViews === null ||
+    recordedViews > 100_000 ||
+    personalRows.some(
+      (app) =>
+        app.views > 0 &&
+        app.package !== 'com.instagram.android' &&
+        app.package !== 'com.google.android.youtube',
+    )
+      ? {}
+      : {
+          personalAppViews: Object.fromEntries(
+            [...supported]
+              .filter(
+                (pkg) => pkg === 'com.instagram.android' || pkg === 'com.google.android.youtube',
+              )
+              .map((pkg) => [
+                pkg,
+                personalRows
+                  .filter((app) => app.package === pkg)
+                  .reduce((sum, app) => sum + app.views, 0),
+              ]),
+          ),
+        }),
     views: views === null ? null : Math.min(5000, views),
     adViews: adViews === null ? null : Math.min(5000, adViews),
     minutes,
@@ -92,5 +115,6 @@ export function valuesKey(d: DayValues): string {
     d.minutes,
     d.coverage,
     d.personalViews ?? null,
+    Object.entries(d.personalAppViews ?? {}).sort(),
   ]);
 }

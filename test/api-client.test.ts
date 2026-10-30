@@ -681,3 +681,50 @@ it('invalidates War snapshots on writes, access loss and signed-in generation ch
   invalidateEntitlement();
   expect(a.cachedBattleDaily('2026-10-29')).toBeNull();
 });
+
+it('retains a display-only War snapshot after TTL expiry without extending network freshness', async () => {
+  const clock = jest.spyOn(Date, 'now').mockReturnValue(100000);
+  try {
+    const f = jest.fn().mockResolvedValue(resp(200, warDay()));
+    const [a, b] = sharedClientPair(f);
+    await a.battleDaily('2026-10-29');
+    clock.mockReturnValue(115000);
+    expect(b.cachedBattleDaily('2026-10-29')).toBeNull();
+    expect(b.staleBattleDaily('2026-10-29')?.self.views).toBe(12);
+    expect(b.staleBattleDaily('2026-10-28')).toBeNull();
+    f.mockRejectedValueOnce(new Error('offline'));
+    await expect(b.battleDaily('2026-10-29')).rejects.toMatchObject({ code: 'network' });
+    expect(b.staleBattleDaily('2026-10-29')?.self.views).toBe(12);
+    expect(f).toHaveBeenCalledTimes(2);
+    const snapshot = b.staleBattleDaily('2026-10-29')!;
+    snapshot.self.views = 900;
+    expect(a.staleBattleDaily('2026-10-29')?.self.views).toBe(12);
+    invalidateEntitlement();
+    expect(a.staleBattleDaily('2026-10-29')).toBeNull();
+  } finally {
+    clock.mockRestore();
+  }
+});
+
+it('an older War response cannot overwrite a newer response after invalidation', async () => {
+  let finish!: (response: Response) => void;
+  const f = jest
+    .fn()
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    )
+    .mockResolvedValue(resp(200, { ...warDay(), self: { ...warDay().self, views: 25 } }));
+  const [a, b] = sharedClientPair(f);
+  const old = a.battleDaily('2026-10-29');
+  const cancelled = expect(old).rejects.toMatchObject({ code: 'sync_cancelled' });
+  await Promise.resolve();
+  await Promise.resolve();
+  b.clearReadReuse();
+  await b.battleDaily('2026-10-29');
+  finish(resp(200, warDay()));
+  await cancelled;
+  expect(b.staleBattleDaily('2026-10-29')?.self.views).toBe(25);
+});

@@ -43,3 +43,25 @@ test('home keeps unavailable counts unknown and does not invent video counts for
   };
   expect(homeAppCount(daily, minutesOnly, 'youtube')).toBeNull();
 });
+
+test('home platform counts prefer merged account attribution and preserve unknown legacy attribution', () => {
+  const health = {
+    apps: [{ package: 'com.instagram.android' }, { package: 'com.google.android.youtube' }],
+  } as any;
+  const daily = {
+    localDate: '2026-10-29',
+    heartbeatMinutes: 0,
+    coverage: 0,
+    apps: [],
+    personalAppViews: { 'com.instagram.android': 70, 'com.google.android.youtube': 45 },
+  };
+  expect(homeAppCount(daily, health, 'com.instagram.android')).toBe(70);
+  expect(homeAppCount(daily, health, 'com.google.android.youtube')).toBe(45);
+  expect(
+    homeAppCount(
+      { ...daily, personalAppViews: { 'com.instagram.android': null } },
+      health,
+      'com.instagram.android',
+    ),
+  ).toBeNull();
+});

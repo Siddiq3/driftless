@@ -52,6 +52,7 @@ export function readPhoneWrap(period: WrapPeriod, end: string): Recap {
   const packages = new Set(health.apps.map((app) => app.package));
   const days = [];
   const appTotals = new Map<string, number>();
+  const unknownApps = new Set<string>();
   for (let date = bounds.previousFrom; date <= end; date = addDays(date, 1)) {
     const daily = personalRawDay(date);
     const localApps = daily.apps.filter((app) => packages.has(app.package));
@@ -63,8 +64,15 @@ export function readPhoneWrap(period: WrapPeriod, end: string): Recap {
     };
     days.push(day);
     if (date >= bounds.from && day.views !== null) {
-      for (const app of localApps)
-        appTotals.set(app.package, (appTotals.get(app.package) ?? 0) + app.views);
+      if (daily.personalAppViews) {
+        for (const pkg of packages) {
+          const views = daily.personalAppViews[pkg];
+          if (views == null) unknownApps.add(pkg);
+          else appTotals.set(pkg, (appTotals.get(pkg) ?? 0) + views);
+        }
+      } else
+        for (const app of localApps)
+          appTotals.set(app.package, (appTotals.get(app.package) ?? 0) + app.views);
     }
   }
   let details: WrapDetails = { available: false, days: [] };
@@ -78,11 +86,13 @@ export function readPhoneWrap(period: WrapPeriod, end: string): Recap {
     period,
     end,
     days,
-    [...appTotals].map(([pkg, views]) => ({
-      package: pkg,
-      views,
-      label: health.apps.find((a) => a.package === pkg)?.label ?? 'App',
-    })),
+    [...appTotals]
+      .filter(([pkg]) => !unknownApps.has(pkg))
+      .map(([pkg, views]) => ({
+        package: pkg,
+        views,
+        label: health.apps.find((a) => a.package === pkg)?.label ?? 'App',
+      })),
     details,
   );
 }

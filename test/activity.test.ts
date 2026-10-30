@@ -199,3 +199,56 @@ test('restored totals alone cannot invent local hourly detail or a zero day', ()
   expect(result.views.value).toBe(50);
   expect(result.hourlyAvailable).toBe(false);
 });
+
+test('platform rows use the same merged measurements as daily and weekly totals', () => {
+  const raw = { ...daily('2026-10-29', 20), personalAppViews: { instagram: 70, youtube: 45 } };
+  const measure = () => ({ views: 115, minutes: 20 });
+  for (const period of ['daily', 'weekly'] as const) {
+    const result = activityData(
+      period,
+      0,
+      '2026-10-29',
+      health,
+      (date) =>
+        date === raw.localDate
+          ? raw
+          : { localDate: date, heartbeatMinutes: 0, coverage: 0, apps: [] },
+      noDetails,
+      (date) => (date === raw.localDate ? measure() : { views: null, minutes: null }),
+    );
+    expect(result.views.value).toBe(115);
+    expect(result.apps.map((app) => [app.package, app.views])).toEqual([
+      ['instagram', 70],
+      ['youtube', 45],
+    ]);
+  }
+});
+
+test('legacy restored totals do not become invented zero per-app counts', () => {
+  const raw = { ...daily('2026-10-29', 20), personalAppViews: { instagram: null, youtube: null } };
+  const result = activityData(
+    'daily',
+    0,
+    raw.localDate,
+    health,
+    () => raw,
+    noDetails,
+    () => ({ views: 115, minutes: 20 }),
+  );
+  expect(result.views.value).toBe(115);
+  expect(result.apps.every((app) => app.views === null)).toBe(true);
+});
+
+test('restored totals explain why hourly records are missing instead of fabricating bars', () => {
+  const result = activityData(
+    'daily',
+    0,
+    '2026-10-30',
+    health,
+    (localDate) => ({ localDate, heartbeatMinutes: 0, coverage: 0, apps: [] }),
+    { available: true, days: [] },
+    () => ({ views: 50, minutes: null }),
+  );
+  expect(result.hourlyUnavailableReason).toContain('Hourly records are not stored on this phone');
+  expect(result.bars.every((bar) => bar.value === null)).toBe(true);
+});

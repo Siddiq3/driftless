@@ -161,13 +161,15 @@ test('active account screens and backup stay unmounted until local incarnation s
   expect(discovery.registerAccount).not.toHaveBeenCalled();
 });
 
-test('interrupted deletion requires recovery before automatic fresh registration', async () => {
+test('interrupted deletion requires recovery and explicit creation before fresh registration', async () => {
   state = { state: 'deleting', incarnation };
   await mount();
   expect(visible()).not.toContain('private screens');
   await press('Resume deletion');
   expect(bound.deleteAccount).toHaveBeenCalledTimes(1);
   expect(createApiClient).toHaveBeenCalledWith(expect.objectContaining({ incarnation }));
+  expect(discovery.registerAccount).not.toHaveBeenCalled();
+  await press('Create a new account');
   expect(discovery.registerAccount).toHaveBeenCalledWith(expect.any(String), incarnation);
   expect(visible()).toContain('private screens');
 });
@@ -308,9 +310,13 @@ test('returning accounts preserve saved timezone and restore data without regist
   expect(visible()).toContain('private screens');
 });
 
-test('previously deleted accounts get a fresh dataset with the previous incarnation guard', async () => {
+test('previously deleted accounts require explicit creation and retain the incarnation guard', async () => {
   state = { state: 'deleted', incarnation };
   await mount();
+  expect(discovery.registerAccount).not.toHaveBeenCalled();
+  expect(resolvePersonalAccount).not.toHaveBeenCalled();
+  expect(visible()).not.toContain('private screens');
+  await press('Create a new account');
   expect(discovery.registerAccount).toHaveBeenCalledWith(expect.any(String), incarnation);
   expect(visible()).toContain('private screens');
 });

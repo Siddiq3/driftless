@@ -27,23 +27,26 @@ export function selectPersonalSession(identity: string | null): Promise<void> {
           candidate,
         ));
       const guest = candidate?.startsWith('guest:') && !claimed ? candidate : null;
-      const scope = identity ? `pending:${randomUUID()}` : guest ? guest : `guest:${randomUUID()}`;
+      // Keep recording in an unowned guest dataset while JS hides account screens.
+      // A pending UI scope must never become an orphaned recording source.
+      const recordingScope = guest ?? `guest:${randomUUID()}`;
+      const scope = identity ? `pending:${randomUUID()}` : recordingScope;
       await db.runAsync('INSERT OR IGNORE INTO data_scopes(scope) VALUES (?)', scope);
-      if (identity && guest) {
+      await db.runAsync('INSERT OR IGNORE INTO data_scopes(scope) VALUES (?)', recordingScope);
+      if (identity) {
         await db.runAsync(
           'UPDATE data_scopes SET source_scope=?,identity_key=? WHERE scope=?',
-          guest,
+          recordingScope,
           identity,
           scope,
         );
       }
-      if (!identity)
-        await db.runAsync(
-          "INSERT OR REPLACE INTO settings VALUES ('available_guest_scope',?)",
-          scope,
-        );
+      await db.runAsync(
+        "INSERT OR REPLACE INTO settings VALUES ('available_guest_scope',?)",
+        recordingScope,
+      );
       Tracking.setLimits([]);
-      Tracking.selectDataScope(scope);
+      Tracking.selectDataScope(recordingScope);
       selectStorageScope(scope);
       await db.runAsync("INSERT OR REPLACE INTO settings VALUES ('active_data_scope', ?)", scope);
     });
@@ -114,6 +117,8 @@ export async function resolvePersonalAccount(
             check();
           });
         }
+        check();
+        if (Tracking.dataScope() !== target) Tracking.selectDataScope(target);
         const imports = await raw.getAllAsync<{ source_scope: string }>(
           "SELECT source_scope FROM guest_imports WHERE target_scope=? AND state!='verified'",
           target,
@@ -142,7 +147,7 @@ export async function resolvePersonalAccount(
       check();
       if (storageScope() !== target) {
         Tracking.setLimits([]);
-        Tracking.selectDataScope(target);
+        if (Tracking.dataScope() !== target) Tracking.selectDataScope(target);
         selectStorageScope(target);
       }
       await raw.runAsync("INSERT OR REPLACE INTO settings VALUES ('active_data_scope', ?)", target);

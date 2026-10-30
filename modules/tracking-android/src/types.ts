@@ -45,6 +45,8 @@ export type DailyApp = {
 };
 /** coverage: share of the day the accessibility counter was running (0..1). */
 export type Daily = {
+  /** Personal display only; never restaged as local observations. */
+  personalAppViews?: Record<string, number | null>;
   recordedTz?: string;
   measurementStatus?: 'validated' | 'experimental' | 'unavailable';
   usageObserved?: boolean;
@@ -89,6 +91,7 @@ export type WrapDetails = {
 export type MemePreferences = { enabled: boolean };
 
 export type PersonalMeasurement = {
+  appViews?: Record<string, number | null>;
   localDate: string;
   views: number | null;
   minutes: number | null;

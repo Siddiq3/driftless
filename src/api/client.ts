@@ -56,6 +56,7 @@ type ReadEntry = { value: unknown; savedAt: number; once: boolean; maxAge?: numb
 type ReadState = {
   pending: Map<string, Promise<unknown>>;
   recent: Map<string, ReadEntry>;
+  battleDisplay: Map<string, unknown>;
   revision: number;
   writes: number;
 };
@@ -71,7 +72,13 @@ export function createApiClient(o: ApiClientOptions) {
 
   let shared = sharedReads.get(o.getAccessToken);
   if (!shared) {
-    shared = { pending: new Map(), recent: new Map(), revision: 0, writes: 0 };
+    shared = {
+      pending: new Map(),
+      recent: new Map(),
+      battleDisplay: new Map(),
+      revision: 0,
+      writes: 0,
+    };
     sharedReads.set(o.getAccessToken, shared);
   }
   const reads = shared;
@@ -139,11 +146,20 @@ export function createApiClient(o: ApiClientOptions) {
     const previous = reads.pending.get(pendingKey);
     if (previous) {
       const result = (await previous) as { data: z.infer<S>; etag: string | null };
-      if (credentialGeneration !== entitlementGeneration() || (init.allowed && !init.allowed()))
+      if (
+        credentialGeneration !== entitlementGeneration() ||
+        (init.allowed && !init.allowed()) ||
+        (path.startsWith('/v1/battles/daily?') && revision !== reads.revision)
+      )
         throw new ApiError(409, 'sync_cancelled', 'Request cancelled');
       return copyResponse(result);
     }
-    const task = send(method, path, schema, init)
+    const task = send(
+      method,
+      path,
+      schema,
+      path.startsWith('/v1/battles/daily?') ? { ...init, allowed: undefined } : init,
+    )
       .then((result) => {
         if (reads.writes === 0 && revision === reads.revision && reusable(path)) {
           // Expired entries are discarded on every successful reusable read, keeping memory bounded.
@@ -151,6 +167,12 @@ export function createApiClient(o: ApiClientOptions) {
           for (const [entryKey, entry] of reads.recent) {
             if (now < entry.savedAt || now - entry.savedAt >= (entry.maxAge ?? READ_REUSE_MS))
               reads.recent.delete(entryKey);
+          }
+          if (path.startsWith('/v1/battles/daily?')) {
+            reads.battleDisplay.delete(key);
+            reads.battleDisplay.set(key, copyResponse(result));
+            if (reads.battleDisplay.size > 32)
+              reads.battleDisplay.delete(reads.battleDisplay.keys().next().value!);
           }
           reads.recent.set(key, {
             value: copyResponse(result),
@@ -165,7 +187,14 @@ export function createApiClient(o: ApiClientOptions) {
         if (reads.pending.get(pendingKey) === task) reads.pending.delete(pendingKey);
       });
     reads.pending.set(pendingKey, task);
-    return task;
+    const result = await task;
+    if (
+      credentialGeneration !== entitlementGeneration() ||
+      (init.allowed && !init.allowed()) ||
+      (path.startsWith('/v1/battles/daily?') && revision !== reads.revision)
+    )
+      throw new ApiError(409, 'sync_cancelled', 'Request cancelled');
+    return result;
   }
 
   async function send<S extends z.ZodType>(
@@ -371,6 +400,13 @@ export function createApiClient(o: ApiClientOptions) {
           { body: { scoreConsent: true }, allowed },
         )
       ).data,
+    staleBattleDaily: (date: string): v1.FriendsDailyResponse | null => {
+      if (credentialGeneration !== entitlementGeneration()) return null;
+      const cached = reads.battleDisplay.get(readKey(battlePath(date))) as
+        | { data: v1.FriendsDailyResponse }
+        | undefined;
+      return cached ? copyResponse(cached.data) : null;
+    },
     cachedBattleDaily: (date: string): v1.FriendsDailyResponse | null => {
       const cached = cachedRead(battlePath(date)) as { data: v1.FriendsDailyResponse } | undefined;
       return cached?.data ?? null;

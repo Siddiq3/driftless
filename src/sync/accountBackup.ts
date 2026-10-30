@@ -1,3 +1,4 @@
+import { sameAppViews } from '@/api/personalUsage';
 import { syncAccountUsage } from './accountUsage';
 import { ensureSocialProfile } from '@/social/profile';
 import { ApiError, type ApiClient } from '@/api/client';
@@ -130,8 +131,9 @@ async function synchronize(
         rev: number;
         views: number | null;
         minutes: number | null;
+        app_views_json: string | null;
       }>(
-        'SELECT rev,views,minutes FROM daily_cache WHERE scope=? AND local_date=? AND device_id=?',
+        'SELECT rev,views,minutes,app_views_json FROM daily_cache WHERE scope=? AND local_date=? AND device_id=?',
         scopeOf(db),
         day.local_date,
         sent.deviceId,
@@ -140,7 +142,11 @@ async function synchronize(
         !remote ||
         remote.rev < day.rev ||
         remote.views !== (sent.personalViews ?? sent.views) ||
-        remote.minutes !== sent.minutes
+        remote.minutes !== sent.minutes ||
+        !sameAppViews(
+          remote.app_views_json ? JSON.parse(remote.app_views_json) : null,
+          sent.personalAppViews,
+        )
       )
         throw new Error('Guest history is awaiting server verification');
     }

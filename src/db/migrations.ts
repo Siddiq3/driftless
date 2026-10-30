@@ -129,6 +129,11 @@ INSERT INTO data_scopes(scope,backend_owner) SELECT 'legacy', MIN(value) FROM se
 INSERT OR IGNORE INTO data_scopes(scope) VALUES ('legacy');
 `,
   },
+  {
+    version: 6,
+    name: 'personal_app_history',
+    sql: 'ALTER TABLE daily_cache ADD COLUMN app_views_json TEXT;',
+  },
 ];
 
 /** Subset of expo-sqlite's SQLiteDatabase used here (keeps the runner unit-testable). */

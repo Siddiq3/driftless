@@ -65,6 +65,7 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
         migrateScopes(db, fresh = true)
         AccountUsage.create(db)
         db.execSQL("CREATE TABLE guest_event_archive AS SELECT * FROM events WHERE 0")
+        db.execSQL("ALTER TABLE synced_daily ADD COLUMN app_views_json TEXT")
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -73,6 +74,7 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
         if (oldVersion < 3) migrateScopes(db, fresh = false)
         if (oldVersion < 4) AccountUsage.create(db)
         if (oldVersion < 5) db.execSQL("CREATE TABLE guest_event_archive AS SELECT * FROM events WHERE 0")
+        if (oldVersion < 6) db.execSQL("ALTER TABLE synced_daily ADD COLUMN app_views_json TEXT")
     }
 
     private fun ensureDaily(db: SQLiteDatabase, date: String, pkg: String) {
@@ -361,13 +363,13 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
 
     @Synchronized
     fun usageIntervals(start: Long, end: Long): List<Pair<Long, Long>> = readableDatabase.rawQuery(
-        "SELECT MAX(start_ms, ?), MIN(COALESCE(end_ms, ?), ?) FROM scope_intervals WHERE scope = ? AND start_ms < ? AND COALESCE(end_ms, ?) > ?",
+        "SELECT MAX(start_ms, CAST(? AS INTEGER)), MIN(COALESCE(end_ms, CAST(? AS INTEGER)), CAST(? AS INTEGER)) FROM scope_intervals WHERE scope = ? AND start_ms < CAST(? AS INTEGER) AND COALESCE(end_ms, CAST(? AS INTEGER)) > CAST(? AS INTEGER)",
         arrayOf(start.toString(), end.toString(), end.toString(), activeScope(), end.toString(), end.toString(), start.toString()),
     ).use { c -> buildList { while(c.moveToNext()) add(c.getLong(0) to c.getLong(1)) } }
 
     @Synchronized
     fun accountingIntervals(start: Long,end: Long): List<Pair<Long,Long>> = readableDatabase.rawQuery(
-        "SELECT MAX(start_ms,?),MIN(COALESCE(end_ms,?),?) FROM account_intervals WHERE scope=? AND start_ms<? AND COALESCE(end_ms,?)>?",
+        "SELECT MAX(start_ms,CAST(? AS INTEGER)),MIN(COALESCE(end_ms,CAST(? AS INTEGER)),CAST(? AS INTEGER)) FROM account_intervals WHERE scope=? AND start_ms<CAST(? AS INTEGER) AND COALESCE(end_ms,CAST(? AS INTEGER))>CAST(? AS INTEGER)",
         arrayOf(start.toString(),end.toString(),end.toString(),activeScope(),end.toString(),end.toString(),start.toString())
     ).use { c -> buildList { while(c.moveToNext()) add(c.getLong(0) to c.getLong(1)) } }
 
@@ -387,6 +389,7 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
                 if(account.cutoff()>0 && d.getString("localDate")<=app.driftless.tracking.core.Recorder.localDate(account.cutoff(),account.zone())) continue
                 val v = ContentValues().apply {
                     put("scope", expectedScope); put("local_date", d.getString("localDate")); put("device_id", d.getString("deviceId")); put("tz", d.getString("tz")); put("rev", d.getLong("rev")); put("coverage", d.getDouble("coverage"))
+                    put("app_views_json", d.optJSONObject("personalAppViews")?.toString())
                     if (d.isNull("views")) putNull("views") else put("views", d.getInt("views"))
                     if (d.isNull("minutes")) putNull("minutes") else put("minutes", d.getInt("minutes"))
                 }
@@ -403,6 +406,48 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
         var zone=ZoneId.systemDefault().id;var status="validated";var observed=false;var rows=0
         while(c.moveToNext()) {rows++;zone=c.getString(0);if(c.getString(1)!="validated") status="experimental";if(c.getInt(2)>0)observed=true}
         mapOf("recordedTz" to zone,"measurementStatus" to if(rows==0) "unavailable" else status,"usageObserved" to observed)
+    }
+
+    /** Private display breakdown. Local and cloud copies of one device overlap, never add. */
+    private fun personalAppViews(date: String, packages: Set<String>, own: List<DailyRow>, total: Long?): Map<String, Int?> {
+        val source = readableDatabase.rawQuery("SELECT value FROM tracking_meta WHERE key='device_id'", null).use { if(it.moveToFirst()) it.getString(0) else "" }
+        val devices = mutableMapOf<String, Map<String, Int?>?>()
+        val deviceTotals = mutableMapOf<String, Long>()
+        if (own.isNotEmpty() && (heartbeatMinutes(date)>0 || own.sumOf { it.views }>0))
+            devices[source] = packages.associateWith { pkg -> own.firstOrNull { it.pkg==pkg }?.views ?: 0 }
+        readableDatabase.rawQuery("SELECT device_id,views,app_views_json FROM synced_daily WHERE scope=? AND local_date=?", arrayOf(activeScope(),date)).use { c ->
+            while(c.moveToNext()) {
+                val id=c.getString(0)
+                if(id==source && own.isNotEmpty() || c.isNull(1)) continue
+                val apps=if(c.isNull(2)) null else org.json.JSONObject(c.getString(2))
+                deviceTotals[id]=c.getLong(1)
+                devices[id]=apps?.let { values -> packages.associateWith { pkg -> if(!values.has(pkg)) 0 else if(values.isNull(pkg)) null else values.getInt(pkg) } }
+            }
+        }
+        if(account.active() && (account.cutoff()==0L || date>app.driftless.tracking.core.Recorder.localDate(account.cutoff(),account.zone()))) {
+            val snapshots=account.meta("snapshot:$date")?.optJSONObject("devices")
+            if(snapshots!=null) for(id in snapshots.keys()) {
+                val apps=snapshots.getJSONObject(id).optJSONObject("apps") ?: continue
+                val values=packages.associateWith { pkg -> apps.optJSONObject(pkg).let { if(it==null) 0 else if(it.isNull("views")) null else it.getInt("views") } }
+                val measuredTotal=snapshots.getJSONObject(id).optJSONObject("used")?.let {
+                    if(it.has("views") && !it.isNull("views")) it.getLong("views") else null
+                }
+                if (!devices.containsKey(id) || (devices[id]==null && measuredTotal!=null && measuredTotal>=(deviceTotals[id] ?: Long.MAX_VALUE))) {
+                    // The same device's newer accounting observation supplies its own
+                    // platform identity; never infer it from a combined legacy total.
+                    devices[id]=values
+                } else devices[id]?.let { existing -> devices[id]=packages.associateWith { pkg ->
+                    existing[pkg]?.let { maxOf(it,values[pkg] ?: 0) }
+                } }
+            }
+        }
+        val result=packages.associateWith { pkg ->
+            if(devices.isEmpty() || devices.values.any { it?.get(pkg)==null }) null
+            else devices.values.sumOf { it!!.getValue(pkg)!! }
+        }
+        // Combined-only legacy rows and incompatible snapshots cannot prove attribution.
+        return if(total!=null && result.values.none {it==null} && result.values.sumOf {it!!.toLong()}==total) result
+            else packages.associateWith { null }
     }
 
     @Synchronized
@@ -434,14 +479,16 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
                 if(own.isEmpty()) tz=c.getString(3)
             }
         }
-        account.measurement(date, personalDevices)?.let { return it }
+        account.measurement(date, personalDevices)?.let {
+            return it + ("appViews" to personalAppViews(date,packages,own,(it["views"] as? Number)?.toLong()))
+        }
         if(restored && !knownLocal) status="synced"
-        return mapOf("localDate" to date, "views" to views, "minutes" to minutes, "status" to status, "tz" to tz, "scope" to activeScope(), "source" to if(restored) "account" else "phone")
+        return mapOf("localDate" to date, "views" to views, "minutes" to minutes, "status" to status, "tz" to tz, "scope" to activeScope(), "source" to if(restored) "account" else "phone", "appViews" to personalAppViews(date,packages,own,views?.toLong()))
     }
 
     companion object {
         const val DB_NAME = "driftless_tracking.db"
-        const val SCHEMA_VERSION = 5
+        const val SCHEMA_VERSION = 6
 
         @Volatile private var instance: SqliteStore? = null
 

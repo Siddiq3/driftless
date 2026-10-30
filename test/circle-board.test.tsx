@@ -3,13 +3,14 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { AppState, Clipboard, Share } from 'react-native';
 import { router } from 'expo-router';
 import { CircleBoard } from '@/social/CircleBoard';
-import { ApiError } from '@/api/client';
+import { ApiError, createApiClient } from '@/api/client';
 let mockSignedIn = true;
 let mockBackupStatus = { state: 'local' };
 const mockApi = {
   incarnation: 'account-a',
   battleDaily: jest.fn(),
   cachedBattleDaily: jest.fn(),
+  staleBattleDaily: jest.fn(),
   createBattleInvite: jest.fn(),
 };
 jest.mock('@/api/useApi', () => ({ useApi: () => (mockSignedIn ? mockApi : null) }));
@@ -110,6 +111,7 @@ beforeEach(() => {
   mockSignedIn = true;
   mockBackupStatus = { state: 'local' };
   mockApi.cachedBattleDaily.mockReset().mockReturnValue(null);
+  mockApi.staleBattleDaily.mockReset().mockReturnValue(null);
   mockApi.battleDaily.mockReset().mockImplementation(async (date: string) => daily(date));
   mockApi.createBattleInvite.mockResolvedValue({ code: 'ABCDEFGHJK' });
   jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
@@ -190,7 +192,7 @@ it('refreshes after backup, foreground return and each minute', async () => {
   await act(async () => tree.update(<CircleBoard />));
   expect(mockApi.battleDaily.mock.calls.length).toBe(initial + 2);
 });
-it('keeps stale data labeled on network failure and clears it on access loss', async () => {
+it('keeps previously loaded results on a failed refresh until account identity changes', async () => {
   jest.useFakeTimers();
   await mount();
   mockApi.battleDaily.mockRejectedValueOnce(new Error('offline'));
@@ -203,7 +205,7 @@ it('keeps stale data labeled on network failure and clears it on access loss', a
   await act(async () => {
     await jest.advanceTimersByTimeAsync(60000);
   });
-  expect(text()).not.toContain('Daily count for garage: 6');
+  expect(text()).toContain('Daily count for garage: 6');
 });
 
 it('renders the cached War immediately on remount without forcing a saved-backup refresh', async () => {
@@ -219,4 +221,69 @@ it('renders the cached War immediately on remount without forcing a saved-backup
   expect(text()).toContain('Your daily count: 24');
   expect(mockApi.battleDaily).toHaveBeenCalledTimes(2);
   expect(mockApi.battleDaily.mock.calls[1][2]).toBe(false);
+});
+
+it('does not show placeholder zero counts while the first War request is pending', async () => {
+  mockApi.battleDaily.mockImplementation(() => new Promise(() => {}));
+  await mount();
+  expect(text()).toContain('Loading your counts');
+  expect(text()).not.toContain('Your daily count: 0');
+});
+
+it('retains stale War across rapid remounts, joins the pending transport, and keeps it after failure', async () => {
+  jest.useFakeTimers();
+  let fail!: (error: Error) => void;
+  const response = (value: unknown) =>
+    ({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify(value),
+      headers: { get: () => null },
+    }) as unknown as Response;
+  const fetchImpl = jest.fn().mockImplementation(async () => {
+    const date = new Date(Date.now()).toISOString().slice(0, 10);
+    return response({ ...daily(date, 24), friends: [] });
+  });
+  const client = createApiClient({
+    baseUrl: 'https://fixture.invalid',
+    getAccessToken: async () => 'fixture',
+    incarnation: 'account-a',
+    platform: 'android',
+    appVersion: 'test',
+    fetchImpl,
+  });
+  mockApi.cachedBattleDaily.mockImplementation(client.cachedBattleDaily);
+  mockApi.staleBattleDaily.mockImplementation(client.staleBattleDaily);
+  mockApi.battleDaily.mockImplementation(client.battleDaily);
+  await mount();
+  expect(text()).toContain('Your daily count: 24');
+  await act(async () => tree.unmount());
+  jest.setSystemTime(Date.now() + 16000);
+  fetchImpl.mockImplementationOnce(
+    () =>
+      new Promise((_resolve, reject) => {
+        fail = reject;
+      }),
+  );
+  await mount();
+  expect(text()).toContain('Your daily count: 24');
+  expect(text()).not.toContain('Loading your counts');
+  await act(async () => tree.unmount());
+  await mount();
+  expect(fetchImpl).toHaveBeenCalledTimes(2);
+  expect(text()).toContain('Your daily count: 24');
+  await act(async () => fail(new Error('offline')));
+  expect(text()).toContain('Your daily count: 24');
+  expect(text()).toContain('Previously loaded counts may be out of date');
+  // The next successful read replaces stale content without a placeholder phase.
+  fetchImpl.mockImplementation(async () =>
+    response({
+      ...daily(new Date(Date.now()).toISOString().slice(0, 10), 26),
+      friends: [],
+    }),
+  );
+  mockBackupStatus = { state: 'saved' };
+  await act(async () => tree.update(<CircleBoard />));
+  expect(fetchImpl).toHaveBeenCalledTimes(3);
+  expect(text()).toContain('Your daily count: 26');
 });

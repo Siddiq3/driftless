@@ -59,6 +59,10 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
   const [retryable, setRetryable] = useState(true);
   const [busy, setBusy] = useState(false);
   const registrationId = useRef(randomUUID());
+  const approvedDeletedIncarnation = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    approvedDeletedIncarnation.current = undefined;
+  }, [token]);
   const apiRef = useRef(api);
   useEffect(() => {
     apiRef.current = api;
@@ -89,6 +93,11 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
       const discovery = await measureStartup('account-lifecycle', () => api.accountState());
       let state = discovery;
       if (!alive) return;
+      if (state.state === 'deleted' && approvedDeletedIncarnation.current !== state.incarnation) {
+        await selectPersonalSession('unresolved');
+        if (alive) setResult({ api, state, usageReady: false });
+        return;
+      }
       if (state.state === 'deleted' || state.state === 'legacy_quarantined') {
         progress('registration');
         try {
@@ -103,6 +112,7 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
         }
         if (!alive) return;
       }
+      if (state.state === 'active') approvedDeletedIncarnation.current = undefined;
       let usageReady = false;
       if (state.state === 'active' && state.incarnation) {
         const bound = createApiClient({
@@ -266,6 +276,24 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
     );
   return (
     <Screen>
+      {current?.state === 'deleted' && (
+        <>
+          <Notice
+            title="Account deleted"
+            body="Create a new account to continue. Your previous account history will stay separate."
+          />
+          <Button
+            label="Create a new account"
+            onPress={() => {
+              registrationId.current = randomUUID();
+              approvedDeletedIncarnation.current = current.incarnation;
+              setError(null);
+              setResult(null);
+              setRevision((r) => r + 1);
+            }}
+          />
+        </>
+      )}
       {current?.state === 'deleting' && (
         <Notice
           title="Finish account deletion"

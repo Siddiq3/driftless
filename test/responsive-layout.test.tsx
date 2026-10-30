@@ -198,6 +198,7 @@ it('gives large-font charts scrollable space while retaining exact accessible va
     minutes: { value: null, days: 0 },
     apps: [],
     hourlyAvailable: false,
+    hourlyUnavailableReason: null,
     expectedDays: 1,
     bars: [
       { key: '1', label: 'Mon', value: 123456 },
@@ -237,6 +238,7 @@ it.each([
       minutes: { value: 13, days: 1 },
       apps: [],
       hourlyAvailable: period === 'daily',
+      hourlyUnavailableReason: null,
       expectedDays: 1,
       bars: Array.from({ length: count }, (_, index) => ({
         key: String(index),

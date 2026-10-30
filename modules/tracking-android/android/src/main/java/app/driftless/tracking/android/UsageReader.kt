@@ -78,12 +78,16 @@ object UsageReader {
             // Visible history after reset uses only post-cutoff intervals. Accounting above
             // keeps the full period total and cannot be replenished by the reset.
             val cutoff=if(store is SqliteStore) store.account.cutoff() else 0L
-            val visible=if(cutoff>start) mutableMapOf<String,Long>() else ms
-            if(cutoff>start) for((a,b) in intervals) {
+            val visibleIntervals=if(store is SqliteStore) store.usageIntervals(start,minOf(end,now)) else intervals
+            val visible=mutableMapOf<String,Long>()
+            var visibleAvailable=true
+            for((a,b) in visibleIntervals) {
                 val lo=maxOf(a,cutoff); if(lo>=b) continue
-                val events=transitions(context,packages,lo,b) ?: continue
+                val events=transitions(context,packages,lo,b)
+                if(events==null) {visibleAvailable=false;break}
                 for((pkg,v) in UsageMath.foregroundMs(events,packages,lo,b,b)) visible[pkg]=(visible[pkg] ?: 0L)+v
             }
+            if(!visibleAvailable) continue
             for ((pkg, v) in visible) {
                 store.setUsage(date, pkg, v)
                 written++

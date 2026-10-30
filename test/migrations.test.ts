@@ -1,3 +1,4 @@
+import { sqlite } from './helpers/sqlite';
 import { MIGRATIONS, migrate, type Migration, type SqlDb } from '../src/db/migrations';
 
 function fakeDb(start = 0, failOn?: string) {
@@ -75,4 +76,25 @@ describe('migrate', () => {
       expect(sql).not.toContain(forbidden);
     }
   });
+});
+
+test('upgrading the personal history cache from v5 keeps all existing account totals', async () => {
+  const fixture = sqlite();
+  try {
+    await migrate(fixture.db, MIGRATIONS.slice(0, 5));
+    await fixture.db
+      .runAsync(`INSERT INTO daily_cache(scope,local_date,device_id,platform,tz,views,minutes,coverage,rev)
+      VALUES ('account:a','2026-10-29','phone','android','UTC',80,2,1,1)`);
+    expect(await migrate(fixture.db)).toEqual([6]);
+    expect(
+      await fixture.db.getFirstAsync('SELECT scope,views,minutes,app_views_json FROM daily_cache'),
+    ).toEqual({
+      scope: 'account:a',
+      views: 80,
+      minutes: 2,
+      app_views_json: null,
+    });
+  } finally {
+    fixture.close();
+  }
 });

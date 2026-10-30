@@ -53,7 +53,11 @@ export function personalSnapshot(date: string): Snapshot {
     scope: storageScope(),
     source: 'phone',
   };
-  const value = { daily, health, measurement };
+  const value = {
+    daily: { ...daily, personalAppViews: measurement.appViews },
+    health,
+    measurement,
+  };
   days.set(date, { at: Date.now(), value });
   return value;
 }

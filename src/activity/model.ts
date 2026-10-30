@@ -72,16 +72,34 @@ export function activityData(
           };
         });
   const apps = health.apps
-    .filter((a) => a.installed || rows.some((r) => r.raw.apps.some((d) => d.package === a.package)))
+    .filter(
+      (a) =>
+        a.installed ||
+        rows.some(
+          (r) =>
+            r.raw.apps.some((d) => d.package === a.package) ||
+            r.raw.personalAppViews?.[a.package] != null,
+        ),
+    )
     .map((app) => ({
       ...app,
       views:
-        views.value === null || !app.installed
+        views.value === null ||
+        rows.some(
+          (r) =>
+            r.day.views !== null &&
+            r.raw.personalAppViews &&
+            r.raw.personalAppViews[app.package] == null,
+        )
           ? null
           : rows
               .filter((r) => r.day.views !== null)
               .reduce(
-                (n, r) => n + (r.raw.apps.find((a) => a.package === app.package)?.views ?? 0),
+                (n, r) =>
+                  n +
+                  (r.raw.personalAppViews?.[app.package] ??
+                    r.raw.apps.find((a) => a.package === app.package)?.views ??
+                    0),
                 0,
               ),
     }))
@@ -93,6 +111,10 @@ export function activityData(
     bars,
     apps,
     hourlyAvailable: hours !== null,
+    hourlyUnavailableReason:
+      period === 'daily' && hours === null && localViews === null && views.value !== null
+        ? 'Your saved total is available. Hourly records are not stored on this phone.'
+        : null,
     expectedDays: bounds.dates.length,
   };
 }

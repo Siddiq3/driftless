@@ -17,6 +17,8 @@ export function homeAppCount(
   if (!daily || !health) return null;
   const app = health.apps.find((app) => app.package === packageName);
   if (!app || app.videoDetectionImplemented === false) return null;
+  if (daily.personalAppViews && Object.hasOwn(daily.personalAppViews, packageName))
+    return daily.personalAppViews[packageName] ?? null;
   const row = daily.apps.find((entry) => entry.package === packageName);
   if (!row && daily.heartbeatMinutes <= 0) return null;
   return row?.views ?? (daily.heartbeatMinutes > 0 ? 0 : null);
