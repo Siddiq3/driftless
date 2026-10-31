@@ -30,8 +30,9 @@ export async function googleIdentity(client: GoogleIdentityClient, interactive: 
 
 /** Presentation only: account ownership always uses the opaque Google ID. */
 export function googleDisplayName(
-  user: { name?: string | null; email?: string | null } | null | undefined,
+  user: { name?: string | null } | null | undefined,
 ): string | null {
-  const name = user?.name?.trim() || user?.email?.split('@')[0]?.trim();
+  // No email fallback: this name is shown to accepted friends.
+  const name = user?.name?.trim();
   return name ? name.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 40) || null : null;
 }

@@ -89,7 +89,8 @@ class GuestAccountLifecycleTest {
         assertTrue(store.daily(date).isEmpty())
         store.writableDatabase.execSQL("DROP TRIGGER fail_import")
         store.importGuest("guest:midnight","account:a")
-        assertEquals(listOf(before,after),store.events(0))
+        // Times, dates and packages survive; per-event versions are deliberately not retained.
+        assertEquals(listOf(before,after).map { it.copy(ruleVersion=0,appVersion=null) },store.events(0))
         assertEquals(1,store.daily("2026-10-28").single().views)
         assertEquals(ig,store.daily("2026-10-28").single().pkg)
         assertCounts(0,1)

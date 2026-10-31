@@ -2,7 +2,6 @@ package app.driftless.tracking.android
 
 import android.content.Context
 import app.driftless.tracking.core.ViewKind
-import app.driftless.tracking.core.isValidatedVersion
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -27,9 +26,8 @@ object WrappedDetails {
         val since = first.minusDays(1).atStartOfDay(ZoneId.of("UTC")).toInstant().toEpochMilli()
         val events = SqliteStore.get(context).events(since).filter { e ->
             e.localDate >= from && e.localDate <= to && e.kind == ViewKind.VIEW &&
-                (localActivity || e.ruleVersion == rules.version) && rules.apps[e.pkg]?.let {
-                    localActivity || isValidatedVersion(it, e.appVersion)
-                } == true
+                e.pkg in rules.apps &&
+                (localActivity || SqliteStore.get(context).localMetadata(e.localDate)["measurementStatus"] == "validated")
         }
         val days = events.groupBy { it.localDate }.map { (date, rows) ->
             val hours = IntArray(24)

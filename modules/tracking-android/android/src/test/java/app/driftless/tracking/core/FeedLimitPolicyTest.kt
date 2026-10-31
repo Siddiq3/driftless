@@ -8,8 +8,8 @@ class FeedLimitPolicyTest {
     private val cfg = FeedSettings(enforceGoal=true, breaksEnabled=true, everyViews=10, breakMinutes=5)
     private fun decide(count: Int, goal: Int? = 50, now: Long = 1000, state: FeedState = FeedState(day),
                        date: String = day, settings: FeedSettings = cfg, surface: Surface = Surface.SHORT_VIDEO,
-                       validated: Boolean = true, pro: Boolean = true) =
-        FeedLimitPolicy.evaluate(settings, state, date, now, count, goal, surface, validated, pro)
+                       pro: Boolean = true) =
+        FeedLimitPolicy.evaluate(settings, state, date, now, count, goal, surface, pro)
 
     @Test fun repeatedExpiryAndRolloverAreIdempotent() {
         val active=decide(10)
@@ -39,9 +39,6 @@ class FeedLimitPolicyTest {
         for (surface in listOf(Surface.OTHER, Surface.UNKNOWN))
             assertNull(decide(100, surface=surface).reason)
         assertEquals(FeedReason.DAILY_VIDEOS, decide(100, pro=false).reason)
-        assertNull(decide(100, validated=false).reason)
-        assertEquals(FeedReason.DAILY_VIDEOS, decide(100, validated=false,
-            settings=cfg.copy(allowUnvalidated=true)).reason)
         assertNull(decide(100, goal=null, settings=cfg.copy(breaksEnabled=false)).reason)
         assertNull(decide(100, settings=FeedSettings()).reason)
     }

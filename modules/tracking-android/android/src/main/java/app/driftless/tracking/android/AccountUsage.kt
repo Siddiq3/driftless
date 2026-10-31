@@ -158,8 +158,7 @@ class AccountUsage(private val store: SqliteStore, private val context: Context)
                 for(date in dates) {
                     val rows=org.json.JSONArray()
                     for(r in store.backupDaily(date)) rows.put(JSONObject().put("pkg",r.pkg).put("views",r.views).put("adViews",r.adViews).put("surfaceMs",r.surfaceMs).put("unknownMs",r.unknownMs).put("usageMs",r.usageMs))
-                    val prior=meta("backup:$date")
-                    save("backup:$date",JSONObject().put("rows",rows).put("beats",store.heartbeatMinutes(date)+(prior?.optInt("beats") ?: 0)).put("metadata",JSONObject(store.localMetadata(date))))
+                    save("backup:$date",JSONObject().put("rows",rows).put("metadata",JSONObject(store.localMetadata(date))))
                 }
             }
             val scopes=mutableSetOf(scope())

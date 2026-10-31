@@ -83,7 +83,7 @@ class PauseActivityTest {
         repeat(BlockPolicy.MAX_SNOOZES_PER_DAY) { TrackingPrefs(context).snooze(pkg, System.currentTimeMillis()) }
         val controller = launch("SCHEDULE")
         val activity = controller.get()
-        find(activity, "Your focus schedule is active")
+        find(activity, "You set this time aside")
         assertFalse(views(activity.window.decorView).filterIsInstance<TextView>().any { it.text.startsWith("5 more minutes") })
         controller.pause().stop().destroy()
     }
@@ -123,7 +123,7 @@ class PauseActivityTest {
         store.selectScope(scope)
         store.account.install("""{"policy":{"incarnation":"phase3-credit","tz":"UTC","activeFromMs":0,"rev":1,"policies":[{"effectiveDate":"2020-01-01","limits":{"minutes":60000}}]}}""",scope)
         controller.newIntent(Intent(context,PauseActivity::class.java).putExtra(PauseActivity.EXTRA_PKG,pkg).putExtra(PauseActivity.EXTRA_REASON,"ACCOUNT_CREDIT"))
-        find(controller.get(),"Account credit is exhausted")
+        find(controller.get(),"Your account allowance is used")
         assertFalse(controller.get().isFinishing)
         assertFalse(views(controller.get().window.decorView).filterIsInstance<TextView>().any {it.text.startsWith("5 more minutes")})
         val prefs=TrackingPrefs(context)

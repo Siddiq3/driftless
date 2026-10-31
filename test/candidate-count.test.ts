@@ -2,8 +2,6 @@ import { candidateCount, homeAppCount } from '@/tracking/candidateCount';
 import type { Daily, TrackingHealth } from 'tracking-android';
 const daily: Daily = {
   localDate: '2026-10-19',
-  heartbeatMinutes: 1,
-  coverage: 1,
   apps: [
     { package: 'youtube', views: 2, adViews: 1, surfaceMs: 5000, unknownMs: 0, usageMs: 5000 },
   ],
@@ -16,7 +14,6 @@ test('shows locally recorded candidate videos without including ads', () =>
 test('never substitutes unknown time, no events or uninstalled-app data for a count', () => {
   expect(candidateCount(null, health)).toBeNull();
   expect(candidateCount(daily, null)).toBeNull();
-  expect(candidateCount({ ...daily, heartbeatMinutes: 0 }, health)).toBeNull();
   expect(
     candidateCount({ ...daily, apps: [{ ...daily.apps[0]!, surfaceMs: 0 }] }, health),
   ).toBeNull();
@@ -35,8 +32,8 @@ test('home keeps unavailable counts unknown and does not invent video counts for
   expect(homeAppCount(null, health, 'youtube')).toBeNull();
   expect(homeAppCount(daily, null, 'youtube')).toBeNull();
   expect(homeAppCount(daily, health, 'missing')).toBeNull();
-  expect(homeAppCount({ ...daily, heartbeatMinutes: 0 }, health, 'youtube')).toBe(2);
-  expect(homeAppCount({ ...daily, apps: [] }, health, 'youtube')).toBe(0);
+  expect(homeAppCount(daily, health, 'youtube')).toBe(2);
+  expect(homeAppCount({ ...daily, apps: [] }, health, 'youtube')).toBeNull();
   const minutesOnly = {
     ...health,
     apps: [{ ...health.apps[0]!, videoDetectionImplemented: false }],
@@ -50,8 +47,6 @@ test('home platform counts prefer merged account attribution and preserve unknow
   } as any;
   const daily = {
     localDate: '2026-10-29',
-    heartbeatMinutes: 0,
-    coverage: 0,
     apps: [],
     personalAppViews: { 'com.instagram.android': 70, 'com.google.android.youtube': 45 },
   };

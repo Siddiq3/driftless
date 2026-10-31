@@ -19,9 +19,8 @@ jest.mock('@/ui/BrainCharacter', () => ({ BrainCharacter: () => null }));
 jest.mock('@/ui/Icon', () => ({ AppIcon: () => null, Icon: () => null }));
 jest.mock('@/onboarding/GetStartedScreen', () => ({ GetStartedScreen: () => null }));
 jest.mock('@/onboarding/QuestionContent', () => ({ QuestionContent: () => null }));
-jest.mock('@/permissions/PermissionChecklist', () => ({
-  PermissionChecklist: () => null,
-  PermissionHelpButton: () => null,
+jest.mock('@/permissions/PermissionScreen', () => ({
+  PermissionScreen: () => null,
 }));
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: require('react-native').View,

@@ -14,13 +14,12 @@ export type TrackingHealth = {
   implemented: boolean;
   rulesVersion: number;
   disclosureAccepted: boolean;
+  /** Prior disclosure acceptance needs renewal; never authorizes tracking. */
+  disclosureRenewalRequired?: boolean;
   /** Switched on in Settings › Accessibility. */
   serviceEnabled: boolean;
   /** Android is running it right now (enabled ≠ running, e.g. after Advanced Protection revokes it). */
   serviceRunning: boolean;
-  lastConnectedMs: number;
-  lastEventMs: number;
-  heartbeatMinutesToday: number;
   /** Usage Access granted: minutes come from Android UsageStats (works without the service). */
   usageAccessGranted: boolean;
   debugBuild: boolean;
@@ -43,7 +42,6 @@ export type DailyApp = {
   /** Foreground time from Android UsageStats. */
   usageMs: number;
 };
-/** coverage: share of the day the accessibility counter was running (0..1). */
 export type Daily = {
   /** Personal display only; never restaged as local observations. */
   personalAppViews?: Record<string, number | null>;
@@ -51,8 +49,6 @@ export type Daily = {
   measurementStatus?: 'validated' | 'experimental' | 'unavailable';
   usageObserved?: boolean;
   localDate: string;
-  heartbeatMinutes: number;
-  coverage: number;
   apps: DailyApp[];
 };
 
@@ -72,7 +68,6 @@ export type BlockingConfig = {
   maxBypassesPerDay?: number;
   bypassMinutes?: number;
   /** Explicit local experiment; never changes cloud/goal-score eligibility. */
-  allowUnvalidatedCounts?: boolean;
 };
 
 export type WrapSession = {

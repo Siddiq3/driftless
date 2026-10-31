@@ -18,7 +18,7 @@ export function WrapEntry() {
       const refresh = () => {
         const scope = storageScope();
         const wraps: ReadyWrap[] = [];
-        for (const period of ['daily', 'weekly'] as const) {
+        for (const period of ['daily'] as const) {
           try {
             const end = defaultEnd(period);
             if (hasWrapData(readPhoneWrap(period, end))) wraps.push({ period, end });
@@ -50,8 +50,8 @@ export function WrapEntry() {
         <Pressable
           key={period}
           accessibilityRole="button"
-          accessibilityLabel={`Open ${period} Wrapped`}
-          onPress={() => router.push({ pathname: '/wrapped', params: { period, end } })}
+          accessibilityLabel="Open your daily wrap"
+          onPress={() => router.push({ pathname: '/wrapped', params: { end } })}
           style={({ pressed }) => ({
             flex: layout.stack ? undefined : 1,
             minHeight: 52,
@@ -66,7 +66,7 @@ export function WrapEntry() {
         >
           <Icon name="chart" size={18} />
           <T v="label" style={{ flex: 1, fontSize: 14 }}>
-            {period === 'daily' ? 'Daily wrap' : 'Weekly wrap'}
+            Daily wrap
           </T>
           <Icon name="chevron" size={14} />
         </Pressable>

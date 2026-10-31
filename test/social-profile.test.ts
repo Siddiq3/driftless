@@ -15,11 +15,13 @@ function client() {
     }),
   };
 }
-it('uses the Google account name, falling back to the mailbox name without exposing its domain', () => {
-  expect(googleDisplayName({ name: ' Siddiq Kolimi ', email: 'other@example.test' })).toBe(
-    'Siddiq Kolimi',
-  );
-  expect(googleDisplayName({ name: null, email: 'siddiq@example.test' })).toBe('siddiq');
+it('uses the Google account name and never falls back to the email address', () => {
+  const named = { name: ' Siddiq Kolimi ', email: 'other@example.test' };
+  expect(googleDisplayName(named)).toBe('Siddiq Kolimi');
+  for (const name of [null, undefined, '   ']) {
+    const unnamed = { name, email: 'siddiq@example.test' };
+    expect(googleDisplayName(unnamed)).toBeNull();
+  }
   expect(googleDisplayName(null)).toBeNull();
 });
 it('allocates one handle and coalesces concurrent initialization without changing sharing consent', async () => {
@@ -30,7 +32,7 @@ it('allocates one handle and coalesces concurrent initialization without changin
   await request();
   expect(api.patchMe).toHaveBeenCalledTimes(1);
   expect(api.patchMe).toHaveBeenCalledWith(
-    { displayName: 'Siddiq Kolimi', handle: 'siddiqkoli_12345678' },
+    { displayName: 'Siddiq Kolimi', handle: 'player_12345678' },
     1,
     expect.any(Function),
   );
@@ -54,4 +56,17 @@ it('never writes after session cancellation', async () => {
     ensureSocialProfile(api as unknown as ApiClient, 'A', () => allowed),
   ).rejects.toThrow('Account changed');
   expect(api.patchMe).not.toHaveBeenCalled();
+});
+
+it('an existing account keeps its Google name and handle with no write', async () => {
+  const api = client();
+  await ensureSocialProfile(api as unknown as ApiClient, 'Siddiq', () => true);
+  api.patchMe.mockClear();
+  await ensureSocialProfile(api as unknown as ApiClient, 'Siddiq', () => true);
+  expect(api.patchMe).not.toHaveBeenCalled();
+});
+it('a missing Google name stores no name and never stores a placeholder', async () => {
+  const api = client();
+  await ensureSocialProfile(api as unknown as ApiClient, null, () => true);
+  expect(api.patchMe.mock.calls[0]![0]).toEqual({ handle: 'player_12345678' });
 });

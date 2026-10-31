@@ -1,12 +1,9 @@
 # Video sources
 
-Six stock clips from [Mixkit](https://mixkit.co/free-stock-video/), obtained from its vertical beach, coffee and landscape collections. Source footage is used for this local composited concept demo. Creator handles, captions and engagement counts in the rendered UI are fictional sample data. Output is silent.
+`onboarding_reels.mp4`, its poster and the `demo-reel-*` images are rendered by `scripts/render-onboarding-media.swift` from six AI-generated images in `assets/illustrations/source/`, supplied by the app owner on 2026-10-31. Image tool: not yet recorded. Confirm that its terms allow commercial use before release.
 
-- coast: https://assets.mixkit.co/videos/1191/1191-720.mp4
-- coffee: https://assets.mixkit.co/videos/41865/41865-720.mp4
-- mountains: https://assets.mixkit.co/active_storage/video_items/100174/1721166924/100174-video-720.mp4
-- waves: https://assets.mixkit.co/videos/51500/51500-720.mp4
-- city: https://assets.mixkit.co/videos/51506/51506-720.mp4
-- beans: https://assets.mixkit.co/videos/43270/43270-720.mp4
+`accessibility_guide.mp4` and its poster are drawn entirely by the same script.
 
-Reference interaction: user-supplied BrainPal screen recordings. One continuous 720×1280 H.264 MP4, 30 fps, 23.4 seconds, six live clips and five vertical slide transitions, no crossfades, no still-image reels or phone frame.
+The earlier Mixkit-based onboarding video is no longer used. Captions and controls in the render are illustrative, and no other app's interface is reproduced.
+
+The render is one continuous 720×1280 H.264 MP4, 30 fps, 23.4 seconds, with six clips and five vertical slide transitions.

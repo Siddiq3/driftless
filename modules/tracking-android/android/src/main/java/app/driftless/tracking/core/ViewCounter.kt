@@ -45,7 +45,7 @@ class ViewCounter(initialRing: List<String> = emptyList()) {
         var dwellMs = 0L
     }
 
-    /** Snapshot of the ring buffer, persisted so a service restart doesn't recount the same item. */
+    /** Snapshot of the ring buffer, kept in memory so reopening an app doesn't recount the same item. */
     fun ringSnapshot(): List<String> = ring.toList()
 
     /** Feed observations in non-decreasing time order; out-of-order input is ignored. */

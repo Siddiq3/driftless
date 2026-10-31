@@ -22,8 +22,14 @@ export type IconName =
   | 'play'
   | 'help'
   | 'cloud'
-  | 'trash';
+  | 'trash'
+  | 'close'
+  | 'user'
+  | 'chat';
 const paths: Partial<Record<IconName, string>> = {
+  close: 'M6 6l12 12M18 6 6 18',
+  user: 'M4 21a8 8 0 0 1 16 0',
+  chat: 'M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z M8 12h.01M12 12h.01M16 12h.01',
   plus: 'M12 5v14M5 12h14',
   minus: 'M5 12h14',
   home: 'M3 10 12 3l9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z',
@@ -78,6 +84,7 @@ export function Icon({
         </>
       )}
       {name === 'friends' && <Circle cx={9} cy={7} r={4} />}
+      {name === 'user' && <Circle cx={12} cy={8} r={4} />}
       {name === 'lock' && <Rect x={4} y={10} width={16} height={11} rx={3} />}
       <Path d={paths[name]} />
     </Svg>

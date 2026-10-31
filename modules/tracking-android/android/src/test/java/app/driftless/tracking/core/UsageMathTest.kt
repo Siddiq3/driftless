@@ -48,11 +48,4 @@ class UsageMathTest {
         assertEquals(23 * 3_600_000L, e - s)
     }
 
-    @Test fun coverageUsesElapsedMinutesForToday() {
-        val z = ZoneId.of("UTC")
-        val (s, _) = UsageMath.dayBounds("2026-10-18", z)
-        assertEquals(0.5, UsageMath.coverage(30, "2026-10-18", z, s + 60 * 60_000L), 1e-9)
-        assertEquals(1.0, UsageMath.coverage(1440, "2026-10-17", z, s), 1e-9)
-        assertEquals(0.0, UsageMath.coverage(10, "2026-10-19", z, s), 1e-9)
-    }
 }

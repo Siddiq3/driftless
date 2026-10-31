@@ -1,5 +1,8 @@
 import Constants from 'expo-constants';
 
+/** Same address as the website's support page. */
+export const SUPPORT_EMAIL = 'siddiqkolimi.dev@gmail.com';
+
 /** Public website configuration is independent of backend/Google sign-in readiness. */
 export function websiteLinks(): {
   privacy: string;

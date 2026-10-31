@@ -101,7 +101,7 @@ it('sizes children from the measured scroll viewport without subtracting safe ar
     mascotSize: 120,
   });
   const tabs = tree.root.findAll((n) => n.props.accessibilityRole === 'tab' && n.props.onPress);
-  expect(tabs.map((n) => n.props.accessibilityLabel)).toEqual(['Today', 'War', 'Progress']);
+  expect(tabs.map((n) => n.props.accessibilityLabel)).toEqual(['Today', 'Friends', 'Progress']);
   expect(scroll.findAll((n) => n.props.accessibilityRole === 'tab')).toHaveLength(0);
   await act(async () => tabs[1]!.props.onPress());
   expect(router.replace).toHaveBeenCalledWith('/friends');

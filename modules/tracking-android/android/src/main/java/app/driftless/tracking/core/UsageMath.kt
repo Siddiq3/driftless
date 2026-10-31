@@ -47,15 +47,4 @@ object UsageMath {
         val d = LocalDate.parse(localDate)
         return d.atStartOfDay(zone).toInstant().toEpochMilli() to d.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
     }
-
-    /**
-     * Share of the day so far during which the counter was running, from per-minute heartbeats.
-     * For today, measured against minutes elapsed; for past days, against the whole day.
-     */
-    fun coverage(heartbeatMinutes: Int, localDate: String, zone: ZoneId, nowMs: Long): Double {
-        val (start, end) = dayBounds(localDate, zone)
-        if (nowMs <= start) return 0.0
-        val elapsedMin = ((minOf(nowMs, end) - start) / 60_000L).coerceAtLeast(1)
-        return (heartbeatMinutes.toDouble() / elapsedMin).coerceIn(0.0, 1.0)
-    }
 }

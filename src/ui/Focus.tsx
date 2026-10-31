@@ -4,7 +4,6 @@ import { Platform, Animated, Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { BrainCompanion } from './BrainCompanion';
-import { BrandMark } from './BrandMark';
 import { AppIcon, Icon, iconForMark, type IconName } from './Icon';
 import { useProgress, type ProgressState } from '@/goals/useProgress';
 import { CountingPermissionBanner } from '@/permissions/CountingPermissionBanner';
@@ -274,19 +273,33 @@ export function Dashboard({ guest = false, account }: { guest?: boolean; account
       tabBarStyle={{ backgroundColor: t.bg, borderTopWidth: 0, paddingTop: 6, paddingBottom: 6 }}
     >
       <View style={styles.brand}>
-        <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <BrandMark size={30} />
-          <T v="title" style={{ letterSpacing: -0.8 }}>
+        <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Profile"
+            onPress={() => router.push('/profile')}
+            style={({ pressed }) => [
+              styles.profile,
+              { backgroundColor: t.surface, opacity: pressed ? 0.7 : 1 },
+            ]}
+          >
+            <Icon name="user" size={22} color={t.textMuted} />
+          </Pressable>
+          <T v="title" style={{ letterSpacing: -0.8, flexShrink: 1 }}>
             ScrollSnooze
           </T>
         </View>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={guest ? 'Privacy' : 'Settings'}
-          onPress={() => router.push(guest ? '/privacy' : '/settings')}
-          style={styles.iconButton}
+          accessibilityLabel="Help"
+          onPress={() => router.push('/help')}
+          style={({ pressed }) => [
+            styles.help,
+            { backgroundColor: t.surface, opacity: pressed ? 0.7 : 1 },
+          ]}
         >
-          <Icon name={guest ? 'shield' : 'settings'} size={23} color={t.textMuted} />
+          <Icon name="chat" size={20} color={t.text} />
+          <T style={{ color: t.text, fontWeight: '700', fontSize: 16 }}>Help</T>
         </Pressable>
       </View>
       {Platform.OS === 'ios' && (
@@ -409,7 +422,21 @@ const styles = StyleSheet.create({
     gap: 8,
     minHeight: 56,
   },
-  iconButton: { minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
+  profile: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  help: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    minHeight: 48,
+    paddingHorizontal: 18,
+    borderRadius: 24,
+  },
   hero: { alignItems: 'center', gap: 18 },
   textAction: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 12 },
   goalLink: {

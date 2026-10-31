@@ -85,7 +85,7 @@ test('upgrading the personal history cache from v5 keeps all existing account to
     await fixture.db
       .runAsync(`INSERT INTO daily_cache(scope,local_date,device_id,platform,tz,views,minutes,coverage,rev)
       VALUES ('account:a','2026-10-29','phone','android','UTC',80,2,1,1)`);
-    expect(await migrate(fixture.db)).toEqual([6]);
+    expect(await migrate(fixture.db)).toEqual([6, 7]);
     expect(
       await fixture.db.getFirstAsync('SELECT scope,views,minutes,app_views_json FROM daily_cache'),
     ).toEqual({
@@ -94,6 +94,48 @@ test('upgrading the personal history cache from v5 keeps all existing account to
       minutes: 2,
       app_views_json: null,
     });
+  } finally {
+    fixture.close();
+  }
+});
+
+test('v7 removes coverage while keeping history and pending backup days', async () => {
+  const fixture = sqlite();
+  try {
+    await migrate(fixture.db, MIGRATIONS.slice(0, 6));
+    await fixture.db.runAsync(
+      `INSERT INTO daily_cache(scope,local_date,device_id,platform,tz,views,minutes,coverage,rev,app_views_json)
+      VALUES ('account:a','2026-10-29','phone','android','UTC',80,2,0.5,3,'{}')`,
+    );
+    await fixture.db.runAsync(
+      `INSERT INTO sync_days(scope,local_date,values_key,rev,synced_rev,values_json)
+      VALUES ('account:a','2026-10-29','k',4,3,'{"localDate":"2026-10-29","minutes":2,"coverage":0.5}')`,
+    );
+    await fixture.db.runAsync(
+      `INSERT INTO sync_batch(scope,id,idempotency_key,days_json,attempts,next_attempt_at)
+      VALUES ('account:a','b','key','[{"coverage":0.5}]',0,0)`,
+    );
+    expect(await migrate(fixture.db)).toEqual([7]);
+    expect(await fixture.db.getFirstAsync('SELECT * FROM daily_cache')).toEqual({
+      scope: 'account:a',
+      local_date: '2026-10-29',
+      device_id: 'phone',
+      platform: 'android',
+      tz: 'UTC',
+      views: 80,
+      ad_views: null,
+      minutes: 2,
+      rev: 3,
+      app_views_json: '{}',
+    });
+    expect(
+      await fixture.db.getFirstAsync('SELECT rev,synced_rev,values_json FROM sync_days'),
+    ).toEqual({
+      rev: 4,
+      synced_rev: 3,
+      values_json: '{"localDate":"2026-10-29","minutes":2}',
+    });
+    expect(await fixture.db.getFirstAsync('SELECT id FROM sync_batch')).toBeNull();
   } finally {
     fixture.close();
   }

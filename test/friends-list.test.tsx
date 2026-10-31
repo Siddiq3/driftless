@@ -51,7 +51,7 @@ afterEach(async () => {
 });
 test('options open the named friend sheet and cancellation never removes a friendship', async () => {
   await tap('Options for Study Garage');
-  expect(JSON.stringify(tree.toJSON())).toContain('stops your battle');
+  expect(JSON.stringify(tree.toJSON())).toContain('stops sharing both ways');
   expect(api.removeFriend).not.toHaveBeenCalled();
   await tap('Close friend options');
   expect(api.removeFriend).not.toHaveBeenCalled();

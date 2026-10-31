@@ -40,6 +40,13 @@ class Engine(
         persistRingIfChanged(s, tMs)
     }
 
+    /** Consent withdrawal is not a departure: never advance dwell, emit time, or save a ring.
+     * Already committed records and the previously saved deduplication ring are preserved. */
+    @Synchronized
+    fun discard() {
+        active = null
+    }
+
     /** The supported app is no longer in front (other app, launcher, screen off, service stop). */
     @Synchronized
     fun onLeave(tMs: Long) {
@@ -55,21 +62,30 @@ class Engine(
     fun onTick(tMs: Long) {
         if(!accept(tMs)) return
         active?.let { it.recorder.apply(it.counter.flush(tMs)) }
-        val at = Instant.ofEpochMilli(tMs).atZone(zone())
-        val beat = at.toLocalDate().toString() to (at.hour * 60 + at.minute)
-        if (beat != lastBeat) {
-            store.heartbeat(beat.first, beat.second)
-            lastBeat = beat
-        }
+        if (active != null) noteCountableApp(tMs)
     }
 
-    private var lastBeat: Pair<String, Int>? = null
+    private var lastMinute: Pair<String, Int>? = null
+
+    /** Only while a video-countable app is open; no session means no accounting evidence.
+     * The minute re-check covers midnight and limits installed during an open session. */
+    private fun noteCountableApp(tMs: Long, force: Boolean = false) {
+        val s = active ?: return
+        if (rules.apps[s.pkg]?.surfaceViewIds.isNullOrEmpty()) return
+        val at = Instant.ofEpochMilli(tMs).atZone(zone())
+        val minute = at.toLocalDate().toString() to (at.hour * 60 + at.minute)
+        if (force || minute != lastMinute) {
+            store.onCountableAppActive(minute.first)
+            lastMinute = minute
+        }
+    }
 
     private fun startSession(pkg: String, appVersion: String?, tMs: Long): Session {
         active?.let { onLeave(tMs) }
         val ring = store.loadRing(pkg, tMs, RING_MAX_AGE_MS)
         return Session(pkg, appVersion, ViewCounter(ring), Recorder(store, pkg, rules.version, appVersion, ids, zone)).also {
             active = it
+            noteCountableApp(tMs, force = true)
         }
     }
 

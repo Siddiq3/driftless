@@ -8,9 +8,6 @@ const health: TrackingHealth = {
   disclosureAccepted: true,
   serviceEnabled: true,
   serviceRunning: true,
-  lastConnectedMs: 1,
-  lastEventMs: 1,
-  heartbeatMinutesToday: 0,
   usageAccessGranted: true,
   debugBuild: false,
   blockingEntitled: true,
@@ -92,8 +89,8 @@ it('offers app minutes but no video counting for apps without player rules', () 
 it('running unapproved versions remain unverified and cannot imply cloud reel scores', () => {
   const r = report({ ...health, apps: [{ ...health.apps[0]!, validated: false }] });
   expect(r.videoCounting).toMatchObject({ available: false });
-  expect(r.videoCounting.detail).toContain('cloud video scores unavailable');
-  expect(r.socialSharingOfUsage.available).toBe(false);
+  expect(r.videoCounting.detail).toContain('labelled experimental');
+  expect(r.socialSharingOfUsage.available).toBe(true);
 });
 it('no installed targets or missing native health never implies tracking readiness', () => {
   expect(report({ ...health, apps: [] }).videoCounting.available).toBe(false);
@@ -134,6 +131,12 @@ it('free users get focus features while sharing still requires consent', () => {
     report(health, {
       ...me,
       profile: { ...me.profile, consent: { cloudSync: true, shareWithFriends: false } },
+    }).socialSharingOfUsage.available,
+  ).toBe(true);
+  expect(
+    report(health, {
+      ...me,
+      profile: { ...me.profile, consent: { cloudSync: false, shareWithFriends: false } },
     }).socialSharingOfUsage.available,
   ).toBe(false);
 });

@@ -3,10 +3,10 @@ import { useFonts } from 'expo-font';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import { addDays, localDateOf } from '@siddiq3/driftless-contracts/domain';
-import type { v1 } from '@siddiq3/driftless-contracts';
 import { AppState, Clipboard, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useApi } from '@/api/useApi';
 import { type ApiClient } from '@/api/client';
+import type { LeaderboardResponse } from '@/api/challenges';
 import { useSession } from '@/auth/session';
 import { useAccountBackup } from '@/sync/AccountBackupProvider';
 import { FriendInviteSheet } from './FriendInviteSheet';
@@ -17,7 +17,7 @@ import { ModalContent, Button, Field, Notice, Screen, T } from '@/ui/kit';
 import { Icon } from '@/ui/Icon';
 import { shuffledInvitePrompts } from './invitePrompts';
 import { Avatar } from './battleVisuals';
-import { rankBattle } from './ranking';
+import { friendName, rankBattle } from './ranking';
 import { parseInvite, rememberInvite } from './pendingInvite';
 import { warHeaderTheme as header } from './warTheme';
 const C = { bg: '#0B0B08', header: '#301A06', row: '#2C2116', muted: '#A49E90', accent: '#FFD09D' };
@@ -31,12 +31,15 @@ function WarBoard({ api }: { api: ApiClient | null }) {
   const [fonts] = useFonts({ LilitaOne: require('../../assets/fonts/LilitaOne-Regular.ttf') });
   const [today, setToday] = useState(() => localDateOf(Date.now(), currentTimeZone()));
   const [date, setDate] = useState(today),
-    [data, setData] = useState<v1.FriendsDailyResponse | null>(
+    [data, setData] = useState<LeaderboardResponse | null>(
       () => api?.staleBattleDaily?.(today) ?? api?.cachedBattleDaily?.(today) ?? null,
     );
   const [requestRunning, setRequestRunning] = useState(false);
   const [guestLoaded, setGuestLoaded] = useState(false);
-  const [guestViews, setGuestViews] = useState<number | null>(null);
+  const [guest, setGuest] = useState<{ views: number | null; experimental: boolean }>({
+    views: null,
+    experimental: false,
+  });
   const [issue, setIssue] = useState<string | null>(null),
     [inviteOpen, setInviteOpen] = useState(false),
     [signIn, setSignIn] = useState(false);
@@ -81,7 +84,8 @@ function WarBoard({ api }: { api: ApiClient | null }) {
           } else {
             refreshPersonalData(1);
             if (alive) {
-              setGuestViews(personalDay(date).views);
+              const day = personalDay(date);
+              setGuest({ views: day.views, experimental: day.status === 'experimental' });
               setGuestLoaded(true);
             }
           }
@@ -125,14 +129,16 @@ function WarBoard({ api }: { api: ApiClient | null }) {
       id: 'self',
       name: 'You',
       handle: 'You',
-      views: api ? (visibleData?.self.views ?? null) : guestViews,
+      views: api ? (visibleData?.self.views ?? null) : guest.views,
+      experimental: api ? visibleData?.self.experimental === true : guest.experimental,
       self: true,
     },
     ...(visibleData?.friends ?? []).map((friend) => ({
       id: friend.userId,
-      name: friend.displayName || `@${friend.handle}`,
+      name: friendName(friend),
       handle: friend.handle,
       views: friend.daily.views,
+      experimental: friend.daily.experimental === true,
       self: false,
     })),
   ]);
@@ -186,7 +192,7 @@ function WarBoard({ api }: { api: ApiClient | null }) {
               color: '#FFE4AB',
             }}
           >
-            SCROLL BATTLE
+            Friends Leaderboard
           </T>
           <Pressable
             accessibilityRole="button"
@@ -256,16 +262,21 @@ function WarBoard({ api }: { api: ApiClient | null }) {
               name={row.self ? selfName : row.name}
               color={row.self ? '#008E80' : '#009EAC'}
             />
-            <T style={styles.person}>{row.name}</T>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <T style={styles.person}>{row.name}</T>
+              {row.views === null ? (
+                <T style={styles.tag}>No count yet</T>
+              ) : (
+                row.experimental && <T style={styles.tag}>Experimental count</T>
+              )}
+            </View>
             <T
-              accessibilityLabel={
-                row.self
-                  ? `Your daily count: ${row.views ?? 0}${row.views === null ? ' (count unavailable)' : ''}`
-                  : `Daily count for ${row.handle}: ${row.views ?? 0}${row.views === null ? ' (count unavailable)' : ''}`
-              }
+              accessibilityLabel={`${row.self ? 'Your daily count' : `Daily count for ${row.name}`}: ${
+                row.views ?? 'no count yet'
+              }${row.views !== null && row.experimental ? ', experimental' : ''}`}
               style={styles.count}
             >
-              {row.views?.toLocaleString() ?? '0'}
+              {row.views?.toLocaleString() ?? '—'}
             </T>
           </View>
         ))}
@@ -289,10 +300,11 @@ function WarBoard({ api }: { api: ApiClient | null }) {
               </Pressable>
             </View>
           ))}
-        {issue && <Notice title="War not updated" body={issue} tone="warn" />}
-        {rows.some((row) => row.views === null) && (
+        {issue && <Notice title="Leaderboard not updated" body={issue} tone="warn" />}
+        {rows.some((row) => row.views !== null && row.experimental) && (
           <T v="caption" muted style={{ paddingTop: 18 }}>
-            Counts awaiting an update show 0 and remain unranked.
+            Experimental counts come from app versions that haven’t passed our accuracy check, so
+            they may be less accurate.
           </T>
         )}
         <Pressable
@@ -313,7 +325,7 @@ function WarBoard({ api }: { api: ApiClient | null }) {
         <FriendInviteSheet
           visible
           api={api}
-          displayName={selfName}
+          displayName={session.status === 'signedIn' ? (session.displayName ?? null) : null}
           onClose={() => setInviteOpen(false)}
         />
       )}
@@ -393,6 +405,7 @@ const styles = StyleSheet.create({
   },
   rank: { fontSize: 25, minWidth: 30, maxWidth: 60, textAlign: 'center' },
   person: { flex: 1, color: C.muted, fontSize: 16, lineHeight: 22 },
+  tag: { color: C.muted, fontSize: 13, lineHeight: 18 },
   count: { maxWidth: '40%', fontSize: 23, fontWeight: '700', fontVariant: ['tabular-nums'] },
   inviteRow: {
     minHeight: 78,

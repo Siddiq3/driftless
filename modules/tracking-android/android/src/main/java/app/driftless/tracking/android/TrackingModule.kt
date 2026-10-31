@@ -5,7 +5,6 @@ import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.provider.Settings
 import app.driftless.tracking.core.Recorder
-import app.driftless.tracking.core.UsageMath
 import app.driftless.tracking.core.isValidatedVersion
 import expo.modules.kotlin.exception.CodedException
 import expo.modules.kotlin.modules.Module
@@ -70,19 +69,15 @@ class TrackingModule : Module() {
             val ctx = context
             val rules = RulesLoader.load(ctx)
             val running = DriftlessAccessibilityService.current?.isOperational == true
-            val store = SqliteStore.get(ctx)
-            val today = store.account.date()
             mapOf(
                 "engineVersion" to ENGINE_VERSION,
                 "implemented" to true,
                 "feedLimitsImplemented" to true,
                 "rulesVersion" to rules.version,
                 "disclosureAccepted" to TrackingPrefs(ctx).disclosureAccepted,
+                "disclosureRenewalRequired" to TrackingPrefs(ctx).disclosureRenewalRequired,
                 "serviceEnabled" to Health.serviceEnabled(ctx),
                 "serviceRunning" to running,
-                "lastConnectedMs" to DriftlessAccessibilityService.lastConnectedMs.toDouble(),
-                "lastEventMs" to DriftlessAccessibilityService.lastEventMs.toDouble(),
-                "heartbeatMinutesToday" to store.heartbeatMinutes(today),
                 "usageAccessGranted" to UsageReader.granted(ctx),
                 "subscriptionRequired" to app.driftless.tracking.core.FeatureAccess.SUBSCRIPTIONS_REQUIRED,
                 "blockingEntitled" to app.driftless.tracking.core.BlockPolicy.entitled(
@@ -105,7 +100,6 @@ class TrackingModule : Module() {
 
         Function("setDisclosureAccepted") { accepted: Boolean ->
             TrackingPrefs(context).disclosureAccepted = accepted
-            DriftlessAccessibilityService.current?.refreshFloatingCount()
         }
 
         Function("openAccessibilityGuide") {
@@ -173,14 +167,11 @@ class TrackingModule : Module() {
             val now = SqliteStore.get(context).account.now()
             val d = localDate ?: Recorder.localDate(now, zone)
             val store = SqliteStore.get(ctx)
-            val beats = store.heartbeatMinutes(d)
             mapOf(
                 "localDate" to d,
                 "recordedTz" to store.localMetadata(d)["recordedTz"],
                 "measurementStatus" to store.localMetadata(d)["measurementStatus"],
                 "usageObserved" to store.localMetadata(d)["usageObserved"],
-                "heartbeatMinutes" to beats,
-                "coverage" to UsageMath.coverage(beats, d, zone, now),
                 "apps" to store.daily(d).map {
                     mapOf(
                         "package" to it.pkg,
@@ -200,14 +191,11 @@ class TrackingModule : Module() {
             val d = localDate ?: Recorder.localDate(now, zone)
             val store = SqliteStore.get(ctx)
             val baseline=store.account.meta("backup:$d")
-            val beats = store.heartbeatMinutes(d)+(baseline?.optInt("beats") ?: 0)
             mapOf(
                 "localDate" to d,
                 "recordedTz" to (baseline?.optJSONObject("metadata")?.optString("recordedTz") ?: store.localMetadata(d)["recordedTz"]),
                 "measurementStatus" to if(baseline!=null) "experimental" else store.localMetadata(d)["measurementStatus"],
                 "usageObserved" to (store.localMetadata(d)["usageObserved"] == true || baseline?.optJSONObject("metadata")?.optBoolean("usageObserved") == true),
-                "heartbeatMinutes" to beats,
-                "coverage" to UsageMath.coverage(beats, d, zone, now),
                 "apps" to store.backupDaily(d).map {
                     mapOf(
                         "package" to it.pkg,
@@ -223,26 +211,7 @@ class TrackingModule : Module() {
 
         /** Writes counted events of the last [days] days as JSON Lines for the accuracy scorer. */
         Function("exportSessionLog") { days: Int ->
-            val ctx = context
-            val since = System.currentTimeMillis() - days.coerceIn(1, 30) * 86_400_000L
-            val events = SqliteStore.get(ctx).events(since)
-            val dir = File(ctx.cacheDir, "exports").apply { mkdirs() }
-            val f = File(dir, "driftless-events-${System.currentTimeMillis()}.jsonl")
-            f.bufferedWriter().use { w ->
-                for (e in events) {
-                    w.write(
-                        JSONObject()
-                            .put("eventId", e.eventId).put("sessionId", e.sessionId).put("seq", e.seq)
-                            .put("package", e.pkg).put("kind", e.kind.name.lowercase())
-                            .put("itemStartMs", e.itemStartMs).put("countedAtMs", e.countedAtMs)
-                            .put("localDate", e.localDate).put("tz", e.tz)
-                            .put("ruleVersion", e.ruleVersion).put("appVersion", e.appVersion ?: JSONObject.NULL)
-                            .toString(),
-                    )
-                    w.newLine()
-                }
-            }
-            mapOf("uri" to "file://${f.absolutePath}", "count" to events.size)
+            DebugTrackingExports.exportSessionLog(context, days)
         }
 
         /**
@@ -260,9 +229,7 @@ class TrackingModule : Module() {
         }
 
         Function("lastStructureCapture") {
-            val f = DriftlessAccessibilityService.lastCaptureFile
-                ?: throw CodedException("NO_CAPTURE", "No capture yet. Was Reels or Shorts open when the timer ended?", null)
-            "file://${f.absolutePath}"
+            DebugTrackingExports.lastStructureCapture(context)
         }
 
         /** Mirrors enabled goals into native storage so alerts work while the app is closed. */
@@ -305,7 +272,6 @@ class TrackingModule : Module() {
                     breakMinutes = ((c["breakMinutes"] as? Number)?.toInt() ?: 5).coerceIn(1, 60),
                     maxBypasses = ((c["maxBypassesPerDay"] as? Number)?.toInt() ?: 3).coerceIn(0, 10),
                     bypassMinutes = ((c["bypassMinutes"] as? Number)?.toInt() ?: 5).coerceIn(1, 30),
-                    allowUnvalidated = c["allowUnvalidatedCounts"] as? Boolean ?: false,
                 ),
             )
         }

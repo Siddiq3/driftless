@@ -148,7 +148,7 @@ export const QuestionContent = forwardRef<
           reducedMotion={reducedMotion !== false}
         >
           <T v="caption" style={styles.small}>
-            App minutes: Instagram, YouTube, Facebook, Snapchat, Moj &amp; ShareChat.
+            Counts and minutes: Instagram &amp; YouTube.
           </T>
         </StaggeredFadeIn>
       )}

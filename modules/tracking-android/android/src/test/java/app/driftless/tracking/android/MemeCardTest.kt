@@ -99,6 +99,21 @@ class MemeCardTest {
         assertTrue(card.show(CountBadgeValue("~100","On this phone"),100,"en") {})
         card.hide(); controller.destroy()
     }
+    @Test fun selectedMemeLanguageHistoryPersists() {
+        val controller=Robolectric.buildService(MemeTestService::class.java).create()
+        val context=controller.get();val prefs=TrackingPrefs(context);prefs.clearMemeHistory()
+        val card=MemeMilestoneCard(context)
+        try {
+            assertTrue(card.show(CountBadgeValue("50","On this phone"),50,"te") {})
+            val recreated=TrackingPrefs(context)
+            val reaction=recreated.lastMemeReaction()!!
+            assertTrue(recreated.usedMemeReactions("te").contains(reaction))
+            assertTrue(recreated.previousMemeCaption(reaction)>=0)
+            val saved=context.getSharedPreferences("driftless_tracking",0).all
+            assertFalse(saved.containsKey("meme_language"))
+        } finally {card.hide();prefs.clearMemeHistory();controller.destroy()}
+    }
+
     @Test fun languageCyclesPersistIndependentlyAndWipeClearsAllPools() {
         val prefs=TrackingPrefs(ApplicationProvider.getApplicationContext<Context>())
         prefs.clearMemeHistory()

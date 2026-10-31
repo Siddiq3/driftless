@@ -124,8 +124,6 @@ test.each(['daily', 'weekly'] as const)(
     } as TrackingHealth;
     const raw: Daily = {
       localDate: '2026-10-21',
-      heartbeatMinutes: 1,
-      coverage: 0.1,
       apps: [
         { package: 'youtube', views: 6, adViews: 1, surfaceMs: 9000, unknownMs: 0, usageMs: 0 },
       ],
@@ -167,8 +165,6 @@ test('expired heartbeats or a failed usage refresh do not hide retained video co
   } as TrackingHealth);
   jest.mocked(Tracking.daily).mockImplementation((date) => ({
     localDate: date!,
-    heartbeatMinutes: 0,
-    coverage: 0,
     apps:
       date === '2026-10-21'
         ? [{ package: 'youtube', views: 6, adViews: 0, surfaceMs: 0, unknownMs: 0, usageMs: 0 }]
@@ -242,8 +238,6 @@ test.each(['daily', 'weekly'] as const)(
     jest.mocked(Tracking.daily).mockImplementation((localDate) => ({
       localDate: localDate!,
       apps: [],
-      heartbeatMinutes: 0,
-      coverage: 0,
     }));
     jest.mocked(Tracking.personalMeasurement).mockImplementation((localDate) => ({
       localDate,

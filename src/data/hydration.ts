@@ -70,7 +70,7 @@ export function hydratePersonalHistory(
       for (const d of personalDays) {
         if (d.localDate < from || d.localDate > to) continue;
         await tx.runAsync(
-          `INSERT INTO daily_cache(scope,local_date,device_id,platform,tz,views,ad_views,minutes,coverage,rev,app_views_json) VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(scope,local_date,device_id) DO UPDATE SET platform=excluded.platform,tz=excluded.tz,views=excluded.views,ad_views=excluded.ad_views,minutes=excluded.minutes,coverage=excluded.coverage,rev=excluded.rev,app_views_json=excluded.app_views_json WHERE excluded.rev>=daily_cache.rev`,
+          `INSERT INTO daily_cache(scope,local_date,device_id,platform,tz,views,ad_views,minutes,rev,app_views_json) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(scope,local_date,device_id) DO UPDATE SET platform=excluded.platform,tz=excluded.tz,views=excluded.views,ad_views=excluded.ad_views,minutes=excluded.minutes,rev=excluded.rev,app_views_json=excluded.app_views_json WHERE excluded.rev>=daily_cache.rev`,
           scope,
           d.localDate,
           d.deviceId,
@@ -79,7 +79,6 @@ export function hydratePersonalHistory(
           d.views,
           d.adViews,
           d.minutes,
-          d.coverage,
           d.rev,
           d.personalAppViews ? JSON.stringify(d.personalAppViews) : null,
         );

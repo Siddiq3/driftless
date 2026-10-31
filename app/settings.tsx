@@ -8,8 +8,7 @@ import { ActivityIndicator, AppState, Platform, Pressable, View } from 'react-na
 import { ApiError, createApiClient } from '@/api/client';
 import { useSession } from '@/auth/session';
 import { APP_VERSION, readEnv } from '@/config/env';
-import { cacheEntitlement } from '@/billing/pro';
-import { entitlementGeneration } from '@/billing/cache';
+import { cacheEntitlement, entitlementGeneration } from '@/billing/cache';
 import { Details, Notice, Screen } from '@/ui/kit';
 import { Icon } from '@/ui/Icon';
 import {
@@ -27,7 +26,7 @@ const CAPABILITY_LABELS: Record<keyof v1.Capabilities, string> = {
   blocking: 'App blocking',
   schedules: 'Schedules',
   advancedAnalytics: 'Advanced analytics',
-  socialSharingOfUsage: 'Share progress with friends',
+  socialSharingOfUsage: 'Friends leaderboard',
 };
 
 type Load =
@@ -206,8 +205,8 @@ export default function Settings() {
           />
           <SettingsDivider />
           <SettingsRow
-            title="Privacy & data"
-            subtitle="Your information and account controls"
+            title="Your data & account"
+            subtitle="Export, reset or delete your account and data"
             icon="lock"
             onPress={() => router.push('/privacy')}
           />

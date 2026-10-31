@@ -77,7 +77,7 @@ class PauseActivity : Activity() {
 
         @Suppress("DEPRECATION")
         window.apply {
-            statusBarColor = PauseStyle.indigo
+            statusBarColor = PauseStyle.background
             navigationBarColor = PauseStyle.background
         }
         val surface = PauseSurface(this)
@@ -85,14 +85,10 @@ class PauseActivity : Activity() {
         val scheduled = reason == "SCHEDULE"
         val snoozesLeft = BlockPolicy.MAX_SNOOZES_PER_DAY - prefs.snoozesToday()
         surface.present(
-            state = if (account) "Allowance needs a refresh" else if (scheduled) "Focus time" else "Daily limit reached",
-            title = if (account) "Let’s reconnect." else if (scheduled) "Your offline moment." else "Less feed. More you.",
+            title = if (account) "Let’s reconnect." else if (scheduled) "Focus time." else "Time’s up for today.",
             body = if (account) "Your account allowance is used or needs a refresh. Open ScrollSnooze to check your available time."
                 else if (scheduled) "You set this time aside. $label can wait."
-                else "You’ve reached your daily app limit. Make a little room for the rest of your day.",
-            explanation = if (account) "Account credit is exhausted or cannot be verified. Reconnect to refresh your reserved allowance. Other offline devices may hold reserved credit. Credit follows your fixed account timezone: ${store.account.zone().id}. Reconnect after the account day changes. Usage continues to be recorded."
-                else if (scheduled) "Your focus schedule is active for $label. Home and Back are always available. Manage pauses in ScrollSnooze or Android Accessibility settings. Media may keep playing underneath."
-                else "Your daily app-minute limit is reached. Limits reset on the next local day. Home and Back are always available. Manage pauses in ScrollSnooze or Android Accessibility settings. Media may keep playing underneath.",
+                else "You reached your daily limit for $label. It resets tomorrow.",
         )
         surface.action("Leave feed", primary = true) { goHome() }
         if (snoozesLeft > 0 && !account) {
@@ -103,7 +99,7 @@ class PauseActivity : Activity() {
                 }
             }
         }
-        surface.action("Open ScrollSnooze") {
+        surface.action("Open ScrollSnooze", quiet = true) {
             packageManager.getLaunchIntentForPackage(packageName)?.let { startActivity(it) }
             finish()
         }

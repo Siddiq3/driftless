@@ -1,7 +1,8 @@
+import { hasRecordedActivity } from '@/data/measurement';
 import type { Daily, TrackingHealth } from 'tracking-android';
 /** Local display only. Never used for validated goals, sync or comparisons. */
 export function candidateCount(daily: Daily | null, health: TrackingHealth | null): number | null {
-  if (!daily || !health || daily.heartbeatMinutes <= 0) return null;
+  if (!daily || !health) return null;
   const packages = new Set(health.apps.filter((a) => a.installed).map((a) => a.package));
   const rows = daily.apps.filter((a) => packages.has(a.package));
   if (!rows.some((a) => a.surfaceMs > 0 && a.views > 0)) return null;
@@ -20,6 +21,5 @@ export function homeAppCount(
   if (daily.personalAppViews && Object.hasOwn(daily.personalAppViews, packageName))
     return daily.personalAppViews[packageName] ?? null;
   const row = daily.apps.find((entry) => entry.package === packageName);
-  if (!row && daily.heartbeatMinutes <= 0) return null;
-  return row?.views ?? (daily.heartbeatMinutes > 0 ? 0 : null);
+  return row?.views ?? (hasRecordedActivity(daily) ? 0 : null);
 }

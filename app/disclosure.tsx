@@ -1,78 +1,31 @@
-import { Platform, Pressable, ScrollView, View } from 'react-native';
+import { Platform, ScrollView } from 'react-native';
 import { ScreenTimeScreen } from '@/ios/ScreenTimeScreen';
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Tracking } from 'tracking-android';
-import { Notice, T } from '@/ui/kit';
+import { T } from '@/ui/kit';
 import { SetupButton, SETUP_COLORS as C } from '@/onboarding/Visuals';
-import { AccessibilityWalkthrough } from '@/permissions/AccessibilityWalkthrough';
+import { FullDisclosure, PermissionScreen } from '@/permissions/PermissionScreen';
 
-/** Prominent consent remains visible before opening Android's real permission screen. */
-function AndroidDisclosure() {
-  const [error, setError] = useState<string | null>(null);
-  const [alreadyAgreed] = useState(() => {
-    try {
-      return Tracking.health().disclosureAccepted;
-    } catch {
-      return false;
-    }
-  });
-  const agree = () => {
-    try {
-      Tracking.setDisclosureAccepted(true);
-      Tracking.openAccessibilityGuide();
-      router.back();
-    } catch {
-      setError('Android settings could not be opened. Please try again.');
-    }
-  };
+const leave = () => (router.canGoBack() ? router.back() : router.replace('/'));
+
+/** Privacy opens this read-only; it never grants or opens anything. */
+function ReadOnlyDisclosure() {
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#666666' }}>
-      <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 16 }}>
-        <View
-          style={{
-            width: '100%',
-            maxWidth: 440,
-            alignSelf: 'center',
-            borderRadius: 20,
-            overflow: 'hidden',
-            backgroundColor: C.surface,
-            paddingBottom: 16,
-            gap: 12,
-          }}
-        >
-          <AccessibilityWalkthrough />
-          {!alreadyAgreed && (
-            <T style={{ color: '#E3DFD1', fontSize: 12, lineHeight: 17, paddingHorizontal: 16 }}>
-              ScrollSnooze can track app minutes in Instagram, YouTube, Facebook, Snapchat, Moj and
-              ShareChat. Experimental short-video detection covers Instagram and YouTube only; video
-              counts are not set up for Facebook, Snapchat, Moj or ShareChat. Where a video rule is
-              active, limited player labels become one-way codes and only counts and times are saved
-              on this phone. Meme breaks can use the script of visible player labels to choose a
-              language on-device; that text and language hint are not saved or uploaded. No
-              messages, passwords or screenshots. Signing in backs up daily totals and goals
-              automatically; guest progress stays on this phone. Optional feed pauses cover a
-              detected Reels or Shorts player. The Leave feed button performs Android Back only when
-              you press it. You can always leave using system navigation.
-            </T>
-          )}
-          {error && <Notice tone="warn" title="Please try again" body={error} />}
-          <View style={{ paddingHorizontal: 16, gap: 4 }}>
-            <SetupButton label={alreadyAgreed ? 'Got it' : 'Got it · I agree'} onPress={agree} />
-            <Pressable
-              onPress={() => router.back()}
-              accessibilityLabel="Not now"
-              accessibilityRole="button"
-              style={{ minHeight: 48, justifyContent: 'center' }}
-            >
-              <T style={{ color: C.muted, textAlign: 'center' }}>Not now</T>
-            </Pressable>
-          </View>
-        </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg, padding: 16 }}>
+      <ScrollView contentContainerStyle={{ gap: 16 }}>
+        <T accessibilityRole="header" style={{ color: C.text, fontSize: 22, fontWeight: '800' }}>
+          How accessibility counting uses your data
+        </T>
+        <FullDisclosure />
       </ScrollView>
+      <SetupButton label="Close" onPress={leave} />
     </SafeAreaView>
   );
+}
+
+function AndroidDisclosure() {
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+  return mode === 'read' ? <ReadOnlyDisclosure /> : <PermissionScreen onDone={leave} />;
 }
 
 export default function Disclosure() {

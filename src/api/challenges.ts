@@ -14,6 +14,15 @@ export const BattleCreate = v1.ChallengeCreate.safeExtend({
     path: ['targetUserId'],
   },
 );
+const LeaderboardCount = z.intersection(
+  v1.DailyFriendCount,
+  z.object({ experimental: z.boolean().optional() }),
+);
+export const LeaderboardResponse = v1.FriendsDailyResponse.extend({
+  self: LeaderboardCount,
+  friends: z.array(v1.Friend.extend({ daily: LeaderboardCount })),
+});
+export type LeaderboardResponse = z.infer<typeof LeaderboardResponse>;
 export const BattleSummary = v1.ChallengeSummary.extend({
   ownerId: z.string().nullable(),
   targetUserId: z.uuid().optional(),

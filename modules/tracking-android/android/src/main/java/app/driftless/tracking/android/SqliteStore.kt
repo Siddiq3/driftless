@@ -66,6 +66,7 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
         AccountUsage.create(db)
         db.execSQL("CREATE TABLE guest_event_archive AS SELECT * FROM events WHERE 0")
         db.execSQL("ALTER TABLE synced_daily ADD COLUMN app_views_json TEXT")
+        removeDiagnostics(db)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -75,6 +76,19 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
         if (oldVersion < 4) AccountUsage.create(db)
         if (oldVersion < 5) db.execSQL("CREATE TABLE guest_event_archive AS SELECT * FROM events WHERE 0")
         if (oldVersion < 6) db.execSQL("ALTER TABLE synced_daily ADD COLUMN app_views_json TEXT")
+        if (oldVersion < 7) removeDiagnostics(db)
+    }
+
+    /** Data minimisation: no heartbeat history, stored item identifiers, coverage or per-event versions. */
+    private fun removeDiagnostics(db: SQLiteDatabase) {
+        for (op in listOf("insert", "delete")) db.execSQL("DROP TRIGGER IF EXISTS heartbeat_revision_$op")
+        db.execSQL("DROP TABLE IF EXISTS heartbeats")
+        db.execSQL("DROP TABLE IF EXISTS rings")
+        db.execSQL("ALTER TABLE synced_daily RENAME TO synced_daily_v6")
+        db.execSQL("CREATE TABLE synced_daily (scope TEXT NOT NULL, local_date TEXT NOT NULL, device_id TEXT NOT NULL, tz TEXT NOT NULL, views INTEGER, minutes INTEGER, rev INTEGER NOT NULL, app_views_json TEXT, PRIMARY KEY(scope, local_date, device_id))")
+        db.execSQL("INSERT INTO synced_daily SELECT scope, local_date, device_id, tz, views, minutes, rev, app_views_json FROM synced_daily_v6")
+        db.execSQL("DROP TABLE synced_daily_v6")
+        for (table in listOf("events", "guest_event_archive")) db.execSQL("UPDATE $table SET rule_version = 0, app_version = NULL")
     }
 
     private fun ensureDaily(db: SQLiteDatabase, date: String, pkg: String) {
@@ -97,8 +111,9 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
                 put("counted_at_ms", e.countedAtMs)
                 put("local_date", e.localDate)
                 put("tz", e.tz)
-                put("rule_version", e.ruleVersion)
-                put("app_version", e.appVersion)
+                // Used below for the experimental label only; versions are not retained per event.
+                put("rule_version", 0)
+                putNull("app_version")
             }
             val row = db.insertWithOnConflict("events", null, v, SQLiteDatabase.CONFLICT_IGNORE)
             if (row == -1L) return false // duplicate event_id or (session_id, seq): already counted
@@ -155,37 +170,26 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
         }
     }
 
+    // ponytail: memory only, so an item re-watched right after the process dies can count again.
+    private val rings = HashMap<Pair<String, String>, Pair<List<String>, Long>>()
+
     @Synchronized
     override fun saveRing(pkg: String, ring: List<String>, savedAtMs: Long) {
-        writableDatabase.execSQL(
-            "INSERT OR REPLACE INTO rings (scope, pkg, fps, saved_at) VALUES (?, ?, ?, ?)",
-            arrayOf<Any>(activeScope(), pkg, ring.joinToString(","), savedAtMs),
-        )
+        rings[activeScope() to pkg] = ring to savedAtMs
     }
 
     @Synchronized
     override fun loadRing(pkg: String, nowMs: Long, maxAgeMs: Long): List<String> =
-        readableDatabase.rawQuery("SELECT fps, saved_at FROM rings WHERE scope = ? AND pkg = ?", arrayOf(activeScope(), pkg)).use { c ->
-            if (!c.moveToFirst() || nowMs - c.getLong(1) > maxAgeMs) emptyList()
-            else c.getString(0).split(',').filter { it.isNotEmpty() }
-        }
+        rings[activeScope() to pkg]?.takeIf { nowMs - it.second <= maxAgeMs }?.first ?: emptyList()
 
     @Synchronized
-    override fun heartbeat(localDate: String, minuteOfDay: Int) {
+    override fun onCountableAppActive(localDate: String) {
         val db=writableDatabase; db.beginTransaction()
         try {
-            db.execSQL("INSERT OR IGNORE INTO heartbeats (scope, local_date, minute) VALUES (?, ?, ?)", arrayOf<Any>(activeScope(),localDate,minuteOfDay))
             account.observeViews(localDate,RulesLoader.load(appContext).apps.keys)
             db.setTransactionSuccessful()
         } finally { db.endTransaction() }
     }
-
-    @Synchronized
-    override fun heartbeatMinutes(localDate: String): Int =
-        readableDatabase.rawQuery("SELECT COUNT(*) FROM heartbeats WHERE scope = ? AND local_date = ?", arrayOf(activeScope(), localDate)).use {
-            it.moveToFirst()
-            it.getInt(0)
-        }
 
     @Synchronized
     override fun daily(localDate: String): List<DailyRow> =
@@ -244,17 +248,17 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
             }
         }
 
-    /** Raw events and heartbeats are kept 30 days; daily aggregates until the user wipes them. */
+    /** Raw events are kept 30 days; daily aggregates until the user wipes them. */
     fun purgeOlderThan(cutoffMs: Long, cutoffDate: String) {
         writableDatabase.execSQL("DELETE FROM events WHERE counted_at_ms < ?", arrayOf<Any>(cutoffMs))
         writableDatabase.execSQL("DELETE FROM guest_event_archive WHERE counted_at_ms < ?", arrayOf<Any>(cutoffMs))
-        writableDatabase.execSQL("DELETE FROM heartbeats WHERE local_date < ?", arrayOf(cutoffDate))
     }
 
     @Synchronized
     fun wipeAll() {
         val db = writableDatabase
-        for (t in listOf("events", "guest_event_archive", "daily", "rings", "heartbeats", "synced_daily")) db.execSQL("DELETE FROM $t")
+        for (t in listOf("events", "guest_event_archive", "daily", "synced_daily")) db.execSQL("DELETE FROM $t")
+        rings.clear()
     }
 
     private fun migrateScopes(db: SQLiteDatabase, fresh: Boolean) {
@@ -312,8 +316,7 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
             override fun setUsage(d: String, p: String, u: Long) = bound { if(account.resetGeneration()==generation) this@SqliteStore.setUsage(d, p, u) }
             override fun saveRing(p: String, r: List<String>, t: Long) = bound { if(account.resetGeneration()==generation) this@SqliteStore.saveRing(p, r, t) }
             override fun loadRing(p: String, n: Long, a: Long) = bound { this@SqliteStore.loadRing(p, n, a) }
-            override fun heartbeat(d: String, m: Int) = bound { if(account.resetGeneration()==generation) this@SqliteStore.heartbeat(d, m) }
-            override fun heartbeatMinutes(d: String) = bound { this@SqliteStore.heartbeatMinutes(d) }
+            override fun onCountableAppActive(d: String) = bound { if(account.resetGeneration()==generation) this@SqliteStore.onCountableAppActive(d) }
             override fun daily(d: String) = bound { this@SqliteStore.daily(d) }
             override fun events(t: Long) = bound { this@SqliteStore.events(t) }
         }
@@ -354,7 +357,6 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
                 ON CONFLICT(scope, local_date, pkg) DO UPDATE SET views=daily.views+excluded.views, ad_views=daily.ad_views+excluded.ad_views, surface_ms=daily.surface_ms+excluded.surface_ms, unknown_ms=daily.unknown_ms+excluded.unknown_ms, usage_ms=daily.usage_ms+excluded.usage_ms, usage_observed=MAX(daily.usage_observed,excluded.usage_observed), status=CASE WHEN daily.status='validated' AND excluded.status='validated' THEN 'validated' ELSE 'experimental' END""", arrayOf(target, source))
             db.execSQL("INSERT INTO guest_event_archive SELECT * FROM events WHERE scope = ?", arrayOf(source))
             db.execSQL("UPDATE events SET scope = ? WHERE scope = ?", arrayOf(target, source))
-            db.execSQL("INSERT OR IGNORE INTO heartbeats SELECT ?, local_date, minute FROM heartbeats WHERE scope = ?", arrayOf(target, source))
             db.execSQL("UPDATE scope_intervals SET scope = ? WHERE scope = ?", arrayOf(target, source))
             // Keep guest aggregates/rings and archived stable events until and after cloud verification.
             db.setTransactionSuccessful()
@@ -388,7 +390,7 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
                 val d = rows.getJSONObject(i)
                 if(account.cutoff()>0 && d.getString("localDate")<=app.driftless.tracking.core.Recorder.localDate(account.cutoff(),account.zone())) continue
                 val v = ContentValues().apply {
-                    put("scope", expectedScope); put("local_date", d.getString("localDate")); put("device_id", d.getString("deviceId")); put("tz", d.getString("tz")); put("rev", d.getLong("rev")); put("coverage", d.getDouble("coverage"))
+                    put("scope", expectedScope); put("local_date", d.getString("localDate")); put("device_id", d.getString("deviceId")); put("tz", d.getString("tz")); put("rev", d.getLong("rev"))
                     put("app_views_json", d.optJSONObject("personalAppViews")?.toString())
                     if (d.isNull("views")) putNull("views") else put("views", d.getInt("views"))
                     if (d.isNull("minutes")) putNull("minutes") else put("minutes", d.getInt("minutes"))
@@ -408,12 +410,15 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
         mapOf("recordedTz" to zone,"measurementStatus" to if(rows==0) "unavailable" else status,"usageObserved" to observed)
     }
 
+    /** A day is known only from recorded activity; Usage Access minutes alone say nothing about the counter. */
+    private fun recordedActivity(rows: List<DailyRow>) = rows.any { it.views>0 || it.adViews>0 || it.surfaceMs>0 || it.unknownMs>0 }
+
     /** Private display breakdown. Local and cloud copies of one device overlap, never add. */
     private fun personalAppViews(date: String, packages: Set<String>, own: List<DailyRow>, total: Long?): Map<String, Int?> {
         val source = readableDatabase.rawQuery("SELECT value FROM tracking_meta WHERE key='device_id'", null).use { if(it.moveToFirst()) it.getString(0) else "" }
         val devices = mutableMapOf<String, Map<String, Int?>?>()
         val deviceTotals = mutableMapOf<String, Long>()
-        if (own.isNotEmpty() && (heartbeatMinutes(date)>0 || own.sumOf { it.views }>0))
+        if (recordedActivity(own))
             devices[source] = packages.associateWith { pkg -> own.firstOrNull { it.pkg==pkg }?.views ?: 0 }
         readableDatabase.rawQuery("SELECT device_id,views,app_views_json FROM synced_daily WHERE scope=? AND local_date=?", arrayOf(activeScope(),date)).use { c ->
             while(c.moveToNext()) {
@@ -454,7 +459,7 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
     fun personalMeasurement(date: String, packages: Set<String>): Map<String, Any?> {
         val own = daily(date).filter { it.pkg in packages }
         val localViews = own.sumOf { it.views }
-        val knownLocal = own.isNotEmpty() && (heartbeatMinutes(date)>0 || localViews>0)
+        val knownLocal = recordedActivity(own)
         var views: Int? = if(knownLocal) localViews else null
         var minutes: Int? = null
         var status = "unavailable"
@@ -464,7 +469,7 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
             while(c.moveToNext()) { if(c.getString(0)!="validated") experimental=true; tz=c.getString(1); if(c.getInt(2)>0) observed=true }
             if(knownLocal) status=if(experimental) "experimental" else "validated"
             if(observed) minutes=(own.sumOf { it.usageMs } / 60000L).toInt()
-            else if(heartbeatMinutes(date)>0) minutes=(own.sumOf { it.surfaceMs+it.unknownMs } / 60000L).toInt()
+            else if(knownLocal) minutes=(own.sumOf { it.surfaceMs+it.unknownMs } / 60000L).toInt()
         }
         val source = readableDatabase.rawQuery("SELECT value FROM tracking_meta WHERE key='device_id'", null).use { if(it.moveToFirst()) it.getString(0) else "" }
         val personalDevices = mutableMapOf<String, Pair<Long?,Long?>>()
@@ -488,7 +493,7 @@ class SqliteStore(context: Context, name: String? = DB_NAME) :
 
     companion object {
         const val DB_NAME = "driftless_tracking.db"
-        const val SCHEMA_VERSION = 6
+        const val SCHEMA_VERSION = 7
 
         @Volatile private var instance: SqliteStore? = null
 

@@ -1,4 +1,6 @@
-jest.mock('@/sync/accountUsage', () => ({ syncAccountUsage: jest.fn().mockResolvedValue('Reserved account credit') }));
+jest.mock('@/sync/accountUsage', () => ({
+  syncAccountUsage: jest.fn().mockResolvedValue('Reserved account credit'),
+}));
 jest.mock('@/data/session', () => ({
   resolvePersonalAccount: async () => require('../src/db').getDb(),
   acknowledgeGuestImports: jest.fn().mockResolvedValue(undefined),
@@ -78,8 +80,6 @@ beforeEach(async () => {
     >);
   jest.mocked(Tracking.daily).mockImplementation((d) => ({
     localDate: d!,
-    heartbeatMinutes: 0,
-    coverage: 0,
     apps: [
       {
         package: 'com.instagram.android',
@@ -112,7 +112,7 @@ it('binds and uploads guest goals and history older than a week without a backup
   expect(api.putGoals.mock.calls[0]![0]).toEqual(await loadGoals(db));
   expect(api.usageSync.mock.calls[0]![0]).toEqual(
     expect.arrayContaining([
-      expect.objectContaining({ localDate: older(), minutes: 2, views: null, coverage: 0 }),
+      expect.objectContaining({ localDate: older(), minutes: 2, views: null }),
     ]),
   );
   expect(

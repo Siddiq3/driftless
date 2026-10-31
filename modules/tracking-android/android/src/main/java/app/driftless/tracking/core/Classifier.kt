@@ -43,28 +43,30 @@ data class RuleSet(val version: Int, val apps: Map<String, AppRules>)
 
 data class Classification(val surface: Surface, val fingerprint: String?, val isAd: Boolean, val nodesVisited: Int, val itemContainerPresent: Boolean = true,
     /** Salted hashes of the same metadata already used for identity; never raw text. */
-    val identitySignals: Set<String> = emptySet(),
-    /** Transient, local-only hint. Never part of events, fingerprints, exports or sync. */
-    val contentLanguage: String? = null)
+    val identitySignals: Set<String> = emptySet())
 
 class Classifier(private val maxNodes: Int = MAX_NODES, private val maxDepth: Int = MAX_DEPTH) {
 
-    fun classify(root: UiNode?, rules: AppRules, salt: ByteArray, detectLanguage: Boolean = false): Classification {
+    fun classify(root: UiNode?, rules: AppRules, salt: ByteArray): Classification {
         if (root == null) return Classification(Surface.UNKNOWN, null, isAd = false, nodesVisited = 0)
         var surface = false
         var ad = false
         val parts = HashMap<ItemPart, String>()
-        val scriptTexts = mutableListOf<CharSequence>()
         var visited = 0
         val containers = HashSet<String>()
         var playerControlsPresent = false
 
         // Breadth-first, bounded: never walk an unbounded tree on the UI-event hot path.
+        data class Visit(val node: UiNode, val id: String?, val scopes: Set<ItemPart>, val controls: Boolean, val metadata: Boolean)
         data class Work(val node: UiNode, val depth: Int, val scopes: Set<ItemPart>, val controls: Boolean, val metadata: Boolean)
         val captions = HashMap<ItemPart, LinkedHashSet<String>>()
         val descriptions = HashMap<ItemPart, LinkedHashSet<String>>()
         val queue = ArrayDeque<Work>()
         queue.addLast(Work(root, 0, emptySet(), false, false))
+        // First pass reads structure only (IDs, classes, visibility). Text and descriptions are
+        // read in the second pass, and only once a configured player is on screen: chats, profiles
+        // and other screens in a supported app are never read as text.
+        val visible = ArrayList<Visit>()
         while (queue.isNotEmpty() && visited < maxNodes) {
             val (n, depth, inheritedScopes, insideControl, inheritedMetadata) = queue.removeFirst()
             visited++
@@ -76,13 +78,28 @@ class Classifier(private val maxNodes: Int = MAX_NODES, private val maxDepth: In
             val scopes = inheritedScopes + rules.itemParts.filter { it.viewId == id && it.field == Field.CAPTION_TEXT }
             if (scopes.isNotEmpty() && cls in setOf("Button", "ImageButton", "RadioButton", "CheckBox", "Switch"))
                 playerControlsPresent = true
+            if (id != null) {
+                if (rules.itemParts.any { it.viewId == id }) containers.add(id)
+                if (id in rules.surfaceViewIds) surface = true
+                if (id in rules.adViewIds) ad = true
+            }
+            visible.add(Visit(n, id, scopes, controls, metadata))
+            if (depth < maxDepth) {
+                for (i in 0 until n.childCount) n.child(i)?.let {
+                    queue.addLast(Work(it, depth + 1, scopes, controls,
+                        metadata || (i == 0 && id in rules.captionDescriptionFirstChildViewIds)))
+                }
+            }
+        }
+        if (!surface) return Classification(Surface.OTHER, null, isAd = false, nodesVisited = visited)
+
+        for ((n, id, scopes, controls, metadata) in visible) {
             // YouTube's anonymous caption groups carry text, while buttons contain changing
             // likes/playback labels. Never use those controls or content outside the player.
             if (!controls && scopes.isNotEmpty()) {
                 val text = n.text?.trim()?.take(512)
                 if (!text.isNullOrEmpty()) {
                     scopes.forEach { captions.getOrPut(it) { linkedSetOf() }.add(text) }
-                    if (detectLanguage && cls != "EditText") scriptTexts.add(text)
                 }
                 // Some YouTube layouts expose captions as descriptions. Only read them
                 // inside the configured metadata panel, never sidebar metrics/progress.
@@ -90,15 +107,11 @@ class Classifier(private val maxNodes: Int = MAX_NODES, private val maxDepth: In
                     val desc = n.contentDesc?.trim()?.take(512)
                     if (!desc.isNullOrEmpty()) {
                         scopes.forEach { descriptions.getOrPut(it) { linkedSetOf() }.add(desc) }
-                        if (detectLanguage && cls != "EditText") scriptTexts.add(desc)
                         playerControlsPresent = true
                     }
                 }
             }
             if (id != null) {
-                if (rules.itemParts.any { it.viewId == id }) containers.add(id)
-                if (id in rules.surfaceViewIds) surface = true
-                if (id in rules.adViewIds) ad = true
                 for (p in rules.itemParts) {
                     if (p.viewId == id && p !in parts) {
                         val v = when (p.field) {
@@ -108,7 +121,6 @@ class Classifier(private val maxNodes: Int = MAX_NODES, private val maxDepth: In
                         }
                         if (!v.isNullOrBlank()) {
                             parts[p] = v.trim()
-                            if (detectLanguage && !controls && cls != "EditText") scriptTexts.add(v.take(512))
                         }
                     }
                 }
@@ -117,17 +129,10 @@ class Classifier(private val maxNodes: Int = MAX_NODES, private val maxDepth: In
                 val label = (n.text ?: n.contentDesc)?.trim()?.lowercase()
                 if (label != null && label in rules.adLabels) ad = true
             }
-            if (depth < maxDepth) {
-                for (i in 0 until n.childCount) n.child(i)?.let {
-                    queue.addLast(Work(it, depth + 1, scopes, controls,
-                        metadata || (i == 0 && id in rules.captionDescriptionFirstChildViewIds)))
-                }
-            }
         }
 
         descriptions.forEach { (part, text) -> if (text.isNotEmpty()) parts[part] = text.joinToString("\n") }
         captions.forEach { (part, text) -> if (text.isNotEmpty()) parts[part] = text.joinToString("\n") }
-        if (!surface) return Classification(Surface.OTHER, null, isAd = false, nodesVisited = visited)
         // Identity needs every configured part; a partial match would merge different items.
         val fp =
             if (rules.itemParts.isNotEmpty() && parts.size == rules.itemParts.size) {
@@ -144,8 +149,7 @@ class Classifier(private val maxNodes: Int = MAX_NODES, private val maxDepth: In
         }.map { Fingerprint.of(salt, listOf(it)) }.toSet()
         return Classification(Surface.SHORT_VIDEO, fp, ad, visited,
             if (rules.itemParts.any { it.field == Field.CAPTION_TEXT }) playerControlsPresent
-            else rules.itemParts.isNotEmpty() && rules.itemParts.all { it.viewId in containers }, signals,
-            if (detectLanguage && !ad) detectContentLanguage(scriptTexts) else null)
+            else rules.itemParts.isNotEmpty() && rules.itemParts.all { it.viewId in containers }, signals)
     }
 
     companion object {

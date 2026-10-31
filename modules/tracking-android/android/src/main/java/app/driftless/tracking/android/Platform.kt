@@ -78,14 +78,42 @@ class TrackingPrefs(private val context: Context) {
     private val p: SharedPreferences =
         context.applicationContext.getSharedPreferences("driftless_tracking", Context.MODE_PRIVATE)
 
+    /** Existing acceptance requires a new explanation; this does not grant consent. */
+    val disclosureRenewalRequired: Boolean
+        get() = p.getBoolean(KEY_CONSENT, false) &&
+            p.getInt(KEY_CONSENT_VERSION, 0) != CURRENT_DISCLOSURE_VERSION
+
     var disclosureAccepted: Boolean
         get() = p.getBoolean(KEY_CONSENT, false) &&
             p.getInt(KEY_CONSENT_VERSION, 0) == CURRENT_DISCLOSURE_VERSION
-        set(v) = p.edit()
-            .putBoolean(KEY_CONSENT, v)
-            .putInt(KEY_CONSENT_VERSION, if (v) CURRENT_DISCLOSURE_VERSION else 0)
-            .putLong(KEY_CONSENT_AT, System.currentTimeMillis())
-            .apply()
+        set(v) = updateDisclosureConsent(v)
+
+    /** The wait boundary is injectable for deterministic timeout/interleaving tests. The actual
+     * preference update and service transition always execute together on the main looper. */
+    internal fun updateDisclosureConsent(
+        accepted: Boolean,
+        awaitCompletion: (java.util.concurrent.CountDownLatch) -> Boolean = {
+            it.await(5, java.util.concurrent.TimeUnit.SECONDS)
+        },
+    ) {
+        val action = {
+            p.edit().putBoolean(KEY_CONSENT, accepted)
+                .putInt(KEY_CONSENT_VERSION, if (accepted) CURRENT_DISCLOSURE_VERSION else 0)
+                .putLong(KEY_CONSENT_AT, System.currentTimeMillis()).apply()
+            DriftlessAccessibilityService.current?.onDisclosureConsentChanged()
+        }
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) action() else {
+            val done = java.util.concurrent.CountDownLatch(1)
+            var failure: Throwable? = null
+            check(android.os.Handler(android.os.Looper.getMainLooper()).post {
+                try { action() } catch (e: Throwable) { failure = e } finally { done.countDown() }
+            }) { "Consent transition could not be queued; the requested change is not confirmed" }
+            check(awaitCompletion(done)) {
+                "Consent transition timed out; the requested change is not confirmed and may still be pending"
+            }
+            failure?.let { throw it }
+        }
+    }
 
     var floatingCountEnabled: Boolean
         get() = p.getBoolean("floating_count_enabled", true)
@@ -138,10 +166,6 @@ class TrackingPrefs(private val context: Context) {
         }.apply()
     }
 
-    fun shownWrapEnd(period: String): String? = p.getString(scoped("wrapped_ready_$period"), null)
-    fun markWrapShown(wrap: ReadyWrap) {
-        p.edit().putString(scoped("wrapped_ready_${wrap.period}"), wrap.end).apply()
-    }
     fun clearWrapHistory() {
         p.edit().also { editor ->
             p.all.keys.filter { it.startsWith("wrapped_ready_") }.forEach { editor.remove(it) }
@@ -203,7 +227,6 @@ class TrackingPrefs(private val context: Context) {
                     o.optBoolean("enforceVideoGoal", false), o.optBoolean("breaksEnabled", false),
                     o.optInt("breakEveryViews", 50).coerceIn(1, 2000), o.optInt("breakMinutes", 5).coerceIn(1, 60),
                     o.optInt("maxBypassesPerDay", 3).coerceIn(0, 10), o.optInt("bypassMinutes", 5).coerceIn(1, 30),
-                    o.optBoolean("allowUnvalidatedCounts", false),
                 ),
             )
         }
@@ -215,7 +238,7 @@ class TrackingPrefs(private val context: Context) {
                 .put("feedOnly", c.feedOnly).put("enforceVideoGoal", c.feed.enforceGoal)
                 .put("breaksEnabled", c.feed.breaksEnabled).put("breakEveryViews", c.feed.everyViews)
                 .put("breakMinutes", c.feed.breakMinutes).put("maxBypassesPerDay", c.feed.maxBypasses)
-                .put("bypassMinutes", c.feed.bypassMinutes).put("allowUnvalidatedCounts", c.feed.allowUnvalidated)
+                .put("bypassMinutes", c.feed.bypassMinutes)
                 .put(
                     "schedules",
                     org.json.JSONArray().apply {
@@ -274,7 +297,7 @@ class TrackingPrefs(private val context: Context) {
     private fun String.hexToBytes(): ByteArray = ByteArray(length / 2) { substring(it * 2, it * 2 + 2).toInt(16).toByte() }
 
     companion object {
-        private const val CURRENT_DISCLOSURE_VERSION = 2
+        private const val CURRENT_DISCLOSURE_VERSION = 4
         private const val KEY_CONSENT = "a11y_disclosure_accepted"
         private const val KEY_CONSENT_AT = "a11y_disclosure_accepted_at"
         private const val KEY_CONSENT_VERSION = "a11y_disclosure_version"

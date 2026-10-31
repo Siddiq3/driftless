@@ -1,8 +1,12 @@
+/** Google account name, or a neutral label. Internal handles are never shown. */
+export const friendName = (friend: { displayName: string | null }) =>
+  friend.displayName || 'ScrollSnooze friend';
 export type BattleRow = {
   id: string;
   name: string;
   handle: string;
   views: number | null;
+  experimental?: boolean;
   self: boolean;
 };
 /** Real zero ranks; missing data stays unranked. Equal counts share a competition rank. */

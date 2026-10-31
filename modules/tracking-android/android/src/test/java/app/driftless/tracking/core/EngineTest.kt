@@ -21,6 +21,31 @@ class EngineTest {
 
     private fun video(fp: String) = Classification(Surface.SHORT_VIDEO, fp, isAd = false, nodesVisited = 3)
 
+    @Test fun discardNeverAdvancesPendingDwellButOrdinaryLeaveStillDoes() {
+        val discarded = MemoryStore(); val normal = MemoryStore(); val t = at(10,0)
+        val revoked = Engine(discarded,rules,zone={kolkata})
+        val valid = Engine(normal,rules,zone={kolkata})
+        for(e in listOf(revoked,valid)) e.onObservation(ig,null,video("a"),false,t)
+        revoked.discard(); revoked.onLeave(t+2000)
+        valid.onLeave(t+2000)
+        assertTrue(discarded.eventsById.isEmpty())
+        assertTrue(discarded.daily("2026-10-18").isEmpty())
+        assertEquals(1,normal.eventsById.size)
+        assertEquals(2000L,normal.daily("2026-10-18").single().surfaceMs)
+    }
+
+    @Test fun discardPreservesCommittedRecordsAndStartsNewDwellOnNextObservation() {
+        val store = MemoryStore(); val e = Engine(store,rules,zone={kolkata}); val t = at(10,0)
+        e.onObservation(ig,null,video("a"),false,t); e.onTick(t+2000)
+        e.onObservation(ig,null,video("b"),true,t+2000)
+        e.discard(); e.onLeave(t+6000)
+        assertEquals(1,store.eventsById.size)
+        assertEquals(2000L,store.daily("2026-10-18").single().surfaceMs)
+        e.onObservation(ig,null,video("c"),false,t+7000); e.onTick(t+9000)
+        assertEquals(2,store.eventsById.size)
+        assertEquals(4000L,store.daily("2026-10-18").single().surfaceMs)
+    }
+
     @Test fun delayedLeaveCannotDropTheActiveSessionOrCreateANewCount() {
         val store=MemoryStore();val e=Engine(store,rules,zone={kolkata})
         val t=at(10,0)
@@ -44,11 +69,17 @@ class EngineTest {
         assertEquals(1,store.eventsById.size)
     }
 
-    @Test fun backwardsTickCannotCreateAHeartbeatInThePreviousDay() {
-        val store=MemoryStore();val e=Engine(store,rules,zone={kolkata})
-        e.onTick(at(0,0,1,day=19));e.onTick(at(23,59,59));e.onTick(at(0,0,1,day=19))
-        assertEquals(0,store.heartbeatMinutes("2026-10-18"))
-        assertEquals(1,store.heartbeatMinutes("2026-10-19"))
+    private class MinuteSpy(val minutes: MutableList<String> = mutableListOf()) : TrackingStore by MemoryStore() {
+        override fun onCountableAppActive(localDate: String) { minutes += localDate }
+    }
+    private val fb = "com.facebook.katana"
+    private val withTimeOnlyApp = rules.copy(apps = rules.apps + (fb to rules.apps.getValue(ig).copy(pkg = fb, surfaceViewIds = emptySet())))
+    private val notVideo = Classification(Surface.OTHER, null, isAd = false, nodesVisited = 3)
+
+    @Test fun backwardsTickCannotMarkThePreviousDayObserved() {
+        val store=MinuteSpy();val e=Engine(store,rules,zone={kolkata})
+        e.onObservation(ig,null,video("a"),false,at(0,0,1,day=19));e.onTick(at(23,59,59));e.onTick(at(0,0,1,day=19))
+        assertEquals(listOf("2026-10-19"),store.minutes)
     }
 
     @Test fun screenOffInterruptAndReconnectDoNotCreditTheUnobservedGap() {
@@ -181,11 +212,35 @@ class EngineTest {
         assertEquals(4_000L, store.daily("2026-10-18").single().surfaceMs)
     }
 
-    @Test fun heartbeatsCountDistinctMinutes() {
-        val store = MemoryStore()
+    @Test fun noSupportedAppMeansNoAccountingEvidence() {
+        val store = MinuteSpy()
         val e = Engine(store, rules, zone = { kolkata })
         for (sec in 0 until 180 step 2) e.onTick(at(9, 0) + sec * 1000L)
-        assertEquals(3, store.heartbeatMinutes("2026-10-18"))
+        assertTrue(store.minutes.isEmpty())
+    }
+
+    @Test fun openingACountableAppIsEvidenceAtOnceEvenOutsideTheVideoPlayer() {
+        val store = MinuteSpy()
+        Engine(store, rules, zone = { kolkata }).onObservation(ig, null, notVideo, false, at(9, 0))
+        assertEquals(listOf("2026-10-18"), store.minutes)
+    }
+
+    @Test fun timeOnlyAppIsNotEvidence() {
+        val store = MinuteSpy()
+        val e = Engine(store, withTimeOnlyApp, zone = { kolkata })
+        e.onObservation(fb, null, notVideo, false, at(9, 0))
+        for (sec in 0 until 180 step 2) e.onTick(at(9, 0) + sec * 1000L)
+        assertTrue(store.minutes.isEmpty())
+    }
+
+    @Test fun leavingStopsAccountingAndASessionAcrossMidnightMarksTheNewDay() {
+        val store = MinuteSpy()
+        val e = Engine(store, rules, zone = { kolkata })
+        e.onObservation(ig, null, video("a"), false, at(23, 59, 30))
+        e.onTick(at(0, 0, 1, day = 19))
+        e.onLeave(at(0, 0, 2, day = 19))
+        e.onTick(at(0, 5, 0, day = 19)); e.onTick(at(0, 0, 0, day = 20))
+        assertEquals(listOf("2026-10-18", "2026-10-19"), store.minutes)
     }
 
     @Test fun uuidV7IsTimeOrderedAndVersioned() {

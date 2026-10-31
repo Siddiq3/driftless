@@ -9,7 +9,7 @@ import {
   type AppStateStatus,
 } from 'react-native';
 import * as Sharing from 'expo-sharing';
-import { WrapStories } from '@/wrapped/Stories';
+import { fitScale, WrapStories } from '@/wrapped/Stories';
 import type { Recap } from '@/wrapped/model';
 jest.mock('expo-router', () => ({
   router: { back: jest.fn(), push: jest.fn() },
@@ -196,4 +196,10 @@ test('holding anywhere pauses playback and releasing resumes the remaining story
   await act(async () => screen.props.onTouchCancel());
   expect(timing).toHaveBeenCalledTimes(starts + 2);
   await act(async () => tree.unmount());
+});
+
+test('a tall slide shrinks to fit and a short one keeps its size', () => {
+  expect(fitScale(500, 1000)).toBe(0.5);
+  expect(fitScale(500, 300)).toBe(1);
+  expect(fitScale(0, 300)).toBe(1);
 });

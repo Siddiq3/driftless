@@ -1,4 +1,5 @@
 import type { PersonalDailyAggregate } from '@/api/personalUsage';
+import { hasRecordedActivity } from '@/data/measurement';
 import type { Daily, TrackingHealth } from 'tracking-android';
 
 export type DayValues = Omit<PersonalDailyAggregate, 'rev'>;
@@ -11,7 +12,6 @@ export type DayValues = Omit<PersonalDailyAggregate, 'rev'>;
  *  - `views` only counts apps whose installed version passed the accuracy gate; if none did, null.
  *  - `minutes` prefers Android UsageStats (complete); otherwise counter time if the counter ran;
  *    otherwise null. Never 0 for "unknown".
- *  - `coverage` describes how trustworthy the numbers are for that day.
  */
 export function aggregateDay(
   daily: Daily,
@@ -29,14 +29,12 @@ export function aggregateDay(
       )
       .map((a) => a.package),
   );
-  const counterRan = daily.heartbeatMinutes > 0;
+  const counterRan = hasRecordedActivity(daily);
   const supported = new Set(health.apps.map((app) => app.package));
   const personalRows = daily.apps.filter((app) => supported.has(app.package));
   const recordedViews = personalRows.reduce((total, app) => total + app.views, 0);
   const personalViews =
-    personalRows.length > 0 && (counterRan || recordedViews > 0)
-      ? Math.min(100_000, recordedViews)
-      : null;
+    personalRows.length > 0 && counterRan ? Math.min(100_000, recordedViews) : null;
 
   let views: number | null = null;
   let adViews: number | null = null;
@@ -60,13 +58,6 @@ export function aggregateDay(
     minutes = Math.floor(usageMs / 60_000);
   else if (counterRan) minutes = Math.floor(counterMs / 60_000);
   if (minutes !== null) minutes = Math.min(1440, Math.max(0, minutes));
-
-  const coverage =
-    views !== null
-      ? daily.coverage
-      : currentDay && health.usageAccessGranted && hasRows
-        ? 1
-        : daily.coverage;
 
   return {
     localDate: daily.localDate,
@@ -100,7 +91,6 @@ export function aggregateDay(
     views: views === null ? null : Math.min(5000, views),
     adViews: adViews === null ? null : Math.min(5000, adViews),
     minutes,
-    coverage: Math.round(Math.min(1, Math.max(0, coverage)) * 1000) / 1000,
   };
 }
 
@@ -113,7 +103,6 @@ export function valuesKey(d: DayValues): string {
     d.views,
     d.adViews,
     d.minutes,
-    d.coverage,
     d.personalViews ?? null,
     Object.entries(d.personalAppViews ?? {}).sort(),
   ]);

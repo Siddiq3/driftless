@@ -25,15 +25,18 @@ export const STATE_COPY: Record<TrackingState, { title: string; body: string }> 
   },
   needs_service: {
     title: 'Turn on the counter in Settings',
-    body: 'Open Accessibility settings, find “ScrollSnooze Reels & Shorts counter” and switch it on. You can switch it off there at any time.',
+    body: 'Open Accessibility settings, find “ScrollSnooze short-video counter” and switch it on. You can switch it off there at any time.',
   },
   enabled_not_running: {
     title: 'Android has stopped the counter',
     body: 'The counter is switched on but not running. This can happen after an update, a battery saver, or when Advanced Protection is on (it blocks apps like this). Nothing is counted while it is stopped — you will see a gap, not zeros.',
   },
-  tracking: { title: 'Counting on this phone', body: 'Counts stay on this phone.' },
+  tracking: {
+    title: 'Counting on this phone',
+    body: 'Counts are saved on this phone and backed up only after you sign in.',
+  },
   tracking_unvalidated: {
     title: 'Counting on this phone',
-    body: 'Your app versions have not passed our accuracy tests yet, so these numbers may be off. They stay on this phone and are not used for goals or friends.',
+    body: 'Your app versions have not passed our accuracy tests yet, so these numbers may be off. They are saved on this phone, backed up only after you sign in, and are not used for goals or friends.',
   },
 };

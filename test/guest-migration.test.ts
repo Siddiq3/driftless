@@ -60,8 +60,6 @@ beforeEach(async () => {
   jest.mocked(Tracking.storedDates).mockReturnValue([today()]);
   jest.mocked(Tracking.daily).mockImplementation((d) => ({
     localDate: d!,
-    coverage: 1,
-    heartbeatMinutes: 5,
     apps:
       d === today()
         ? [
@@ -180,7 +178,6 @@ it('existing remote device history is preserved alongside the guest device ident
     personalViews: 7,
     adViews: null,
     minutes: 1,
-    coverage: 1,
     rev: 1,
   });
   await backupAccount(api, () => true);

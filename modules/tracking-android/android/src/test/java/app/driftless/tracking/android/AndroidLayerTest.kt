@@ -44,8 +44,6 @@ class AndroidLayerTest {
         SqliteStore(ctx, dbName).apply {
             recordView(ev("e1", 1))
             addTime("2026-10-18", "com.instagram.android", 5_000, 1_000)
-            saveRing("com.instagram.android", listOf("a", "b"), 100)
-            heartbeat("2026-10-18", 600)
             close()
         }
         val s = SqliteStore(ctx, dbName)
@@ -53,9 +51,6 @@ class AndroidLayerTest {
         assertEquals(1, row.views)
         assertEquals(5_000, row.surfaceMs)
         assertEquals(1_000, row.unknownMs)
-        assertEquals(listOf("a", "b"), s.loadRing("com.instagram.android", 200, Engine.RING_MAX_AGE_MS))
-        assertEquals(emptyList<String>(), s.loadRing("com.instagram.android", Engine.RING_MAX_AGE_MS + 1_000, Engine.RING_MAX_AGE_MS))
-        assertEquals(1, s.heartbeatMinutes("2026-10-18"))
         s.close()
     }
 
@@ -92,13 +87,81 @@ class AndroidLayerTest {
         s.close()
     }
 
+    @Test fun v6UpgradeRemovesDiagnosticsAndKeepsHistoryAndPendingBackup() {
+        val scope = "account:a"
+        SqliteStore(ctx, dbName).apply {
+            val db = writableDatabase
+            db.execSQL("CREATE TABLE heartbeats (scope TEXT NOT NULL, local_date TEXT NOT NULL, minute INTEGER NOT NULL, PRIMARY KEY(scope, local_date, minute))")
+            for (op in listOf("INSERT", "DELETE")) db.execSQL("CREATE TRIGGER heartbeat_revision_${op.lowercase()} AFTER $op ON heartbeats BEGIN UPDATE tracking_meta SET value=CAST(value AS INTEGER)+1 WHERE key='revision'; END")
+            db.execSQL("INSERT INTO heartbeats VALUES (?, '2026-10-18', 600)", arrayOf(scope))
+            db.execSQL("CREATE TABLE rings (scope TEXT NOT NULL, pkg TEXT NOT NULL, fps TEXT NOT NULL, saved_at INTEGER NOT NULL, PRIMARY KEY(scope, pkg))")
+            db.execSQL("INSERT INTO rings VALUES (?, 'com.instagram.android', 'a,b', 1)", arrayOf(scope))
+            db.execSQL("DROP TABLE synced_daily")
+            db.execSQL("CREATE TABLE synced_daily (scope TEXT NOT NULL, local_date TEXT NOT NULL, device_id TEXT NOT NULL, tz TEXT NOT NULL, views INTEGER, minutes INTEGER, coverage REAL NOT NULL, rev INTEGER NOT NULL, app_views_json TEXT, PRIMARY KEY(scope, local_date, device_id))")
+            db.execSQL("INSERT INTO synced_daily VALUES (?, '2026-10-18', 'phone', 'UTC', 80, 2, 0.5, 3, '{}')", arrayOf(scope))
+            db.execSQL("INSERT INTO daily (scope, local_date, pkg, views, surface_ms, tz) VALUES (?, '2026-10-18', 'com.instagram.android', 7, 5000, 'UTC')", arrayOf(scope))
+            db.execSQL("INSERT INTO events (scope, event_id, session_id, seq, pkg, kind, item_start_ms, counted_at_ms, local_date, tz, rule_version, app_version) VALUES (?, 'e', 's', 1, 'com.instagram.android', 'VIEW', 1, 2, '2026-10-18', 'UTC', 9, '1.2.3')", arrayOf(scope))
+            db.execSQL("INSERT INTO guest_event_archive SELECT * FROM events")
+            db.execSQL("INSERT INTO account_totals VALUES (?, '2026-10-18', 'com.instagram.android', 7, 5000)", arrayOf(scope))
+            db.execSQL("INSERT INTO account_pending VALUES (?, '2026-10-18', 4)", arrayOf(scope))
+            db.version = 6
+            close()
+        }
+        val s = SqliteStore(ctx, dbName)
+        val db = s.readableDatabase
+        assertEquals(7, db.version)
+        db.rawQuery("SELECT name FROM sqlite_master WHERE name IN ('heartbeats','rings','synced_daily_v6') OR name LIKE 'heartbeat_revision%'", null).use { assertEquals(0, it.count) }
+        db.rawQuery("SELECT views, minutes, rev, app_views_json FROM synced_daily WHERE scope=?", arrayOf(scope)).use {
+            assertTrue(it.moveToFirst())
+            assertEquals(80, it.getInt(0)); assertEquals(2, it.getInt(1)); assertEquals(3, it.getInt(2)); assertEquals("{}", it.getString(3))
+            assertTrue(it.getColumnIndex("coverage") == -1)
+        }
+        db.rawQuery("SELECT views, surface_ms FROM daily WHERE scope=?", arrayOf(scope)).use {
+            assertTrue(it.moveToFirst()); assertEquals(7, it.getInt(0)); assertEquals(5000, it.getInt(1))
+        }
+        for (table in listOf("events", "guest_event_archive")) db.rawQuery("SELECT counted_at_ms, rule_version, app_version FROM $table WHERE scope=?", arrayOf(scope)).use {
+            assertTrue(it.moveToFirst()); assertEquals(2, it.getInt(0)); assertEquals(0, it.getInt(1)); assertTrue(it.isNull(2))
+        }
+        db.rawQuery("SELECT rev FROM account_pending WHERE scope=? AND date='2026-10-18'", arrayOf(scope)).use {
+            assertTrue(it.moveToFirst()); assertEquals(4, it.getInt(0))
+        }
+        db.rawQuery("SELECT views, usage_ms FROM account_totals WHERE scope=?", arrayOf(scope)).use {
+            assertTrue(it.moveToFirst()); assertEquals(7, it.getInt(0)); assertEquals(5000, it.getInt(1))
+        }
+        s.close()
+    }
+
+    @Test fun itemIdentifiersStayInMemoryAndExpire() {
+        val s = SqliteStore(ctx, dbName)
+        s.saveRing("com.instagram.android", listOf("a", "b"), 100)
+        assertEquals(listOf("a", "b"), s.loadRing("com.instagram.android", 200, Engine.RING_MAX_AGE_MS))
+        assertEquals(emptyList<String>(), s.loadRing("com.instagram.android", Engine.RING_MAX_AGE_MS + 1_000, Engine.RING_MAX_AGE_MS))
+        s.close()
+        val reopened = SqliteStore(ctx, dbName)
+        assertEquals(emptyList<String>(), reopened.loadRing("com.instagram.android", 200, Engine.RING_MAX_AGE_MS))
+        reopened.close()
+    }
+
+    @Test fun storesNoHeartbeatsItemIdentifiersCoverageOrEventVersions() {
+        val s = SqliteStore(ctx, dbName)
+        s.recordView(ev("e1", 1))
+        s.readableDatabase.rawQuery("SELECT name FROM sqlite_master WHERE name IN ('heartbeats','rings')", null).use {
+            assertEquals(0, it.count)
+        }
+        s.readableDatabase.rawQuery("PRAGMA table_info(synced_daily)", null).use { c ->
+            while (c.moveToNext()) assertTrue(c.getString(1) != "coverage")
+        }
+        s.readableDatabase.rawQuery("SELECT rule_version, app_version FROM events", null).use {
+            it.moveToFirst(); assertEquals(0, it.getInt(0)); assertTrue(it.isNull(1))
+        }
+        s.close()
+    }
+
     @Test fun purgeKeepsAggregatesAndDropsRawEvents() {
         val s = SqliteStore(ctx, dbName)
         s.recordView(ev("old", 1, date = "2026-09-01"))
-        s.heartbeat("2026-09-01", 1)
         s.purgeOlderThan(cutoffMs = 10_000, cutoffDate = "2026-09-18")
         assertEquals(0, s.events(0).size)
-        assertEquals(0, s.heartbeatMinutes("2026-09-01"))
         assertEquals(1, s.daily("2026-09-01").single().views)
         s.close()
     }
@@ -106,7 +169,7 @@ class AndroidLayerTest {
     @Test fun schemaHasNoColumnsForContent() {
         val s = SqliteStore(ctx, dbName)
         val cols = mutableListOf<String>()
-        for (t in listOf("events", "daily", "rings", "heartbeats")) {
+        for (t in listOf("events", "daily")) {
             s.readableDatabase.rawQuery("PRAGMA table_info($t)", null).use { c ->
                 while (c.moveToNext()) cols += c.getString(1)
             }
@@ -119,16 +182,15 @@ class AndroidLayerTest {
 
     @Test fun bundledRulesParseAndAreMarkedUnvalidated() {
         val rules = RulesLoader.load(ctx)
-        assertEquals(setOf("com.instagram.android", "com.google.android.youtube", "com.facebook.katana", "com.snapchat.android", "in.mohalla.video", "in.mohalla.sharechat"), rules.apps.keys)
+        assertEquals(setOf("com.instagram.android", "com.google.android.youtube"), rules.apps.keys)
         assertTrue(rules.apps.values.all { it.validatedVersions.isEmpty() })
-        assertTrue(rules.apps.filterKeys { it in setOf("com.instagram.android", "com.google.android.youtube") }.values.all { it.surfaceViewIds.isNotEmpty() && it.itemParts.isNotEmpty() })
-        assertTrue(rules.apps.filterKeys { it !in setOf("com.instagram.android", "com.google.android.youtube") }.values.all { it.surfaceViewIds.isEmpty() && it.itemParts.isEmpty() })
+        assertTrue(rules.apps.values.all { it.surfaceViewIds.isNotEmpty() && it.itemParts.isNotEmpty() })
     }
 
     @Test fun accessibilityConfigIsNotAnAccessibilityToolAndIsScopedToSupportedApps() {
         val xml = File("src/main/res/xml/driftless_accessibility.xml").readText()
         assertFalse("must not claim isAccessibilityTool (Play policy)", Regex("""android:isAccessibilityTool\s*=""").containsMatchIn(xml))
-        assertTrue(xml.contains("""android:packageNames="com.instagram.android,com.google.android.youtube,com.facebook.katana,com.snapchat.android,in.mohalla.video,in.mohalla.sharechat""""))
+        assertTrue(xml.contains("""android:packageNames="com.instagram.android,com.google.android.youtube""""))
         assertTrue(xml.contains("""android:canPerformGestures="false""""))
     }
 

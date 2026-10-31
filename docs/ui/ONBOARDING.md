@@ -81,3 +81,11 @@ Get Started now embeds the user-approved 23.4-second MP4 from `output/reels-vide
 ### Income question removed
 
 Onboarding now has six habit questions. The optional income question and yearly money-value calculation/display are removed. The summary shows estimated weekly scrolling hours only. Existing persisted step IDs remain stable: forward/back navigation skips retired step 7, and a saved draft on that question resumes at the time summary. Legacy income fields are ignored/stripped by the answers schema and are not used or written on subsequent saves. No backend change is needed; these answers were always local-only.
+
+## Permission UI reference, 30 October 17:32
+
+Android's permission landing screen now follows the supplied recording's dark composition: centered white/amber heading, tall scenic feed preview, small floating counter, the existing purple brain beside the phone, and a bottom amber Allow action. The preview cycles bundled scenic images and illustrative counts only while focused and active; reduced motion keeps it still. It never writes tracking data. Small screens and larger text scroll above the fixed actions.
+
+Allow opens the existing Accessibility consent sheet directly, avoiding a repeated introduction. Not now continues setup; Why this permission opens the read-only disclosure. Existing consent, renewal, Android settings, and readiness checks remain authoritative. The introduction and consent sheet reuse the purple-character preview. The recording's separate overlay/background requests are not introduced: this app uses its existing Accessibility flow. iOS keeps its Screen Time setup.
+
+Validation for this change: TypeScript and scoped production-file lint passed; five focused Jest suites passed (40 tests), including disclosure routing and preview background/reduced-motion cleanup. The current debug APK was updated on the wirelessly connected OnePlus CPH2569 and loaded the edited source from Metro. The permission landing was also captured on an Android API 36 emulator at standard and enlarged text sizes. Evidence is in workspace `output/permission-ui-20261030/`. No accessibility grant was changed during UI verification.

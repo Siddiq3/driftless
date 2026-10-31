@@ -7,7 +7,6 @@ data class FeedSettings(
     val breakMinutes: Int = 5,
     val maxBypasses: Int = 3,
     val bypassMinutes: Int = 5,
-    val allowUnvalidated: Boolean = false,
 )
 
 /** One combined daily allowance and bypass budget across Reels and Shorts. */
@@ -23,10 +22,10 @@ data class FeedDecision(val reason: FeedReason?, val state: FeedState)
 
 object FeedLimitPolicy {
     fun evaluate(settings: FeedSettings, state: FeedState, date: String, now: Long,
-                 count: Int, goal: Int?, surface: Surface, validated: Boolean, entitled: Boolean): FeedDecision {
+                 count: Int, goal: Int?, surface: Surface, entitled: Boolean): FeedDecision {
         var next = if (state.date == date) state else FeedState(date)
         fun allow() = FeedDecision(null, next)
-        if ((FeatureAccess.SUBSCRIPTIONS_REQUIRED && !entitled) || surface != Surface.SHORT_VIDEO || (!validated && !settings.allowUnvalidated)) return allow()
+        if ((FeatureAccess.SUBSCRIPTIONS_REQUIRED && !entitled) || surface != Surface.SHORT_VIDEO) return allow()
         if (next.bypassUntilMs > now) return allow()
         // The Nth qualifying view consumes the allowance. Pause at count >= N, until local midnight.
         if (settings.enforceGoal && goal != null && goal > 0 && count >= goal)

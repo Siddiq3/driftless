@@ -5,14 +5,12 @@ import { WrapStories } from '@/wrapped/Stories';
 import { useWrap } from '@/wrapped/useWrap';
 
 export default function Wrapped() {
-  const params = useLocalSearchParams<{ period?: string; end?: string }>();
-  const period = params.period === 'weekly' ? 'weekly' : 'daily';
-  const [state, refresh] = useWrap(period, params.end);
+  const params = useLocalSearchParams<{ end?: string }>();
+  const [state, refresh] = useWrap('daily', params.end);
   if (state.state === 'loading')
     return (
       <Screen>
         <ActivityIndicator accessibilityLabel="Reading your wrap" />
-        <Button label="Close" kind="secondary" onPress={() => router.back()} />
       </Screen>
     );
   if (state.state === 'error')
@@ -25,17 +23,7 @@ export default function Wrapped() {
     );
   return (
     <View style={{ flex: 1 }}>
-      {state.cloudUnavailable && (
-        <Notice
-          tone="warn"
-          title="Synced totals unavailable"
-          body="Showing this phone. Reopen Wrapped to retry."
-        />
-      )}
-      <WrapStories
-        key={`${state.recap.period}-${state.recap.to}-${state.recap.source}`}
-        recap={state.recap}
-      />
+      <WrapStories key={`${state.recap.to}-${state.recap.source}`} recap={state.recap} />
     </View>
   );
 }

@@ -1,18 +1,31 @@
-import { Platform } from 'react-native';
+import { BackHandler, Platform } from 'react-native';
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Tracking } from 'tracking-android';
 import Disclosure from '../app/disclosure';
+import {
+  ACCESSIBILITY_DISCLOSURE,
+  ACCESSIBILITY_SHEET_POINTS,
+} from '../src/permissions/accessibilityDisclosure';
+import { SLIDES } from '../src/permissions/PermissionScreen';
 
-jest.mock('expo-router', () => ({ router: { back: jest.fn() } }));
+jest.mock('expo-router', () => ({
+  router: { back: jest.fn(), replace: jest.fn(), canGoBack: jest.fn(() => true) },
+  useLocalSearchParams: jest.fn(() => ({})),
+}));
 jest.mock('tracking-android', () => ({
-  Tracking: { setDisclosureAccepted: jest.fn(), openAccessibilityGuide: jest.fn() },
+  Tracking: {
+    health: jest.fn(),
+    setDisclosureAccepted: jest.fn(),
+    openAccessibilityGuide: jest.fn(),
+  },
 }));
+jest.mock('expo-font', () => ({ useFonts: () => [true] }));
 jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: require('react-native').View }));
-jest.mock('@/permissions/AccessibilityWalkthrough', () => ({
-  AccessibilityWalkthrough: () => null,
-}));
+jest.mock('@/ios/ScreenTimeScreen', () => ({ ScreenTimeScreen: () => null }));
+jest.mock('@/ui/BrainCharacter', () => ({ BrainCharacter: () => null }));
+jest.mock('@/ui/motion', () => ({ useReducedMotion: () => true }));
 jest.mock('@/ui/kit', () => ({
   T: require('react-native').Text,
   Notice: ({ body }: { body: string }) =>
@@ -26,48 +39,144 @@ jest.mock('@/onboarding/Visuals', () => ({
       onPress,
     }),
 }));
+jest.mock('@/ui/Icon', () => ({ Icon: () => null }));
+
+const T = Tracking as unknown as Record<string, jest.Mock>;
+const fresh = { disclosureAccepted: false, serviceEnabled: false, serviceRunning: false };
 let tree: ReactTestRenderer;
+const text = () => JSON.stringify(tree.toJSON());
+const has = (label: string) =>
+  tree.root.findAll(
+    (n) => n.props.accessibilityLabel === label && typeof n.props.onPress === 'function',
+  ).length > 0;
 async function tap(label: string) {
   await act(async () => {
     tree.root
       .findAll(
-        (node) =>
-          node.props.accessibilityLabel === label && typeof node.props.onPress === 'function',
+        (n) => n.props.accessibilityLabel === label && typeof n.props.onPress === 'function',
       )[0]!
       .props.onPress();
   });
 }
-beforeEach(async () => {
-  Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });
-  jest.clearAllMocks();
-  (Tracking.openAccessibilityGuide as jest.Mock).mockImplementation(() => undefined);
+async function open(state: object = fresh, params: object = {}) {
+  T.health!.mockReturnValue(state);
+  (useLocalSearchParams as jest.Mock).mockReturnValue(params);
   await act(async () => {
     tree = create(<Disclosure />);
   });
+}
+async function pressBack() {
+  const calls = (BackHandler.addEventListener as jest.Mock).mock.calls;
+  let handled: boolean | null | undefined;
+  await act(async () => {
+    handled = (calls[calls.length - 1]![1] as () => boolean)();
+  });
+  return handled;
+}
+const expectNoConsent = () => {
+  expect(T.setDisclosureAccepted).not.toHaveBeenCalled();
+  expect(T.openAccessibilityGuide).not.toHaveBeenCalled();
+};
+
+beforeEach(() => {
+  Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });
+  jest.clearAllMocks();
+  jest.spyOn(BackHandler, 'addEventListener');
+  (router.canGoBack as jest.Mock).mockReturnValue(true);
 });
 afterEach(async () => {
   await act(async () => tree.unmount());
+  jest.restoreAllMocks();
 });
-it('opens the guide only after explicit counting consent', async () => {
-  expect(Tracking.openAccessibilityGuide).not.toHaveBeenCalled();
-  await tap('Got it · I agree');
-  expect(Tracking.setDisclosureAccepted).toHaveBeenCalledWith(true);
-  expect((Tracking.setDisclosureAccepted as jest.Mock).mock.invocationCallOrder[0]!).toBeLessThan(
-    (Tracking.openAccessibilityGuide as jest.Mock).mock.invocationCallOrder[0]!,
-  );
-  expect(router.back).toHaveBeenCalledTimes(1);
-});
-it('allows leaving without consent or opening settings', async () => {
-  await tap('Not now');
-  expect(Tracking.setDisclosureAccepted).not.toHaveBeenCalled();
-  expect(Tracking.openAccessibilityGuide).not.toHaveBeenCalled();
-  expect(router.back).toHaveBeenCalledTimes(1);
-});
-it('keeps the guide open and reports a Settings launch failure', async () => {
-  (Tracking.openAccessibilityGuide as jest.Mock).mockImplementation(() => {
-    throw new Error('Settings unavailable');
+
+describe('permission screen', () => {
+  it('shows each of the three uses of the one permission, without granting anything', async () => {
+    await open();
+    for (const [i, { body }] of SLIDES.entries()) {
+      await tap(`Show: ${SLIDES[i]!.title}`);
+      expect(text()).toContain(body);
+    }
+    expect(has('Turn on')).toBe(true);
+    expect(has('Accept')).toBe(false);
+    expectNoConsent();
   });
-  await tap('Got it · I agree');
-  expect(router.back).not.toHaveBeenCalled();
-  expect(JSON.stringify(tree.toJSON())).toContain('Android settings could not be opened');
+  it('agreed users go straight to the guide', async () => {
+    await open({ ...fresh, disclosureAccepted: true });
+    await tap('Turn on');
+    expect(T.openAccessibilityGuide).toHaveBeenCalledTimes(1);
+    expect(router.back).toHaveBeenCalledTimes(1);
+  });
+  it('treats unavailable native health as no consent', async () => {
+    await open();
+    T.health!.mockImplementation(() => {
+      throw new Error('unavailable');
+    });
+    await tap('Turn on');
+    expect(has('Accept')).toBe(true);
+    expectNoConsent();
+  });
+});
+
+describe('consent sheet', () => {
+  const sheet = async () => {
+    await open();
+    await tap('Turn on');
+  };
+  it('shows the V3 summary and expands to the exact full text', async () => {
+    await sheet();
+    for (const { body } of ACCESSIBILITY_SHEET_POINTS) expect(text()).toContain(body);
+    await tap('Read full details');
+    for (const { body } of ACCESSIBILITY_DISCLOSURE) expect(text()).toContain(body);
+    expect(text()).not.toMatch(/Facebook|Snapchat|ShareChat|Moj|heartbeat|coverage/i);
+    expectNoConsent();
+  });
+  it('agree saves consent before opening the guide, then leaves', async () => {
+    await sheet();
+    const order: string[] = [];
+    T.setDisclosureAccepted!.mockImplementation(() => order.push('consent'));
+    T.openAccessibilityGuide!.mockImplementation(() => order.push('guide'));
+    await tap('Accept');
+    expect(order).toEqual(['consent', 'guide']);
+    expect(router.back).toHaveBeenCalledTimes(1);
+  });
+  it('does not open the guide when saving consent fails', async () => {
+    await sheet();
+    T.setDisclosureAccepted!.mockImplementation(() => {
+      throw new Error('timeout');
+    });
+    await tap('Accept');
+    expect(T.openAccessibilityGuide).not.toHaveBeenCalled();
+    expect(text()).toContain('could not be saved');
+  });
+  it('Deny asks first, and Okay returns to the consent sheet', async () => {
+    await sheet();
+    await tap('Deny');
+    expect(text()).toContain('Not sure about this permission?');
+    await tap('Okay, turn it on');
+    expect(has('Accept')).toBe(true);
+    expectNoConsent();
+  });
+});
+
+describe('Back', () => {
+  it('shows the Not sure sheet, and a second Back leaves without consent', async () => {
+    await open();
+    expect(await pressBack()).toBe(true);
+    expect(text()).toContain('Not sure about this permission?');
+    expect(text()).not.toMatch(/Everything stays|never sees/i);
+    await pressBack();
+    expect(router.back).toHaveBeenCalledTimes(1);
+    expectNoConsent();
+  });
+});
+
+describe('read-only from Privacy', () => {
+  it('shows the full text with Close only and no side effects', async () => {
+    await open({ ...fresh, disclosureAccepted: true }, { mode: 'read' });
+    for (const { body } of ACCESSIBILITY_DISCLOSURE) expect(text()).toContain(body);
+    expect(has('Turn on')).toBe(false);
+    await tap('Close');
+    expectNoConsent();
+    expect(router.back).toHaveBeenCalledTimes(1);
+  });
 });

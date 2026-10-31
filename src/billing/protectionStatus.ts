@@ -23,7 +23,7 @@ export function protectionStatus(
   const selected = health.apps.filter((app) => app.installed && config.apps.includes(app.package));
   if (!selected.length) return inactive('Select an installed app to protect.');
   if (!SUBSCRIPTIONS_REQUIRED && health.subscriptionRequired !== false)
-    return inactive('Install the latest Android build for subscription-free focus features.');
+    return inactive('Install the latest Android build to use focus features.');
   if (SUBSCRIPTIONS_REQUIRED && health.blockingEntitled !== true)
     return inactive('Current Pro verification required. Sign in and review your subscription.');
   const appRule = config.dailyMinutes !== null || config.schedules.length > 0;
@@ -43,15 +43,6 @@ export function protectionStatus(
       issues.push('Feed protection requires an updated Android build.');
     if (selected.some((app) => app.videoDetectionImplemented === false))
       issues.push('Feed detection is unsupported for one or more selected apps.');
-    const unapproved = selected.some((app) => !app.validated);
-    if (unapproved && !config.allowUnvalidatedCounts)
-      issues.push(
-        'Feed enforcement is inactive for app versions without approval. Experimental feed detection is off.',
-      );
-    if (unapproved && config.allowUnvalidatedCounts)
-      issues.push(
-        'Experimental feed detection is enabled. Videos may be missed or the wrong screen paused.',
-      );
   }
   if (issues.length)
     return { title: 'Protection needs attention', body: issues.join(' '), tone: 'warn' };

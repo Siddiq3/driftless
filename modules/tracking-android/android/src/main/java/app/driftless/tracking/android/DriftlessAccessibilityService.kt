@@ -27,10 +27,11 @@ import java.time.ZoneId
 /**
  * Counts Reels/Shorts on this device only. Events arrive only for the packages listed in
  * res/xml/driftless_accessibility.xml. For each settled screen it reads a bounded snapshot of the
- * window, keeps a salted one-way code for the current item, and discards everything else.
+ * window, derives salted item codes held in memory, and records local activity.
  *
- * Never: performs automatic actions on other apps, stores node text, takes screenshots, or sends anything
- * off the device. Counting only runs after the in-app prominent disclosure was accepted.
+ * No raw node text or screenshots are stored. This service does not make network requests; the app
+ * separately backs up daily aggregates for signed-in accounts. Counting requires
+ * the current in-app disclosure consent. Text-free developer captures require a debug build and consent.
  */
 class DriftlessAccessibilityService : AccessibilityService() {
     private val main = Handler(Looper.getMainLooper())
@@ -42,10 +43,6 @@ class DriftlessAccessibilityService : AccessibilityService() {
 
     private lateinit var memeCard: MemeMilestoneCard
     private lateinit var feedPause: FeedPauseOverlay
-    private lateinit var wrapReady: WrapReadyOverlay
-    private var wrapPromptedThisVisit = false
-    private var wrapCheckedAt = 0L
-    private var memeContentLanguage: String? = null
     private var memeDate: String? = null
     private var memeCount: Int? = null
     private lateinit var floatingBadge: FloatingCountBadge
@@ -70,6 +67,34 @@ class DriftlessAccessibilityService : AccessibilityService() {
     private val versions = HashMap<String, String?>()
 
     private val classifyTask = Runnable { classifyNow() }
+    /** Main-thread-only consent transition, called by TrackingPrefs before its setter returns. */
+    fun onDisclosureConsentChanged() {
+        check(Looper.myLooper() == Looper.getMainLooper())
+        if (current !== this || !::engine.isInitialized) return
+        if (!prefs.disclosureAccepted) { discardTracking(); return }
+        if (!isOperational) {
+            isOperational = true
+            main.removeCallbacks(classifyTask); main.post(classifyTask)
+            main.removeCallbacks(tick); main.post(tick)
+        }
+    }
+
+    /** No flush: retain completed SQLite records, discard all unfinished observations. */
+    private fun discardTracking() {
+        isOperational = false
+        main.removeCallbacks(classifyTask); main.removeCallbacks(tick); classifyScheduled = false
+        if (::engine.isInitialized) engine.discard()
+        pendingScroll = false; pendingScrollPackage = null; playerTransition.reset()
+        debugTraceUntil = 0L; debugLastIdentity = null; debugLastShortKey = null
+        while (debugTrace.length() > 0) debugTrace.remove(0)
+        hideFloatingCount()
+    }
+
+    /** Ordinary valid-consent departure behavior is unchanged. */
+    private fun leaveOrDiscard(now: Long) {
+        if (prefs.disclosureAccepted) engine.onLeave(now) else engine.discard()
+    }
+
     private val tick = object : Runnable {
         override fun run() {
             if(!isOperational) return
@@ -80,7 +105,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
     private val screenOff = object : BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) {
             if (i.action == Intent.ACTION_SCREEN_OFF) {
-                engine.onLeave(SqliteStore.get(this@DriftlessAccessibilityService).account.now()); hideFloatingCount()
+                leaveOrDiscard(SqliteStore.get(this@DriftlessAccessibilityService).account.now()); hideFloatingCount()
                 main.removeCallbacks(classifyTask);classifyScheduled=false
                 pendingScroll=false;pendingScrollPackage=null;playerTransition.reset();lastPauseToken=null
             }
@@ -97,7 +122,6 @@ class DriftlessAccessibilityService : AccessibilityService() {
         floatingBadge = FloatingCountBadge(this)
         memeCard = MemeMilestoneCard(this)
         feedPause = FeedPauseOverlay(this)
-        wrapReady = WrapReadyOverlay(this)
         rules = RulesLoader.load(this)
         val store = SqliteStore.get(this)
         val now = SqliteStore.get(this@DriftlessAccessibilityService).account.now()
@@ -109,16 +133,14 @@ class DriftlessAccessibilityService : AccessibilityService() {
         } else {
             registerReceiver(screenOff, IntentFilter(Intent.ACTION_SCREEN_OFF))
         }
-        isOperational=true
         current = this
-        main.post(classifyTask)
-        main.post(tick)
-        lastConnectedMs = now
+        isOperational = false
+        // No window, viewing observation or content-derived trace is read before acceptance.
+        onDisclosureConsentChanged()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (current !== this || event == null || !::engine.isInitialized || !prefs.disclosureAccepted) return
-        lastEventMs = SqliteStore.get(this@DriftlessAccessibilityService).account.now()
         val pkg = event.packageName?.toString() ?: return
         if (!engine.isSupported(pkg)) return
         if(event.eventTime>0 && event.eventTime<lastCallbackUptime) return
@@ -153,13 +175,14 @@ class DriftlessAccessibilityService : AccessibilityService() {
     private fun classifyNow() {
         main.removeCallbacks(classifyTask)
         classifyScheduled = false
+        if (!::prefs.isInitialized || !prefs.disclosureAccepted) { discardTracking(); return }
         if(!isOperational) return
         lastClassificationUptime = android.os.SystemClock.uptimeMillis()
         val now = SqliteStore.get(this@DriftlessAccessibilityService).account.now()
         if (!::engine.isInitialized || !prefs.disclosureAccepted ||
             !getSystemService(PowerManager::class.java).isInteractive ||
             getSystemService(KeyguardManager::class.java).isKeyguardLocked) {
-            if (::engine.isInitialized) engine.onLeave(now)
+            if (::engine.isInitialized) leaveOrDiscard(now)
             hideFloatingCount()
             return
         }
@@ -167,33 +190,25 @@ class DriftlessAccessibilityService : AccessibilityService() {
         val pkg = root?.packageName?.toString()
         val appRules = pkg?.let { rules.apps[it] }
         if (appRules == null) {
-            engine.onLeave(now)
+            leaveOrDiscard(now)
             hideFloatingCount()
             pendingScroll = false;pendingScrollPackage=null
             playerTransition.reset();lastPauseToken=null
             return
         }
-        val c = classifier.classify(A11yNode(root), appRules, saltFor(now), detectLanguage = prefs.memeCardsEnabled)
-        memeContentLanguage = c.contentLanguage
+        val c = classifier.classify(A11yNode(root), appRules, saltFor(now))
         val replaced = playerTransition.observe(pkg, if (pkg == "com.google.android.youtube") c
             else c.copy(identitySignals = emptySet()), now)
         if (::feedPause.isInitialized && feedPause.isShowing) {
-            engine.onLeave(now)
+            leaveOrDiscard(now)
             badgeSurface = c.surface; badgeIdentity = c.fingerprint != null; badgePackage = pkg
             maybePause(pkg, now)
             if (!feedPause.isShowing) main.post(classifyTask)
             pendingScroll = false
             return
         }
-        if (::wrapReady.isInitialized && wrapReady.isShowing) {
-            engine.onLeave(now)
-            badgeSurface = c.surface; badgeIdentity = c.fingerprint != null; badgePackage = pkg
-            if (c.surface != Surface.SHORT_VIDEO) hideFloatingCount() else maybePause(pkg, now)
-            pendingScroll = false
-            return
-        }
         if (::memeCard.isInitialized && memeCard.isShowing) {
-            engine.onLeave(now)
+            leaveOrDiscard(now)
             if (c.surface != Surface.SHORT_VIDEO) hideFloatingCount()
             pendingScroll = false
             return
@@ -219,7 +234,6 @@ class DriftlessAccessibilityService : AccessibilityService() {
         pendingScroll = false
         badgeSurface = c.surface; badgeIdentity = c.fingerprint != null; badgePackage = pkg
         maybePause(pkg, now)
-        maybeShowWrap(now)
         updateFloatingCount(now)
     }
 
@@ -229,7 +243,6 @@ class DriftlessAccessibilityService : AccessibilityService() {
         val store=SqliteStore.get(this)
         val token="${store.activeScope()}:${store.account.date()}:$pkg:$reason"
         if(token==lastPauseToken || now-lastPauseMs<PAUSE_COOLDOWN_MS) return
-        if (::wrapReady.isInitialized) wrapReady.hide()
         startActivity(Intent(this,PauseActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             .putExtra(PauseActivity.EXTRA_PKG,pkg).putExtra(PauseActivity.EXTRA_REASON,reason)
             .putExtra(PauseActivity.EXTRA_SCOPE,store.activeScope())
@@ -261,7 +274,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
                 rows.filter { it.views > 0 }.all { r -> rules.apps[r.pkg]?.let { isValidatedVersion(it, versionOf(r.pkg)) } == true }
             val goal = prefs.limits.filter { it.metric == "views" && it.dailyLimit > 0 }.minOfOrNull { it.dailyLimit }
             val feedDecision = app.driftless.tracking.core.FeedLimitPolicy.evaluate(cfg.feed, prefs.feedState,
-                date, now, count, goal, badgeSurface, validated, true)
+                date, now, count, goal, badgeSurface, true)
             if (feedDecision.state != prefs.feedState) prefs.feedState = feedDecision.state
             val minutes = row?.let { (maxOf(it.usageMs, it.surfaceMs + it.unknownMs) / 60_000L).toInt() }
             val d = app.driftless.tracking.core.BlockPolicy.decide(
@@ -270,18 +283,18 @@ class DriftlessAccessibilityService : AccessibilityService() {
             )
             val bypassed = feedDecision.state.date == date && feedDecision.state.bypassUntilMs > now
             val scopedReason = if (cfg.feedOnly && badgeSurface == Surface.SHORT_VIDEO &&
-                (validated || cfg.feed.allowUnvalidated) && d.block && !bypassed) {
+                d.block && !bypassed) {
                 if (d.reason == app.driftless.tracking.core.BlockReason.SCHEDULE) app.driftless.tracking.core.FeedReason.SCHEDULE
                 else app.driftless.tracking.core.FeedReason.APP_LIMIT
             } else null
             val reason = feedDecision.reason ?: scopedReason
             if (reason != null) {
-                memeCard.hide(); floatingBadge.hide(); wrapReady.hide()
+                memeCard.hide(); floatingBadge.hide()
                 val pauseScope=store.activeScope()
                 val pauseDate=date
                 feedPause.show(reason, feedDecision.state.breakUntilMs - now,
                     (cfg.feed.maxBypasses - feedDecision.state.bypasses).coerceAtLeast(0), cfg.feed.bypassMinutes,
-                    !validated) {
+                    !validated, count) {
                     val currentNow = SqliteStore.get(this@DriftlessAccessibilityService).account.now()
                     val currentDate = Recorder.localDate(currentNow, SqliteStore.get(this@DriftlessAccessibilityService).account.zone())
                     val currentCfg = prefs.blockConfig
@@ -292,7 +305,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
                         }
                     }
                 }
-                engine.onLeave(now)
+                leaveOrDiscard(now)
                 return
             }
             feedPause.hide()
@@ -303,13 +316,10 @@ class DriftlessAccessibilityService : AccessibilityService() {
 
     private fun onTick() {
         if (!::engine.isInitialized) return
+        if (!prefs.disclosureAccepted) { discardTracking(); return }
+        if (!isOperational) return
         val now = SqliteStore.get(this@DriftlessAccessibilityService).account.now()
         captureRequestedDebugStructure()
-        if (!prefs.disclosureAccepted) {
-            engine.onLeave(now)
-            hideFloatingCount()
-            return
-        }
         // Re-entry and overlay dismissal may produce no supported-package event. Always refresh
         // foreground classification on the tick instead of trusting the previous feed state.
         classifyNow()
@@ -317,11 +327,10 @@ class DriftlessAccessibilityService : AccessibilityService() {
         engine.activePackage?.let { active ->
             // Leave detection: only the foreground package name is read here, never content.
             val fg = rootInActiveWindow?.packageName?.toString()
-            if (fg != active) { engine.onLeave(now); hideFloatingCount() } else maybePause(active, now)
+            if (fg != active) { leaveOrDiscard(now); hideFloatingCount() } else maybePause(active, now)
         }
         engine.onTick(now)
         engine.activePackage?.let { maybePause(it, now) }
-        maybeShowWrap(now)
         updateFloatingCount(now)
         if (now - lastGoalCheckMs >= GOAL_CHECK_MS) {
             lastGoalCheckMs = now
@@ -332,7 +341,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
 
     fun changeDataScope(next: String) {
         val action = {
-            if (::engine.isInitialized) engine.onLeave(SqliteStore.get(this@DriftlessAccessibilityService).account.now())
+            if (::engine.isInitialized) leaveOrDiscard(SqliteStore.get(this@DriftlessAccessibilityService).account.now())
             SqliteStore.get(this).selectScope(next)
             engine = Engine(SqliteStore.get(this).capturedStore(), rules, zone = SqliteStore.get(this).capturedZone())
             hideFloatingCount()
@@ -357,7 +366,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
         main.post {
             val store=SqliteStore.get(this)
             if(current!==this || store.activeScope()!=expectedScope || !::engine.isInitialized) return@post
-            engine.onLeave(store.account.now())
+            leaveOrDiscard(store.account.now())
             engine=Engine(store.capturedStore(),rules,zone=store.capturedZone())
             hideFloatingCount();playerTransition.reset();pendingScroll=false;pendingScrollPackage=null
             lastPauseToken=null;lastPauseMs=0L;lastGoalCheckMs=0L
@@ -369,53 +378,15 @@ class DriftlessAccessibilityService : AccessibilityService() {
 
     private fun hideFloatingCount() {
         badgeSurface = Surface.UNKNOWN; badgeIdentity = false; badgePackage = null
-        memeContentLanguage = null
         if (::floatingBadge.isInitialized) floatingBadge.hide()
         if (::memeCard.isInitialized) memeCard.hide()
         if (::feedPause.isInitialized) feedPause.hide()
-        if (::wrapReady.isInitialized) wrapReady.hide()
-        wrapPromptedThisVisit = false; wrapCheckedAt = 0L
-    }
-
-    private fun maybeShowWrap(now: Long) {
-        if (!::wrapReady.isInitialized || wrapReady.isShowing || wrapPromptedThisVisit ||
-            feedPause.isShowing || memeCard.isShowing || !prefs.disclosureAccepted ||
-            badgeSurface != Surface.SHORT_VIDEO || !badgeIdentity) return
-        val pkg = badgePackage ?: return
-        if (pkg !in rules.apps || rootInActiveWindow?.packageName?.toString() != pkg ||
-            !getSystemService(PowerManager::class.java).isInteractive ||
-            getSystemService(KeyguardManager::class.java).isKeyguardLocked ||
-            (lastPauseMs > 0 && now - lastPauseMs < PAUSE_COOLDOWN_MS) ||
-            (wrapCheckedAt > 0 && now - wrapCheckedAt < GOAL_CHECK_MS)) return
-        wrapCheckedAt = now
-        runCatching {
-            val store = SqliteStore.get(this)
-            val wrap = WrapReady.next(store, rules.apps.keys, prefs) ?: return
-            val scope = store.activeScope()
-            if (wrapReady.show(wrap) {
-                // A delayed overlay tap must never open a different account's recap.
-                if (store.activeScope() == scope) {
-                    val uri = android.net.Uri.Builder().scheme("scrollsnooze").authority("")
-                        .path("/wrapped").appendQueryParameter("period", wrap.period)
-                        .appendQueryParameter("end", wrap.end).build()
-                    runCatching {
-                        startActivity(Intent(Intent.ACTION_VIEW, uri).setPackage(packageName)
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                    }
-                }
-            }) {
-                prefs.markWrapShown(wrap)
-                wrapPromptedThisVisit = true
-                floatingBadge.hide()
-                engine.onLeave(now)
-            }
-        }
     }
 
     private fun updateFloatingCount(now: Long) {
         if (!::floatingBadge.isInitialized) return
-        if ((::feedPause.isInitialized && feedPause.isShowing) ||
-            (::wrapReady.isInitialized && wrapReady.isShowing)) { floatingBadge.hide(); return }
+        if (!prefs.disclosureAccepted) { discardTracking(); return }
+        if (::feedPause.isInitialized && feedPause.isShowing) { floatingBadge.hide(); return }
         val pkg = badgePackage
         val foreground = rootInActiveWindow?.packageName?.toString()
         val power = getSystemService(PowerManager::class.java)
@@ -447,13 +418,13 @@ class DriftlessAccessibilityService : AccessibilityService() {
                 val locales = resources.configuration.locales
                 val language = app.driftless.tracking.core.MemeLanguages.resolve(
                     (0 until locales.size()).map { locales[it].language })
-                if (memeCard.show(badge,milestone,memeContentLanguage ?: language, shorts = pkg == "com.google.android.youtube") {
+                if (memeCard.show(badge,milestone,language, shorts = pkg == "com.google.android.youtube") {
                     packageManager.getLaunchIntentForPackage(packageName)?.let {
                         it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); startActivity(it)
                     }
                 }) {
                     prefs.markMemeMilestone(today,milestone)
-                    engine.onLeave(now)
+                    leaveOrDiscard(now)
                 }
             }
         }
@@ -483,7 +454,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
         main.removeCallbacks(classifyTask);main.removeCallbacks(tick);classifyScheduled=false
         pendingScroll=false;pendingScrollPackage=null;playerTransition.reset()
         hideFloatingCount()
-        if (::engine.isInitialized) engine.onLeave(SqliteStore.get(this@DriftlessAccessibilityService).account.now())
+        if (::engine.isInitialized) leaveOrDiscard(SqliteStore.get(this@DriftlessAccessibilityService).account.now())
     }
 
     override fun onDestroy() {
@@ -502,7 +473,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
         classifyScheduled=false;pendingScroll=false;pendingScrollPackage=null;playerTransition.reset()
         hideFloatingCount()
         main.removeCallbacksAndMessages(null)
-        if (::engine.isInitialized) engine.onLeave(SqliteStore.get(this@DriftlessAccessibilityService).account.now())
+        if (::engine.isInitialized) leaveOrDiscard(SqliteStore.get(this@DriftlessAccessibilityService).account.now())
         runCatching { unregisterReceiver(screenOff) }
         current = null
     }
@@ -512,6 +483,8 @@ class DriftlessAccessibilityService : AccessibilityService() {
      * Contains view ids and class names only — no text, no descriptions.
      */
     fun captureStructure(): String? {
+        if ((applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) == 0 ||
+            current !== this || !::prefs.isInitialized || !prefs.disclosureAccepted) return null
         val root = rootInActiveWindow ?: return null
         val pkg = root.packageName?.toString() ?: return null
         if (!::engine.isInitialized || !engine.isSupported(pkg)) return null
@@ -558,6 +531,9 @@ class DriftlessAccessibilityService : AccessibilityService() {
 
     /** Debug builds: capture the supported app's structure after [delayMs] and save it to [out]. */
     fun scheduleStructureCapture(delayMs: Long, out: java.io.File) {
+        if ((applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) == 0 ||
+            !::prefs.isInitialized || !prefs.disclosureAccepted) return
+        // captureStructure checks current consent again when the delayed task executes.
         main.postDelayed({
             captureStructure()?.let { json ->
                 out.parentFile?.mkdirs()
@@ -580,10 +556,6 @@ class DriftlessAccessibilityService : AccessibilityService() {
 
         /** The bound instance, if Android is currently running the service. */
         @Volatile var current: DriftlessAccessibilityService? = null
-            private set
-        @Volatile var lastConnectedMs: Long = 0
-            private set
-        @Volatile var lastEventMs: Long = 0
             private set
     }
 }

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
   <string name="driftless_a11y_label">ScrollSnooze short-video counter</string>
-  <string name="driftless_a11y_description">ScrollSnooze can track app minutes in Instagram, YouTube, Facebook, Snapchat, Moj and ShareChat. Video-feed detection rules are candidates for Instagram and YouTube only and are not accuracy-validated; video counts are not available for Facebook, Snapchat, Moj or ShareChat yet. When an available video rule is active, ScrollSnooze reads limited player layout labels to distinguish items, converts labels to one-way codes and keeps counts on this phone. It never reads messages, takes screenshots, taps or types for you. Optional sync shares daily totals only.</string>
+  <string name="driftless_a11y_description">ScrollSnooze uses this service only in Instagram and YouTube, to count the Reels and Shorts you watch, measure the time you spend on them, show your count, goal alerts and meme breaks, and apply pauses you set. It reads window and scroll events and interface structure in those two apps, and visible text and content descriptions on Reels and Shorts screens. Text is processed in memory and is not saved. Counts, times and dates are stored on this phone. After you sign in, daily and per-app video counts, ad counts, minutes and goals are backed up automatically. It does not take screenshots. You can turn it off here at any time.</string>
   <string name="driftless_widget_description">Today’s confirmed short-video count on your home screen.</string>
 </resources>

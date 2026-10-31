@@ -55,6 +55,26 @@ class AccountUsageTest {
     private fun event(id:String,at:Long=store.account.now()) = ViewEvent(id,id,1,pkg,ViewKind.VIEW,at-1000,at,Recorder.localDate(at,zone),zone.id,1,"experimental")
     private fun pending()=JSONArray(store.account.contributions("device-a"))
     private fun count()=pending().getJSONObject(0).getJSONObject("apps").getJSONObject(pkg).getInt("views")
+    @Test fun dayStaysUnknownUntilACountableAppOpensThenLimitsWork() {
+        val fb="com.facebook.katana"; val other="com.google.android.youtube"
+        val appRules=app.driftless.tracking.core.AppRules(pkg,"Instagram Reels",setOf("pager"),emptyList(),emptySet(),emptySet(),emptyList())
+        val rules=app.driftless.tracking.core.RuleSet(1,mapOf(pkg to appRules,fb to appRules.copy(pkg=fb,surfaceViewIds=emptySet())))
+        install()
+        val engine=app.driftless.tracking.core.Engine(store,rules,zone={zone})
+        val quiet=app.driftless.tracking.core.Classification(app.driftless.tracking.core.Surface.OTHER,null,isAd=false,nodesVisited=1)
+        engine.onTick(store.account.now())
+        engine.onObservation(fb,null,quiet,false,store.account.now())
+        assertEquals(0,pending().length())
+        assertEquals("measurement_unavailable",store.account.status())
+        assertTrue(store.account.remainingCredit().isNull("views"))
+        engine.onObservation(pkg,null,quiet,false,store.account.now())
+        val apps=pending().getJSONObject(0).getJSONObject("apps")
+        assertEquals(0,apps.getJSONObject(pkg).getInt("views"))
+        assertEquals(0,apps.getJSONObject(other).getInt("views"))
+        assertEquals("reserved",store.account.status())
+        assertEquals(3L,store.account.remainingCredit().getLong("views"))
+        assertFalse(store.account.blocked(pkg))
+    }
     @Test fun deduplicatesEventsAndBlocksAtOwnReservationWithoutDoubleCountingAcceptedUsage() {
         install(); store.account.observeViews(date,setOf(pkg))
         assertEquals("reserved",store.account.status())
@@ -126,9 +146,9 @@ class AccountUsageTest {
     @Test fun delayedPreResetRecorderCannotRestoreIntervalsOrCachedHistory() {
         install(); val old=store.capturedStore(); val at=store.account.now()-1000
         store.recordView(event("first",at)); store.account.resetHistory()
-        old.addTime(date,pkg,120000,0); old.heartbeat(date,10)
+        old.addTime(date,pkg,120000,0)
         old.recordView(event("delayed",at))
-        assertTrue(store.daily(date).isEmpty()); assertTrue(store.events(0).isEmpty()); assertEquals(0,store.heartbeatMinutes(date))
+        assertTrue(store.daily(date).isEmpty()); assertTrue(store.events(0).isEmpty())
         val rows=JSONArray().put(JSONObject().put("localDate",date).put("deviceId","other").put("tz",zone.id).put("rev",5).put("coverage",1).put("views",99).put("minutes",20))
         store.mergeSynced(rows.toString(),"account:$inc")
         assertNull(store.personalMeasurement(date,setOf(pkg))["views"])

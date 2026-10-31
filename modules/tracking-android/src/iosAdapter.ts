@@ -19,9 +19,6 @@ export function createIOSTracking(store: Store, hooks: Hooks) {
     disclosureAccepted: false,
     serviceEnabled: false,
     serviceRunning: false,
-    lastConnectedMs: 0,
-    lastEventMs: 0,
-    heartbeatMinutesToday: 0,
     usageAccessGranted: false,
     debugBuild: false,
     subscriptionRequired: false,
@@ -31,8 +28,6 @@ export function createIOSTracking(store: Store, hooks: Hooks) {
   const daily = (date: string | null = null): Daily => ({
     localDate: date ?? new Date().toLocaleDateString('en-CA'),
     apps: [],
-    coverage: 0,
-    heartbeatMinutes: 0,
     measurementStatus: 'unavailable',
     usageObserved: false,
   });

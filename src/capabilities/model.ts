@@ -46,7 +46,7 @@ export function capabilityReport({
         ? unavailable('Short-video detection rules are not configured for the installed apps yet')
         : videoTargets.some((a) => !a.validated)
           ? unavailable(
-              'Local counting available; cloud video scores unavailable for these app versions',
+              'Local counting available; counts for these app versions are labelled experimental',
             )
           : available('Service running; installed versions approved');
   const minutesTracking = !android
@@ -75,7 +75,7 @@ export function capabilityReport({
       if (h?.blockingEntitled !== true)
         return unavailable('Native Pro verification unavailable or expired; refresh your profile');
     } else if (h?.subscriptionRequired !== false) {
-      return unavailable('Install the latest Android build for subscription-free focus features');
+      return unavailable('Install the latest Android build to use focus features');
     }
     // This report describes configurability, never an assertion that enforcement is active.
     return available(
@@ -89,9 +89,7 @@ export function capabilityReport({
   const shareGate = !android
     ? 'Not implemented on this platform'
     : (cloud('socialSharingOfUsage') ??
-      (!me!.profile.consent.cloudSync || !me!.profile.consent.shareWithFriends
-        ? 'Cloud backup and friend-sharing consent required'
-        : null));
+      (!me!.profile.consent.cloudSync ? 'Account backup required' : null));
   return {
     videoCounting,
     minutesTracking,
@@ -100,10 +98,8 @@ export function capabilityReport({
     advancedAnalytics: unavailable('Advanced analytics is not implemented'),
     socialSharingOfUsage: shareGate
       ? unavailable(shareGate)
-      : videoCounting.available
-        ? available('Backend and consent enabled; eligible totals required')
-        : unavailable(
-            'Approved counting versions required for reel scores; local counts are not cloud scores',
-          ),
+      : available(
+          'Daily counts, including experimental ones, are shared only with friends through an accepted invitation',
+        ),
   };
 }

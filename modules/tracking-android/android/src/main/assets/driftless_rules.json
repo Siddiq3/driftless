@@ -31,42 +31,6 @@
       "adViewIds": ["ad_badge", "reel_ad_badge"],
       "adLabels": ["sponsored", "ad"],
       "validatedVersions": []
-    },
-    {
-      "package": "com.facebook.katana",
-      "label": "Facebook Reels",
-      "surfaceViewIds": [],
-      "itemParts": [],
-      "adViewIds": [],
-      "adLabels": [],
-      "validatedVersions": []
-    },
-    {
-      "package": "com.snapchat.android",
-      "label": "Snapchat Spotlight",
-      "surfaceViewIds": [],
-      "itemParts": [],
-      "adViewIds": [],
-      "adLabels": [],
-      "validatedVersions": []
-    },
-    {
-      "package": "in.mohalla.video",
-      "label": "Moj",
-      "surfaceViewIds": [],
-      "itemParts": [],
-      "adViewIds": [],
-      "adLabels": [],
-      "validatedVersions": []
-    },
-    {
-      "package": "in.mohalla.sharechat",
-      "label": "ShareChat",
-      "surfaceViewIds": [],
-      "itemParts": [],
-      "adViewIds": [],
-      "adLabels": [],
-      "validatedVersions": []
     }
   ]
 }

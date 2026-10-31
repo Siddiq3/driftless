@@ -79,14 +79,16 @@ export function FriendInviteSheet({
         </T>
         <T muted>Invite someone to ScrollSnooze and find out who scrolls less.</T>
         <T v="caption" muted>
-          Creating this link lets people who accept it become your friends and see your daily video
-          totals from the day they join. You can stop sharing with someone by removing them. Your
-          other history stays private.
+          The invitation page doesn’t show your name, so let them know the link is from you. When
+          someone accepts it, you become friends. Each of you can then see the other’s Google
+          account name and daily Reels and Shorts count from that day on, including experimental
+          counts. Your minutes stay private. To stop sharing, delete the friend. Counts already on
+          their phone may show until it refreshes.
         </T>
         {error && <Notice title="Invite needs attention" body={error} tone="warn" />}
         {note && <T>{note}</T>}
         {!code ? (
-          <Button label="Create battle invite" busy={busy} onPress={() => void create()} />
+          <Button label="Create Friend Invitation" busy={busy} onPress={() => void create()} />
         ) : (
           <>
             <Button label="Share invitation" onPress={() => void share()} />
@@ -99,7 +101,8 @@ export function FriendInviteSheet({
               }}
             />
             <T v="caption" muted>
-              Invitation valid for 7 days. Download buttons will become available when ScrollSnooze
+              This link works for one person and
+              lasts 7 days. Download buttons will become available when ScrollSnooze
               is released.
             </T>
           </>

@@ -28,7 +28,7 @@ import { ScreenTimeScreen } from '@/ios/ScreenTimeScreen';
 import { GetStartedScreen } from './GetStartedScreen';
 import { QuestionContent, type QuestionContentHandle } from './QuestionContent';
 import { useMotionPreferences } from '@/ui/onboarding-motion/useMotionPreferences';
-import { PermissionChecklist, PermissionHelpButton } from '@/permissions/PermissionChecklist';
+import { PermissionScreen } from '@/permissions/PermissionScreen';
 import {
   SetupButton,
   WidgetPreview,
@@ -72,14 +72,10 @@ const QUESTIONS: Question[] = [
     key: 'apps',
     title: 'Where do you scroll?',
     multi: true,
-    help: 'App minutes are supported for these apps. Short-video counts are still experimental for Instagram and YouTube, and are not set up for the other apps yet.',
+    help: 'ScrollSnooze counts Instagram Reels and YouTube Shorts. Counting is experimental.',
     options: [
       { value: 'instagram', label: 'Instagram Reels' },
       { value: 'youtube', label: 'YouTube Shorts' },
-      { value: 'facebook', label: 'Facebook Reels' },
-      { value: 'snapchat', label: 'Snapchat Spotlight' },
-      { value: 'moj', label: 'Moj' },
-      { value: 'sharechat', label: 'ShareChat' },
       { value: 'other', label: 'Other apps' },
     ],
   },
@@ -369,6 +365,8 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
     );
   }
 
+  if (step === 12 && !ios) return <PermissionScreen onDone={() => void move(13)} />;
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: step === 14 ? '#281500' : C.bg }}>
       <View style={styles.header}>
@@ -523,7 +521,7 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
             <>
               {title(ios ? 'Your apps.\nYour privacy.' : 'Your scroll count.\nYour privacy.')}
               <T v="heading" style={{ ...styles.title, fontSize: 24, lineHeight: 32 }}>
-                No chats. No passwords.
+                Screen text isn’t saved.
               </T>
               <PrivacyArtwork />
             </>
@@ -535,7 +533,7 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
                   ? 'Choose your apps.\nTake a pause.'
                   : 'Enable permissions\nto start counting reels',
               )}
-              {ios ? <ScreenTimeScreen embedded /> : <PermissionChecklist health={health} />}
+              <ScreenTimeScreen embedded />
             </>
           )}
           {step === 13 && (
@@ -554,7 +552,7 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
               <T v="label" style={styles.small}>
                 A little friendly competition
               </T>
-              {title('CHALLENGE\nFRIENDS')}
+              {title('INVITE\nFRIENDS')}
               <ChallengeArtwork />
             </>
           )}
@@ -587,7 +585,7 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
               <T v="caption" style={styles.small}>
                 {ios
                   ? 'Your minute intention is saved. Open app pauses whenever you need some space.'
-                  : health?.serviceRunning
+                  : health?.disclosureAccepted && health?.serviceRunning
                     ? 'Your count updates on Today.'
                     : 'Counting is off. Enable it later in Counter.'}
               </T>
@@ -644,9 +642,14 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
           )}
           {step === 12 && (
             <>
-              {!ios && <PermissionHelpButton />}
               <PlainSetupButton
-                label={ios ? 'Continue' : health?.serviceRunning ? 'Continue' : 'Not now'}
+                label={
+                  ios
+                    ? 'Continue'
+                    : health?.disclosureAccepted && health?.serviceRunning
+                      ? 'Continue'
+                      : 'Not now'
+                }
                 busy={busy}
                 onPress={() => void move(13)}
               />
@@ -664,7 +667,7 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
           )}
           {step === 14 && (
             <>
-              <SetupButton label="Challenge your friend" busy={busy} onPress={() => void share()} />
+              <SetupButton label="Invite a friend" busy={busy} onPress={() => void share()} />
               <PlainSetupButton
                 label="I’ll do it later"
                 busy={busy}

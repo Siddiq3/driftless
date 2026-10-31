@@ -1,3 +1,4 @@
+import { ensureSocialProfile } from '@/social/profile';
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { AppState, Clipboard, Share } from 'react-native';
@@ -22,7 +23,7 @@ jest.mock('@/sync/AccountBackupProvider', () => ({
 }));
 jest.mock('@/data/personal', () => ({
   refreshPersonalData: jest.fn(),
-  personalDay: () => ({ views: 92 }),
+  personalDay: () => mockGuestDay,
 }));
 jest.mock('@/social/profile', () => ({
   ensureSocialProfile: jest.fn().mockResolvedValue({ data: { profile: { handle: 'kolimi' } } }),
@@ -61,6 +62,7 @@ jest.mock('@/ui/kit', () => {
     ),
   };
 });
+let mockGuestDay: { views: number | null; status?: string } = { views: 92 };
 let tree: ReactTestRenderer;
 const text = () => JSON.stringify(tree.toJSON());
 const control = (label: string) =>
@@ -125,7 +127,7 @@ afterEach(async () => {
 it('ranks daily battle friends and real zero without a challenges screen or creation form', async () => {
   await mount();
   expect(text()).toContain('Your daily count: 0');
-  expect(text()).toContain('Daily count for garage: 6');
+  expect(text()).toContain('Daily count for Study Garage: 6');
   expect(text()).toContain('Rank 1');
   expect(text()).not.toContain('View your battles');
   expect(text()).not.toContain('Start battle');
@@ -137,7 +139,7 @@ it('shares only after explicit invitation creation and a share tap', async () =>
   await tap(inviteLabel());
   expect(mockApi.createBattleInvite).not.toHaveBeenCalled();
   expect(Share.share).not.toHaveBeenCalled();
-  await tap('Create battle invite');
+  await tap('Create Friend Invitation');
   expect(mockApi.createBattleInvite).toHaveBeenCalledTimes(1);
   expect(Share.share).not.toHaveBeenCalled();
   await tap('Share invitation');
@@ -147,14 +149,102 @@ it('shares only after explicit invitation creation and a share tap', async () =>
     ),
   });
 });
-it('displays missing counts as zero without ranking them or using local candidates', async () => {
+it('shows missing counts as no count, never as zero, and leaves them unranked', async () => {
   mockApi.battleDaily.mockImplementation(async (date: string) => daily(date, null, null));
   await mount();
-  expect(text()).toContain('Your daily count: 0 (count unavailable)');
-  expect(text()).toContain('Daily count for garage: 0 (count unavailable)');
-  expect(text()).toContain('Counts awaiting an update show 0 and remain unranked.');
+  expect(text()).toContain('Your daily count: no count yet');
+  expect(text()).toContain('Daily count for Study Garage: no count yet');
+  expect(text()).toContain('No count yet');
+  expect(text()).not.toContain('It doesn’t mean zero videos.');
   expect(text()).not.toContain('92');
   expect(text()).not.toContain('Rank 1');
+});
+it('a real zero stays a number and is not labelled missing', async () => {
+  await mount();
+  expect(text()).toContain('Your daily count: 0');
+  expect(text()).not.toContain('No count yet');
+});
+it('labels experimental counts on both rows and leaves verified counts unlabelled', async () => {
+  await mount();
+  expect(text()).not.toContain('Experimental count"');
+  await act(async () => tree.unmount());
+  mockApi.battleDaily.mockImplementation(async (date: string) => {
+    const d = daily(date, 3, 6);
+    return {
+      ...d,
+      self: { ...d.self, experimental: true },
+      friends: [{ ...d.friends[0]!, daily: { ...d.friends[0]!.daily, experimental: true } }],
+    };
+  });
+  await mount();
+  expect(text().match(/Experimental count"/g)).toHaveLength(2);
+  expect(text()).toContain('Your daily count: 3, experimental');
+  expect(text()).toContain('Daily count for Study Garage: 6, experimental');
+  expect(text()).toContain('may be less accurate');
+});
+it('labels only the friend whose count is experimental', async () => {
+  mockApi.battleDaily.mockImplementation(async (date: string) => {
+    const d = daily(date, 3, 6);
+    return {
+      ...d,
+      friends: [{ ...d.friends[0]!, daily: { ...d.friends[0]!.daily, experimental: true } }],
+    };
+  });
+  await mount();
+  expect(text().match(/Experimental count"/g)).toHaveLength(1);
+  expect(text()).toContain('Your daily count: 3"');
+});
+it('creating an invitation saves the Google sign-up name', async () => {
+  await mount();
+  await tap(inviteLabel());
+  await tap('Create Friend Invitation');
+  expect(jest.mocked(ensureSocialProfile).mock.calls[0]![1]).toBe('Kolimi');
+});
+it('shows the Google name, and a neutral label instead of a handle when it is missing', async () => {
+  await mount();
+  expect(text()).toContain('Study Garage');
+  await act(async () => tree.unmount());
+  mockApi.battleDaily.mockImplementation(async (date: string) => {
+    const d = daily(date);
+    return { ...d, friends: [{ ...d.friends[0]!, displayName: null }] };
+  });
+  await mount();
+  expect(text()).toContain('ScrollSnooze friend');
+  expect(text()).not.toContain('garage');
+  expect(text()).not.toContain('@');
+});
+it('tells the inviter the page hides their name before anything is created', async () => {
+  await mount();
+  await tap(inviteLabel());
+  expect(text()).toContain('The invitation page doesn’t show your name');
+  expect(mockApi.createBattleInvite).not.toHaveBeenCalled();
+});
+it.each([
+  ['verified zero', { views: 0, status: 'validated' }, 'Your daily count: 0"', false],
+  ['experimental zero', { views: 0, status: 'experimental' }, 'Your daily count: 0, experimental', true],
+  ['experimental count', { views: 5, status: 'experimental' }, 'Your daily count: 5, experimental', true],
+  ['missing', { views: null, status: 'unavailable' }, 'Your daily count: no count yet', false],
+])('guest row: %s', async (_name, day, label, tagged) => {
+  mockSignedIn = false;
+  mockGuestDay = day;
+  await mount();
+  expect(text()).toContain(label);
+  expect(text().includes('Experimental count"')).toBe(tagged);
+  mockGuestDay = { views: 92 };
+});
+it('after sign-out the board makes no account requests and shows no friends', async () => {
+  mockSignedIn = false;
+  await mount();
+  expect(mockApi.battleDaily).not.toHaveBeenCalled();
+  expect(text()).not.toContain('Study Garage');
+});
+it('uses leaderboard wording, not battle wording', async () => {
+  await mount();
+  expect(text()).toContain('Friends Leaderboard');
+  expect(text()).not.toMatch(/SCROLL BATTLE|War not updated/);
+  await tap(inviteLabel());
+  for (const words of ['you become friends', 'from that day on', 'delete the friend'])
+    expect(text()).toContain(words);
 });
 it('shows a sign-in sheet before a guest can invite', async () => {
   mockSignedIn = false;
@@ -200,12 +290,12 @@ it('keeps previously loaded results on a failed refresh until account identity c
     await jest.advanceTimersByTimeAsync(60000);
   });
   expect(text()).toContain('Previously loaded counts may be out of date');
-  expect(text()).toContain('Daily count for garage: 6');
+  expect(text()).toContain('Daily count for Study Garage: 6');
   mockApi.battleDaily.mockRejectedValueOnce(new ApiError(403, 'forbidden', 'no access'));
   await act(async () => {
     await jest.advanceTimersByTimeAsync(60000);
   });
-  expect(text()).toContain('Daily count for garage: 6');
+  expect(text()).toContain('Daily count for Study Garage: 6');
 });
 
 it('renders the cached War immediately on remount without forcing a saved-backup refresh', async () => {

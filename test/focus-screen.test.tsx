@@ -3,7 +3,6 @@ import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { router } from 'expo-router';
 import { Tracking } from 'tracking-android';
-import Blocking from '../app/app-pauses';
 import Focus from '../app/blocking';
 import { DEFAULT_BLOCKING, loadBlocking, saveBlocking } from '../src/billing/blocking';
 
@@ -27,6 +26,10 @@ jest.mock('react-native-reanimated', () => {
       }))[0],
     useAnimatedStyle: (fn: () => object) => fn(),
     withTiming: (value: number) => value,
+    withRepeat: (value: number) => value,
+    withSequence: (value: number) => value,
+    cancelAnimation: () => undefined,
+    Easing: { out: () => undefined, in: () => undefined, quad: undefined },
     interpolateColor: (_value: number, _range: number[], colors: string[]) => colors[0],
   };
 });
@@ -47,6 +50,7 @@ jest.mock('../src/billing/blocking', () => ({
 jest.mock('../src/billing/ProtectionNotice', () => ({ ProtectionNotice: () => null }));
 jest.mock('tracking-android', () => ({ Tracking: { health: jest.fn() } }));
 jest.mock('../src/ui/Icon', () => ({ Icon: () => null, AppIcon: () => null }));
+jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: require('react-native').View }));
 jest.mock('../src/ui/kit', () => {
   const { View, Text, Pressable, Switch } = require('react-native');
   return {
@@ -56,7 +60,7 @@ jest.mock('../src/ui/kit', () => {
     Toggle: Switch,
     Details: View,
     LoadingState: View,
-    Notice: View,
+    Notice: ({ body }: { body: string }) => require('react').createElement(Text, null, body),
     Button: ({ label, onPress }: { label: string; onPress: () => void }) =>
       require('react').createElement(Pressable, { accessibilityLabel: label, onPress }),
   };
@@ -72,91 +76,95 @@ const control = (label: string) =>
     (node) =>
       node.props.accessibilityLabel === label && (node.props.onPress || node.props.onValueChange),
   )[0]!;
+const text = () => JSON.stringify(tree.toJSON());
+const health = {
+  feedLimitsImplemented: true,
+  implemented: true,
+  subscriptionRequired: false,
+  disclosureAccepted: true,
+  serviceEnabled: true,
+  serviceRunning: true,
+  usageAccessGranted: true,
+  apps: [
+    { package: 'youtube', label: 'YouTube Shorts', installed: true },
+    { package: 'instagram', label: 'Instagram Reels', installed: false },
+  ],
+} as ReturnType<typeof Tracking.health>;
+async function mount() {
+  await act(async () => {
+    tree?.unmount();
+    tree = create(<Focus />);
+  });
+}
 beforeEach(async () => {
   Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });
   jest.clearAllMocks();
   jest.mocked(loadBlocking).mockResolvedValue(config);
-  jest.mocked(Tracking.health).mockReturnValue({
-    feedLimitsImplemented: true,
-    implemented: true,
-    subscriptionRequired: false,
-    disclosureAccepted: true,
-    serviceEnabled: true,
-    serviceRunning: true,
-    usageAccessGranted: true,
-    apps: [
-      { package: 'youtube', label: 'YouTube Shorts', installed: true },
-      { package: 'instagram', label: 'Instagram Reels', installed: false },
-    ],
-  } as ReturnType<typeof Tracking.health>);
-  await act(async () => {
-    tree = create(<Blocking />);
-  });
+  jest.mocked(Tracking.health).mockReturnValue(health);
+  await mount();
 });
 afterEach(async () => {
   await act(async () => tree.unmount());
 });
 
-it('saves app choices and daily allowance while preserving existing focus and bypass settings', async () => {
+it('saves app choices, the daily limit and the master switch', async () => {
   await act(async () => control('YouTube Shorts').props.onPress());
   expect(saveBlocking).toHaveBeenLastCalledWith({}, { ...config, apps: ['youtube'] });
   await act(async () => control('Daily limit: 45m').props.onPress());
-  expect(saveBlocking).toHaveBeenLastCalledWith(
-    {},
-    { ...config, apps: ['youtube'], dailyMinutes: 45 },
-  );
-  await act(async () => control('Pause apps').props.onValueChange(true));
+  await act(async () => control('App pauses').props.onValueChange(true));
   expect(saveBlocking).toHaveBeenLastCalledWith(
     {},
     { ...config, apps: ['youtube'], dailyMinutes: 45, enabled: true },
   );
 });
-it('keeps feed breaks, scope and goal navigation connected to their saved settings', async () => {
-  await act(async () => control('Whole app').props.onPress());
-  await act(async () => control('Timed feed breaks').props.onValueChange(true));
-  await act(async () => control('Break duration: 10m').props.onPress());
-  expect(saveBlocking).toHaveBeenLastCalledWith(
-    {},
-    { ...config, feedOnly: false, breaksEnabled: true, breakMinutes: 10 },
+
+it('turns the daily limit off and on', async () => {
+  await act(async () => control('Pause after a daily limit').props.onValueChange(false));
+  expect(saveBlocking).toHaveBeenLastCalledWith({}, { ...config, dailyMinutes: null });
+  expect(tree.root.findAll((n) => n.props.accessibilityLabel === 'Daily limit: 30m')).toHaveLength(
+    0,
   );
-  await act(async () => control('Edit daily video goal').props.onPress());
-  expect(router.push).toHaveBeenCalledWith('/goals');
 });
 
 it('applies rapid edits against the latest configuration and persists them in order', async () => {
   await act(async () => {
     control('YouTube Shorts').props.onPress();
     control('Daily limit: 60m').props.onPress();
-    control('Pause apps').props.onValueChange(true);
+    control('App pauses').props.onValueChange(true);
   });
   expect(saveBlocking).toHaveBeenLastCalledWith(
     {},
     { ...config, apps: ['youtube'], dailyMinutes: 60, enabled: true },
   );
 });
-it('restores the last saved configuration after a failed write', async () => {
+
+it('restores the last saved configuration after a failed write, then retries', async () => {
   jest.mocked(saveBlocking).mockRejectedValueOnce(new Error('disk full'));
   await act(async () => control('Daily limit: 60m').props.onPress());
-  expect(control('Daily limit: 30m').props.accessibilityState.selected).toBe(true);
-  expect(JSON.stringify(tree.toJSON())).toContain('last saved settings have been restored');
-  await act(async () => control('Daily limit: 45m').props.onPress());
-  expect(saveBlocking).toHaveBeenLastCalledWith({}, { ...config, dailyMinutes: 45 });
+  expect(control('Daily limit: 30m').props.accessibilityState.checked).toBe(true);
+  expect(text()).toContain('last saved settings have been restored');
+  await act(async () => control('Retry save').props.onPress());
+  expect(saveBlocking).toHaveBeenLastCalledWith({}, config);
 });
+
+it('does not claim restoration if persistence and restoration both fail', async () => {
+  jest
+    .mocked(saveBlocking)
+    .mockRejectedValueOnce(new Error('native failure'))
+    .mockRejectedValueOnce(new Error('still unavailable'));
+  await act(async () => control('Daily limit: 60m').props.onPress());
+  expect(text()).toContain('Changes could not be confirmed');
+  expect(text()).not.toContain('have been restored');
+});
+
 it('keeps selections after returning to the screen', async () => {
   await act(async () => control('YouTube Shorts').props.onPress());
-  const saved = jest.mocked(saveBlocking).mock.calls.at(-1)![1];
-  await act(async () => tree.unmount());
-  jest.mocked(loadBlocking).mockResolvedValue(saved);
-  await act(async () => {
-    tree = create(<Blocking />);
-  });
+  jest.mocked(loadBlocking).mockResolvedValue(jest.mocked(saveBlocking).mock.calls.at(-1)![1]);
+  await mount();
   expect(control('YouTube Shorts').props.accessibilityState.checked).toBe(true);
 });
-it('preserves custom schedules when toggling a preset and opens app pause configuration', async () => {
-  await act(async () => {
-    tree.unmount();
-    tree = create(<Focus />);
-  });
+
+it('toggles focus-time presets while preserving custom schedules', async () => {
   await act(async () => control('Work hours').props.onValueChange(true));
   expect(jest.mocked(saveBlocking).mock.calls.at(-1)![1].schedules).toEqual([
     ...config.schedules,
@@ -164,153 +172,48 @@ it('preserves custom schedules when toggling a preset and opens app pause config
   ]);
   await act(async () => control('Work hours').props.onValueChange(false));
   expect(jest.mocked(saveBlocking).mock.calls.at(-1)![1].schedules).toEqual(config.schedules);
-  await act(async () => control('Configure app pauses').props.onPress());
-  expect(router.push).toHaveBeenCalledWith('/app-pauses');
-});
-it('does not claim active protection when permissions are missing', async () => {
-  jest.mocked(loadBlocking).mockResolvedValue({ ...config, enabled: true, apps: ['youtube'] });
-  jest.mocked(Tracking.health).mockReturnValue({ ...Tracking.health(), serviceEnabled: false });
-  await act(async () => {
-    tree.unmount();
-    tree = create(<Blocking />);
-  });
-  expect(JSON.stringify(tree.toJSON())).toContain('Permission required');
-  expect(JSON.stringify(tree.toJSON())).not.toContain('Protection active');
-});
-it('handles unavailable native services without discarding saved settings', async () => {
-  jest.mocked(Tracking.health).mockImplementationOnce(() => {
-    throw new Error('not supported');
-  });
-  await act(async () => {
-    tree.unmount();
-    tree = create(<Blocking />);
-  });
-  expect(JSON.stringify(tree.toJSON())).toContain(
-    'App pauses need the Android accessibility service',
-  );
-  expect(control('Daily limit: 30m').props.accessibilityState.selected).toBe(true);
-});
-it('shows ready protection only for a supported, running and approved configuration', async () => {
-  jest.mocked(loadBlocking).mockResolvedValue({ ...config, enabled: true, apps: ['youtube'] });
-  jest.mocked(Tracking.health).mockReturnValue({
-    ...Tracking.health(),
-    apps: [
-      {
-        package: 'youtube',
-        label: 'YouTube Shorts',
-        installed: true,
-        validated: true,
-        version: '1',
-      },
-    ],
-  });
-  await act(async () => {
-    tree.unmount();
-    tree = create(<Blocking />);
-  });
-  expect(JSON.stringify(tree.toJSON())).toContain('Protection active');
-});
-it('does not claim restoration if persistence and restoration both fail', async () => {
-  jest
-    .mocked(saveBlocking)
-    .mockRejectedValueOnce(new Error('native failure'))
-    .mockRejectedValueOnce(new Error('still unavailable'));
-  await act(async () => control('Daily limit: 60m').props.onPress());
-  expect(JSON.stringify(tree.toJSON())).toContain('Changes could not be confirmed');
-  expect(JSON.stringify(tree.toJSON())).not.toContain('have been restored');
-  await act(async () => control('Try saving again').props.onPress());
-  expect(saveBlocking).toHaveBeenLastCalledWith({}, { ...config, dailyMinutes: 60 });
-});
-it('can retry after failing to load settings', async () => {
-  jest.mocked(loadBlocking).mockRejectedValueOnce(new Error('storage unavailable'));
-  await act(async () => {
-    tree.unmount();
-    tree = create(<Blocking />);
-  });
-  expect(JSON.stringify(tree.toJSON())).toContain('Your settings could not be loaded');
-  await act(async () => control('Try again').props.onPress());
-  expect(control('Daily limit: 30m').props.accessibilityState.selected).toBe(true);
 });
 
-it('makes Focus protection primary, keeps setup editable while off, and preserves choices on enable', async () => {
-  await act(async () => {
-    tree.unmount();
-    tree = create(<Focus />);
-  });
-  expect(JSON.stringify(tree.toJSON())).toContain('Protection is off');
-  expect(JSON.stringify(tree.toJSON())).not.toContain('INCLUDED');
-  expect(control('More options').props.accessibilityState.expanded).toBe(false);
-  expect(
-    tree.root.findAll((node) => node.props.accessibilityLabel === 'Timed feed breaks'),
-  ).toHaveLength(0);
-  await act(async () => control('YouTube Shorts').props.onPress());
-  await act(async () => control('Increase daily limit').props.onPress());
-  await act(async () => control('Turn on app pauses').props.onPress());
-  expect(saveBlocking).toHaveBeenLastCalledWith(
-    {},
-    { ...config, apps: ['youtube'], dailyMinutes: 45, enabled: true },
-  );
-  await act(async () => control('Pause apps').props.onPress());
-  expect(saveBlocking).toHaveBeenLastCalledWith(
-    {},
-    { ...config, apps: ['youtube'], dailyMinutes: 45, enabled: false },
-  );
-});
-
-it('retains advanced goal, break, bypass and experimental controls inside More options', async () => {
-  await act(async () => {
-    tree.unmount();
-    tree = create(<Focus />);
-  });
-  await act(async () => control('More options').props.onPress());
-  await act(async () => control('Timed feed breaks').props.onValueChange(true));
-  await act(async () => control('Break duration: 10m').props.onPress());
-  await act(async () => control('Bypass options').props.onPress());
-  await act(async () => control('Bypasses per day: 5').props.onPress());
-  await act(async () => control('Experimental feed detection').props.onValueChange(true));
+it('keeps feed scope, breaks, skips and the goal link connected', async () => {
+  await act(async () => control('Whole app').props.onPress());
+  await act(async () => control('Short break after a run of videos').props.onValueChange(true));
+  await act(async () => control('Break length: 10m').props.onPress());
+  await act(async () => control('Skips allowed per day: 5').props.onPress());
   expect(saveBlocking).toHaveBeenLastCalledWith(
     {},
     {
       ...config,
+      feedOnly: false,
       breaksEnabled: true,
       breakMinutes: 10,
       maxBypassesPerDay: 5,
-      allowUnvalidatedCounts: true,
     },
   );
-  await act(async () => control('Edit daily video goal').props.onPress());
+  await act(async () => control('Pause at my video goal').props.onValueChange(true));
+  await act(async () => control('Edit video goal').props.onPress());
   expect(router.push).toHaveBeenCalledWith('/goals');
 });
 
-it('keeps unavailable app selections and custom daily limits without normalizing them', async () => {
-  const saved = { ...config, apps: ['instagram'], dailyMinutes: 35 };
-  jest.mocked(loadBlocking).mockResolvedValue(saved);
-  await act(async () => {
-    tree.unmount();
-    tree = create(<Focus />);
-  });
-  expect(JSON.stringify(tree.toJSON())).toContain('35');
-  await act(async () => control('Add app').props.onPress());
-  expect(JSON.stringify(tree.toJSON())).toContain('selection saved');
-  await act(async () => control('Turn on app pauses').props.onPress());
-  expect(saveBlocking).toHaveBeenLastCalledWith({}, { ...saved, enabled: true });
+it('keeps a custom daily limit without normalizing it', async () => {
+  jest.mocked(loadBlocking).mockResolvedValue({ ...config, dailyMinutes: 35 });
+  await mount();
+  expect(control('Daily limit: 35m').props.accessibilityState.checked).toBe(true);
 });
 
-it('keeps the Focus hero honest when protection is enabled without permissions', async () => {
+it('says pauses need attention, not on, when counting is off', async () => {
   jest.mocked(loadBlocking).mockResolvedValue({ ...config, enabled: true, apps: ['youtube'] });
-  jest.mocked(Tracking.health).mockReturnValue({ ...Tracking.health(), serviceEnabled: false });
-  await act(async () => {
-    tree.unmount();
-    tree = create(<Focus />);
-  });
-  expect(JSON.stringify(tree.toJSON())).toContain('Permission required');
-  expect(JSON.stringify(tree.toJSON())).not.toContain('Protection is on');
+  jest.mocked(Tracking.health).mockReturnValue({ ...health, serviceEnabled: false });
+  await mount();
+  expect(text()).toContain('Pauses need attention');
+  expect(text()).not.toContain('Pauses are on');
+  await act(async () => control('Turn on counting').props.onPress());
+  expect(router.push).toHaveBeenCalledWith('/disclosure');
 });
 
-it('shows the on state in Focus only when the existing readiness checks pass', async () => {
+it('says pauses are on only when the readiness checks pass', async () => {
   jest.mocked(loadBlocking).mockResolvedValue({ ...config, enabled: true, apps: ['youtube'] });
   jest.mocked(Tracking.health).mockReturnValue({
-    ...Tracking.health(),
+    ...health,
     apps: [
       {
         package: 'youtube',
@@ -320,23 +223,24 @@ it('shows the on state in Focus only when the existing readiness checks pass', a
         version: '1',
       },
     ],
-  });
-  await act(async () => {
-    tree.unmount();
-    tree = create(<Focus />);
-  });
-  expect(JSON.stringify(tree.toJSON())).toContain('Protection is on');
-  expect(control('Pause apps').props.accessibilityState.checked).toBe(true);
+  } as ReturnType<typeof Tracking.health>);
+  await mount();
+  expect(text()).toContain('Pauses are on');
 });
 
-it('retains Focus rollback and retry behavior after a failed write', async () => {
-  await act(async () => {
-    tree.unmount();
-    tree = create(<Focus />);
+it('handles unavailable native services without discarding saved settings', async () => {
+  jest.mocked(loadBlocking).mockResolvedValue({ ...config, enabled: true });
+  jest.mocked(Tracking.health).mockImplementation(() => {
+    throw new Error('not supported');
   });
-  jest.mocked(saveBlocking).mockRejectedValueOnce(new Error('disk full'));
-  await act(async () => control('Increase daily limit').props.onPress());
-  expect(JSON.stringify(tree.toJSON())).toContain('last saved settings have been restored');
-  await act(async () => control('Retry save').props.onPress());
-  expect(saveBlocking).toHaveBeenLastCalledWith({}, config);
+  await mount();
+  expect(text()).toContain('App pauses need the Android accessibility service');
+  expect(control('Daily limit: 30m').props.accessibilityState.checked).toBe(true);
+});
+
+it('can retry after failing to load settings', async () => {
+  jest.mocked(loadBlocking).mockRejectedValueOnce(new Error('storage unavailable'));
+  await mount();
+  await act(async () => control('Try again').props.onPress());
+  expect(control('Daily limit: 30m').props.accessibilityState.checked).toBe(true);
 });

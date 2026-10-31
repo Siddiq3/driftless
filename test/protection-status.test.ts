@@ -21,9 +21,6 @@ const health: TrackingHealth = {
   feedLimitsImplemented: true,
   usageAccessGranted: true,
   debugBuild: false,
-  lastConnectedMs: 0,
-  lastEventMs: 0,
-  heartbeatMinutesToday: 1,
   apps: [
     {
       package: 'youtube',
@@ -51,15 +48,9 @@ test.each([
 ])('reports the native gate %j', (override, reason) => {
   expect(protectionStatus(config, { ...health, ...override }, 50).body).toContain(reason);
 });
-test('distinguishes disabled experimental detection, enabled experiment, and unsupported app', () => {
+test('an untested app version is still protected, and an unsupported app is reported', () => {
   const candidate = { ...health, apps: [{ ...health.apps[0]!, validated: false }] };
-  expect(protectionStatus(config, candidate, 50).body).toContain('enforcement is inactive');
-  expect(
-    protectionStatus({ ...config, allowUnvalidatedCounts: true }, candidate, 50),
-  ).toMatchObject({
-    title: 'Protection needs attention',
-    body: expect.stringContaining('Experimental feed detection is enabled'),
-  });
+  expect(protectionStatus(config, candidate, 50).title).toBe('Protection active');
   expect(
     protectionStatus(
       config,

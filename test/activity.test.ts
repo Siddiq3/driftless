@@ -10,8 +10,6 @@ const health = {
 } as TrackingHealth;
 const daily = (localDate: string, views = 1): Daily => ({
   localDate,
-  heartbeatMinutes: 20,
-  coverage: 1,
   apps: [
     { package: 'instagram', views, adViews: 0, surfaceMs: 60000, unknownMs: 0, usageMs: 120000 },
   ],
@@ -56,8 +54,7 @@ test('partial weekly sums retain tracked-day coverage and future days remain unk
     0,
     '2026-10-21',
     health,
-    (d) =>
-      d.endsWith('20') ? { localDate: d, heartbeatMinutes: 0, coverage: 0, apps: [] } : daily(d, 4),
+    (d) => (d.endsWith('20') ? { localDate: d, apps: [] } : daily(d, 4)),
     noDetails,
   );
   expect(result.views).toEqual({ value: 8, days: 2 });
@@ -75,7 +72,12 @@ test('unrecorded counts and unmeasured time never become zero', () => {
       usageAccessGranted: false,
       apps: health.apps.map((a) => ({ ...a, validated: false })),
     },
-    (d) => ({ ...daily(d, 0), heartbeatMinutes: 0 }),
+    (d) => ({
+      localDate: d,
+      apps: [
+        { package: 'instagram', views: 0, adViews: 0, surfaceMs: 0, unknownMs: 0, usageMs: 120000 },
+      ],
+    }),
     noDetails,
   );
   expect(result.views.value).toBeNull();
@@ -124,7 +126,7 @@ test('missing validation metadata and event-only days still allow local hours wi
     ...health,
     apps: health.apps.map(({ validated: _validated, ...app }) => app),
   } as TrackingHealth;
-  const raw = { ...daily('2026-10-19', 2), heartbeatMinutes: 0 };
+  const raw = daily('2026-10-19', 2);
   const hourlyViews = Array<number>(24).fill(0);
   hourlyViews[23] = 2;
   const result = activityData('daily', 0, raw.localDate, missing, () => raw, {
@@ -192,7 +194,7 @@ test('restored totals alone cannot invent local hourly detail or a zero day', ()
     1,
     '2026-10-30',
     health,
-    (localDate) => ({ localDate, heartbeatMinutes: 0, coverage: 0, apps: [] }),
+    (localDate) => ({ localDate, apps: [] }),
     { available: true, days: [] },
     () => ({ views: 50, minutes: 20 }),
   );
@@ -209,10 +211,7 @@ test('platform rows use the same merged measurements as daily and weekly totals'
       0,
       '2026-10-29',
       health,
-      (date) =>
-        date === raw.localDate
-          ? raw
-          : { localDate: date, heartbeatMinutes: 0, coverage: 0, apps: [] },
+      (date) => (date === raw.localDate ? raw : { localDate: date, apps: [] }),
       noDetails,
       (date) => (date === raw.localDate ? measure() : { views: null, minutes: null }),
     );
@@ -245,7 +244,7 @@ test('restored totals explain why hourly records are missing instead of fabricat
     0,
     '2026-10-30',
     health,
-    (localDate) => ({ localDate, heartbeatMinutes: 0, coverage: 0, apps: [] }),
+    (localDate) => ({ localDate, apps: [] }),
     { available: true, days: [] },
     () => ({ views: 50, minutes: null }),
   );

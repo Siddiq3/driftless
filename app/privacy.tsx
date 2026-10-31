@@ -1,6 +1,7 @@
+import { openUsageAccess } from '@/permissions/usageAccess';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Linking, Share } from 'react-native';
+import { Alert, Linking, Platform, Share } from 'react-native';
 import { websiteLinks } from '@/config/website';
 import { Tracking } from 'tracking-android';
 import { ApiError } from '@/api/client';
@@ -19,6 +20,14 @@ export default function Privacy() {
   const s = useSession();
   const [note, setNote] = useState<{ title: string; body: string; warn?: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
+  // Settings is reachable here only to turn off; enabling goes through the disclosure first.
+  const [serviceEnabled] = useState(() => {
+    try {
+      return Tracking.health().serviceEnabled;
+    } catch {
+      return false;
+    }
+  });
   const links = websiteLinks();
   const openWebsite = (url: string) => {
     void Linking.openURL(url).catch(() =>
@@ -39,7 +48,7 @@ export default function Privacy() {
   const deleteAccount = () =>
     confirm(
       'Delete your account?',
-      'This permanently deletes your account, history in the cloud, friends and challenge memberships. Cancel any Pro subscription in Google Play separately.',
+      'This permanently deletes your account, history in the cloud, and friends.',
       'Delete account',
       () => {
         if (!api || s.status !== 'signedIn') return;
@@ -109,9 +118,11 @@ export default function Privacy() {
       <Details title="What we store" icon="shield">
         <T muted>
           On this phone: counts, minutes, goals and first-launch answers. Uninstalling or switching
-          phones loses unbacked-up local data. Setup answers are never uploaded. When you sign in,
-          we back up daily totals and goals to your account alongside your profile and friends.
-          Never what you watched, messages or screenshots.
+          phones loses unbacked-up local data. Setup answers are not uploaded. When you sign in, we
+          back up daily video and ad counts, minutes and goals to your account alongside your profile
+          and friends. Signed-in backup also includes per-app counts and minutes, the date, timezone and a random
+          device ID. Raw accessibility text, captions, interface trees and viewing events are not
+          included in account backup.
         </T>
       </Details>
 
@@ -119,26 +130,41 @@ export default function Privacy() {
         <T v="heading">Saving your progress</T>
         <T muted>
           Without an account, progress stays on this phone. Signing in backs up saved goals and
-          supported daily history automatically. Sign out to stop account backup. Sharing with
-          friends is a separate choice.
+          supported daily history automatically. Sign out to stop account backup. Signing in never shares
+          with friends. Sharing starts only when an invitation is accepted: your friend sees your
+          daily Reels and Shorts count from that day on, including experimental counts, and your
+          Google account name. Delete the friend to stop. Signing out stops new counts, but friends can
+          still see counts already backed up.
         </T>
       </Section>
+
+      {Platform.OS === 'android' && (
+        <Section>
+          <Button
+            kind="secondary"
+            label="Read accessibility disclosure"
+            onPress={() => router.push('/disclosure?mode=read')}
+          />
+        </Section>
+      )}
 
       <Section>
         <T v="heading">Turn counting off</T>
         <T muted>
-          Switch off “ScrollSnooze Reels &amp; Shorts counter” in Accessibility settings, and Usage
-          Access for ScrollSnooze.
+          Switch off “ScrollSnooze short-video counter” in Accessibility settings, and Usage Access
+          for ScrollSnooze.
         </T>
-        <Button
-          kind="secondary"
-          label="Accessibility settings"
-          onPress={Tracking.openAccessibilitySettings}
-        />
+        {serviceEnabled && (
+          <Button
+            kind="secondary"
+            label="Turn off in Accessibility settings"
+            onPress={Tracking.openAccessibilitySettings}
+          />
+        )}
         <Button
           kind="secondary"
           label="Usage Access settings"
-          onPress={Tracking.openUsageAccessSettings}
+          onPress={openUsageAccess}
         />
       </Section>
 

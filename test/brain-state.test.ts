@@ -5,7 +5,7 @@ function sample(): Extract<ProgressState, { state: 'ok' }> {
   return {
     state: 'ok',
     today: '2026-10-19',
-    daily: { localDate: '2026-10-19', heartbeatMinutes: 30, coverage: 1, apps: [] },
+    daily: { localDate: '2026-10-19', apps: [] },
     health: {
       engineVersion: 1,
       rulesVersion: 1,
@@ -13,9 +13,6 @@ function sample(): Extract<ProgressState, { state: 'ok' }> {
       disclosureAccepted: true,
       serviceEnabled: true,
       serviceRunning: true,
-      lastConnectedMs: 1,
-      lastEventMs: 1,
-      heartbeatMinutesToday: 30,
       usageAccessGranted: true,
       debugBuild: false,
       apps: [
@@ -121,7 +118,6 @@ describe('home character matches the popup count mood', () => {
     s.health.apps[0]!.validated = false;
     s.health.serviceRunning = false;
     s.p.today.views = null;
-    s.daily.heartbeatMinutes = 0;
     expect(countBrainMood(s)).toBe('drained');
     expect(s.p.today.views).toBeNull();
   });

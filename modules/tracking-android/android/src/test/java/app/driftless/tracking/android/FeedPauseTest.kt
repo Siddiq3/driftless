@@ -35,7 +35,7 @@ class FeedPauseTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val prefs = TrackingPrefs(context)
         prefs.blockConfig = BlockConfig(true, setOf("com.google.android.youtube"), null, emptyList(), true,
-            FeedSettings(true, true, 25, 10, 0, 1, true))
+            FeedSettings(true, true, 25, 10, 0, 1))
         val state = FeedState("2026-10-21", 25, 900000, 0, 0)
         prefs.feedState = state
         val reopened = TrackingPrefs(context)
@@ -56,6 +56,14 @@ class FeedPauseTest {
         assertTrue(overlay.isShowing)
         overlay.hide(); controller.destroy()
     }
+    @Test fun videoGoalPauseShowsTodaysCount() {
+        val controller = Robolectric.buildService(MemeTestService::class.java).create()
+        val overlay = FeedPauseOverlay(controller.get())
+        overlay.show(FeedReason.DAILY_VIDEOS, 0, 1, 5, false, 25) {}
+        val surface = FeedPauseOverlay::class.java.getDeclaredField("root").apply { isAccessible = true }.get(overlay) as PauseSurface
+        assertEquals("25", surface.figure.text.toString())
+        overlay.hide(); controller.destroy()
+    }
     @Test fun redesignedOverlayUpdatesCountdownAndUsesLatestBypassCallback() {
         val controller = Robolectric.buildService(MemeTestService::class.java).create()
         val overlay = FeedPauseOverlay(controller.get())
@@ -65,17 +73,18 @@ class FeedPauseTest {
         overlay.show(FeedReason.BREAK, 60000, 0, 5, true) { oldCalls++ }
         val bypass = field("bypass") as android.widget.Button
         assertFalse(bypass.isEnabled)
-        assertTrue((field("summary") as android.widget.TextView).text.contains("1:00"))
+        val surface = field("root") as PauseSurface
+        assertEquals("1:00", surface.figure.text.toString())
+        assertTrue(surface.detection.text.contains("experimental"))
         overlay.show(FeedReason.BREAK, 59000, 2, 5, false) { newCalls++ }
-        assertTrue((field("summary") as android.widget.TextView).text.contains("0:59"))
-        assertEquals(android.view.View.GONE, (field("detection") as android.view.View).visibility)
+        assertEquals("0:59", surface.figure.text.toString())
+        assertFalse(surface.detection.text.contains("experimental"))
         assertTrue(bypass.isEnabled)
         bypass.performClick()
         assertEquals(0, oldCalls)
         assertEquals(1, newCalls)
         overlay.hide()
         assertNull(field("root"))
-        assertNull(field("summary"))
         controller.destroy()
     }
 

@@ -29,15 +29,12 @@ type Variant = keyof typeof typeScale;
 
 const PAGE_DETAILS: Record<string, { title: string; mark: string }> = {
   '/tracking': { title: 'Counter', mark: '▥' },
-  '/history': { title: 'History', mark: '▤' },
-  '/stats': { title: 'Your activity', mark: '↗' },
   '/goals': { title: 'Daily goals', mark: '◎' },
   '/blocking': { title: 'Focus', mark: 'Ⅱ' },
   '/friends': { title: 'Friends', mark: '♡' },
-  '/challenges': { title: 'War', mark: '⚑' },
-  '/privacy': { title: 'Privacy', mark: '◇' },
+  '/challenges': { title: 'Friends', mark: '☺' },
+  '/privacy': { title: 'Your data & account', mark: '◇' },
   '/disclosure': { title: 'Enable counting', mark: '▥' },
-  '/pro': { title: 'Feature access', mark: '✦' },
   '/settings': { title: 'Settings', mark: '◇' },
 };
 
@@ -114,19 +111,17 @@ export function Screen({
     '/home',
     '/tracking',
     '/progress',
-    '/history',
-    '/stats',
     '/friends',
   ].includes(path);
   const details = PAGE_DETAILS[path];
   const tabs = [
     { label: 'Today', mark: '◉', href: '/welcome', active: ['/welcome', '/home', '/tracking'] },
-    { label: 'War', mark: '⚔', href: '/friends', active: ['/friends', '/challenges'] },
+    { label: 'Friends', mark: '⚔', href: '/friends', active: ['/friends', '/challenges'] },
     {
       label: 'Progress',
       mark: '↗',
       href: '/progress',
-      active: ['/progress', '/history', '/stats'],
+      active: ['/progress'],
     },
   ] as const;
   return (

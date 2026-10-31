@@ -27,7 +27,7 @@ menus, fake scores or isolated UI-fixture data as evidence of live product behav
 | App activity | Backed-up daily minutes, private video counts, eligible scores, goals and quality fields |
 | Device identifiers | Random install/device IDs and configured notification token |
 | Friends | Relationship data, invitations and explicitly shared aggregate scores |
-| Diagnostics | Operational request logs; separate explicit local exports |
+| Diagnostics | Operational request logs only (no tracking coverage or heartbeats); debug-only local exports. See DATA_SAFETY_RECOMMENDATION.md |
 | Local-only input | Setup answers, interface-node processing and raw recorder events do not enter ordinary account backup |
 
 Do not answer "no data collected" for the entire app. Cloud backup follows sign-in.

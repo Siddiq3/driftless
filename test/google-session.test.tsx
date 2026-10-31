@@ -267,6 +267,15 @@ it('uses the signed-in Google profile name as the presentation name', async () =
   expect(signedIn().displayName).toBe('Siddiq Kolimi');
 });
 
+it('a Google profile with no name gives no presentation name, not the email prefix', async () => {
+  jest.mocked(GoogleSignin.getCurrentUser).mockReturnValue({
+    user: { id: '100000000000000000001', name: null, email: 'siddiq@example.test' },
+  } as never);
+  await mount();
+  await login();
+  expect(signedIn().displayName).toBeNull();
+});
+
 test('local scope initialization failure exposes Retry and resumes without erasing data', async () => {
   const { selectPersonalSession } = require('@/data/session');
   selectPersonalSession.mockRejectedValueOnce(new Error('disk unavailable'));

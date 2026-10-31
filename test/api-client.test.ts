@@ -281,7 +281,6 @@ it('keeps personal recorded counts when decoding restored history', async () => 
     adViews: null,
     personalViews: 73,
     minutes: 12,
-    coverage: 1,
     rev: 2,
   };
   const api = client(jest.fn().mockResolvedValue(resp(200, { days: [row] })));

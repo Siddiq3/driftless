@@ -56,6 +56,27 @@ class ClassifierTest {
         assertEquals(Surface.OTHER, c.classify(home, rules, salt).surface)
     }
 
+    private class SpyNode(
+        override val viewId: String?,
+        val kids: List<SpyNode> = emptyList(),
+        val reads: MutableList<String> = mutableListOf(),
+    ) : UiNode {
+        override val className: String? = null
+        override val contentDesc: String? get() { reads += "desc"; return "private message" }
+        override val text: String? get() { reads += "text"; return "private message" }
+        override val isVisible = true
+        override val childCount get() = kids.size
+        override fun child(i: Int): UiNode? = kids.getOrNull(i)
+    }
+
+    @Test fun screensWithoutAPlayerAreNeverReadAsText() {
+        val message = SpyNode("message_text")
+        val chat = SpyNode("thread", listOf(SpyNode("composer"), message))
+        assertEquals(Surface.OTHER, c.classify(chat, rules, salt).surface)
+        assertTrue(message.reads.isEmpty())
+        assertTrue(chat.reads.isEmpty())
+    }
+
     @Test fun nullRootIsUnknown() {
         assertEquals(Surface.UNKNOWN, c.classify(null, rules, salt).surface)
     }

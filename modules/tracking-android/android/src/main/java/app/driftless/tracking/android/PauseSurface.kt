@@ -1,5 +1,6 @@
 package app.driftless.tracking.android
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
@@ -10,37 +11,34 @@ import android.os.Build
 import android.view.Gravity
 import android.view.View
 import android.view.WindowInsets
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import app.driftless.tracking.R
 
-/** Shared visual tokens for the native activity and accessibility overlay, matching the website. */
+/** Shared visual tokens for the native activity and accessibility overlay, matching the app. */
 internal object PauseStyle {
-    val background = Color.parseColor("#111C30")
-    val violet = Color.parseColor("#493063")
-    val indigo = Color.parseColor("#25274A")
-    val surface = Color.parseColor("#22324C")
-    val text = Color.parseColor("#F4F6FF")
-    val muted = Color.parseColor("#B8C6DC")
-    val lilac = Color.parseColor("#D6C5FF")
-    val lilacBright = Color.parseColor("#E9DDFF")
-    val ink = Color.parseColor("#292140")
-    val border = Color.parseColor("#536581")
+    val background = Color.parseColor("#0B0B08")
+    val surface = Color.parseColor("#29271F")
+    val text = Color.parseColor("#FFFFF8")
+    val muted = Color.parseColor("#B4B3AA")
+    val accent = Color.parseColor("#FFD18E")
+    val ink = Color.parseColor("#4B2C0C")
     val ripple = Color.parseColor("#26FFFFFF")
     const val gutter = 24
-    const val gap = 16
     const val touch = 56
-    const val radius = 20
-    fun canvas() = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(violet, indigo, background))
 }
 
 /** Presentation only. All decisions, scope guards and button actions stay with the caller. */
 internal class PauseSurface(context: Context) : ScrollView(context) {
     private val palette = PauseStyle
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
+    private val displayFace = if (Build.VERSION.SDK_INT >= 26) resources.getFont(R.font.lilita_one)
+        else Typeface.create("sans-serif", Typeface.BOLD)
     private val content = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_HORIZONTAL
@@ -53,61 +51,33 @@ internal class PauseSurface(context: Context) : ScrollView(context) {
         setLineSpacing(dp(3).toFloat(), 1f)
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
     }
-    private fun shape(color: Int, radius: Int = palette.radius, outline: Boolean = false) = GradientDrawable().apply {
-        cornerRadius = dp(radius).toFloat()
-        setColor(color)
-        if (outline) setStroke(dp(1), palette.border)
-    }
     private fun margin(top: Int = 0, bottom: Int = 0) = LinearLayout.LayoutParams(-1, -2).apply {
         topMargin = dp(top); bottomMargin = dp(bottom)
     }
-    val status = text(13f, palette.lilac).apply {
-        setTypeface(typeface, Typeface.BOLD)
-        background = shape(palette.surface, 999)
-        setPadding(dp(16), dp(8), dp(16), dp(8))
-    }
-    val mascot = ImageView(context).apply {
-        setImageResource(R.drawable.scrollsnooze_meditating)
-        scaleType = ImageView.ScaleType.FIT_CENTER
-        contentDescription = "ScrollSnooze meditating peacefully, taking a pause from the feed"
-    }
+    /** The hero: a countdown or today's count. Hidden when a pause has no number to show. */
+    val figure = text(84f, palette.accent).apply { typeface = displayFace; visibility = View.GONE }
+    val figureLabel = text(15f, palette.muted).apply { visibility = View.GONE }
     val headline = text(32f).apply {
-        typeface = Typeface.create("sans-serif", Typeface.BOLD)
+        typeface = displayFace
         if (Build.VERSION.SDK_INT >= 28) isAccessibilityHeading = true
     }
-    val summary = text(15f, palette.muted)
-    val detection = text(12f, palette.muted).apply { visibility = View.GONE }
-    private val details = text(13f, palette.muted).apply {
-        gravity = Gravity.START
-        setPadding(0, dp(8), 0, dp(12))
-        visibility = View.GONE
-    }
-    private val detailsButton = Button(context).apply {
-        text = "Pause details"
-        isAllCaps = false
-        stateListAnimator = null
-        elevation = 0f
-        textSize = 13f
-        minHeight = dp(48)
-        setTextColor(palette.muted)
-        background = RippleDrawable(ColorStateList.valueOf(palette.ripple), shape(Color.TRANSPARENT, 12), null)
-        setOnClickListener {
-            val expanded = details.visibility != View.VISIBLE
-            details.visibility = if (expanded) View.VISIBLE else View.GONE
-            text = if (expanded) "Hide pause details" else "Pause details"
-            contentDescription = if (expanded) "Pause details, expanded. Collapse details" else "Pause details, collapsed. Expand details"
-        }
-        contentDescription = "Pause details, collapsed. Expand details"
-    }
+    val summary = text(16f, palette.muted)
+    val detection = text(13f, palette.muted)
     private val actions = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_HORIZONTAL
     }
+    private val breath = View(context).apply {
+        background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(palette.accent) }
+        alpha = .12f
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+    }
+    private var breathing: ValueAnimator? = null
 
     init {
         isFillViewport = true
         isVerticalScrollBarEnabled = false
-        background = palette.canvas()
+        setBackgroundColor(palette.background)
         setOnApplyWindowInsetsListener { view, insets ->
             if (Build.VERSION.SDK_INT >= 30) {
                 val safe = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
@@ -119,56 +89,91 @@ internal class PauseSurface(context: Context) : ScrollView(context) {
             insets
         }
         addView(content, LayoutParams(-1, -1))
-        content.addView(text(18f).apply {
-            text = "ScrollSnooze"
-            typeface = Typeface.create("sans-serif", Typeface.BOLD)
-            gravity = Gravity.START
-            setPadding(0, dp(8), 0, dp(8))
-        }, margin(bottom = 16))
         val hero = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
         }
-        content.addView(hero, LinearLayout.LayoutParams(-1, -2, 1f))
+        content.addView(hero, LinearLayout.LayoutParams(-1, 0, 1f))
         val compact = resources.configuration.screenHeightDp < 720
-        val imageSize = if (compact) 164 else 208
-        hero.addView(mascot, LinearLayout.LayoutParams(dp(imageSize), dp(imageSize)).apply {
+        val stage = if (compact) 150 else 200
+        val mascot = ImageView(context).apply {
+            setImageResource(R.drawable.scrollsnooze_meditating)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            contentDescription = "ScrollSnooze taking a pause from the feed"
+        }
+        hero.addView(FrameLayout(context).apply {
+            addView(breath, FrameLayout.LayoutParams(-1, -1))
+            val inset = dp(18)
+            addView(mascot, FrameLayout.LayoutParams(-1, -1).apply { setMargins(inset, inset, inset, inset) })
+        }, LinearLayout.LayoutParams(dp(stage), dp(stage)).apply {
             gravity = Gravity.CENTER_HORIZONTAL
-            topMargin = dp(16); bottomMargin = dp(24)
+            bottomMargin = dp(20)
         })
-        hero.addView(status, LinearLayout.LayoutParams(-2, -2).apply { gravity = Gravity.CENTER_HORIZONTAL; bottomMargin = dp(16) })
-        hero.addView(headline, margin(bottom = 12))
-        hero.addView(summary, margin(bottom = 24))
-        content.addView(actions, margin(top = 8))
+        hero.addView(figure, margin())
+        hero.addView(figureLabel, margin(bottom = 20))
+        hero.addView(headline, margin(bottom = 10))
+        hero.addView(summary, margin())
+        content.addView(actions, margin(top = 20))
         content.addView(detection, margin(top = 12))
-        content.addView(detailsButton, margin(top = 4))
-        content.addView(details, margin())
     }
 
-    fun present(state: String, title: String, body: String, explanation: String) {
-        // Tick updates must not re-announce unchanged copy or reset the expanded details.
-        if (status.text.toString() != state) status.text = state
+    /** One slow breath in and out, stopped with the window and off when animations are off. */
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        if (Build.VERSION.SDK_INT >= 26 && !ValueAnimator.areAnimatorsEnabled()) return
+        breathing = ValueAnimator.ofFloat(.82f, 1f).apply {
+            duration = 4000
+            repeatMode = ValueAnimator.REVERSE
+            repeatCount = ValueAnimator.INFINITE
+            interpolator = AccelerateDecelerateInterpolator()
+            addUpdateListener {
+                val v = it.animatedValue as Float
+                breath.scaleX = v; breath.scaleY = v
+                breath.alpha = .06f + (v - .82f) * .6f
+            }
+            start()
+        }
+    }
+
+    override fun onDetachedFromWindow() {
+        breathing?.cancel()
+        breathing = null
+        super.onDetachedFromWindow()
+    }
+
+    fun present(title: String, body: String, number: String? = null, numberLabel: String? = null, note: String = FOOTER) {
+        // Tick updates must not re-announce unchanged copy.
         if (headline.text.toString() != title) headline.text = title
         if (summary.text.toString() != body) summary.text = body
-        if (details.text.toString() != explanation) details.text = explanation
+        if (figure.text.toString() != (number ?: "")) figure.text = number ?: ""
+        if (figureLabel.text.toString() != (numberLabel ?: "")) figureLabel.text = numberLabel ?: ""
+        figure.visibility = if (number == null) View.GONE else View.VISIBLE
+        figureLabel.visibility = if (number == null) View.GONE else View.VISIBLE
+        if (detection.text.toString() != note) detection.text = note
     }
 
-    fun action(label: String, primary: Boolean = false, callback: () -> Unit): Button = Button(context).apply {
+    /** Primary is the one filled amber action; quiet actions read as text links. */
+    fun action(label: String, primary: Boolean = false, quiet: Boolean = false, callback: () -> Unit): Button = Button(context).apply {
         text = label
         isAllCaps = false
         stateListAnimator = null
         elevation = 0f
         textSize = 16f
         setTypeface(typeface, Typeface.BOLD)
-        minHeight = dp(palette.touch)
-        minimumHeight = dp(palette.touch)
+        minHeight = dp(if (quiet) 48 else palette.touch)
+        minimumHeight = dp(if (quiet) 48 else palette.touch)
         setPadding(dp(20), dp(14), dp(20), dp(14))
-        setTextColor(if (primary) palette.ink else palette.text)
-        val fill = if (primary) GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(palette.lilacBright, palette.lilac)).apply {
+        setTextColor(if (primary) palette.ink else if (quiet) palette.muted else palette.text)
+        val fill = GradientDrawable().apply {
             cornerRadius = dp(999).toFloat()
-        } else shape(palette.surface, 999, outline = true)
+            setColor(if (primary) palette.accent else if (quiet) Color.TRANSPARENT else palette.surface)
+        }
         background = RippleDrawable(ColorStateList.valueOf(palette.ripple), fill, null)
         setOnClickListener { if (isEnabled) callback() }
-        actions.addView(this, margin(top = 12))
+        actions.addView(this, margin(top = if (quiet) 4 else 12))
+    }
+
+    companion object {
+        const val FOOTER = "Back and Home always work."
     }
 }

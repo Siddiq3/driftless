@@ -11,17 +11,12 @@ const health = (validated = false): TrackingHealth => ({
   disclosureAccepted: true,
   serviceEnabled: true,
   serviceRunning: true,
-  lastConnectedMs: 0,
-  lastEventMs: 0,
-  heartbeatMinutesToday: 0,
   usageAccessGranted: true,
   debugBuild: false,
   apps: [{ package: IG, label: 'IG', installed: true, version: '1', validated }],
 });
 const daily = (localDate: string, minutes: number, views = 0): Daily => ({
   localDate,
-  heartbeatMinutes: 900,
-  coverage: 0.95,
   apps: [{ package: IG, views, adViews: 0, surfaceMs: 0, unknownMs: 0, usageMs: minutes * 60_000 }],
 });
 const goal = (metric: v1.Goal['metric'], dailyLimit: number, enabled = true): v1.Goal => ({
@@ -66,6 +61,14 @@ describe('dayResult', () => {
   });
 });
 
+describe('recorded activity decides goal days', () => {
+  it('marks a day without recorded activity Unknown, never Kept', () => {
+    expect(
+      dayResult({ localDate: '2026-10-18', apps: [] }, health(), [goal('minutes', 30)]).outcome,
+    ).toBe('unknown');
+  });
+});
+
 describe('progress', () => {
   const minutesByDate: Record<string, number> = {
     '2026-10-14': 20,
@@ -75,9 +78,7 @@ describe('progress', () => {
     '2026-10-18': 5, // today, in progress
   };
   const read = (d: string): Daily =>
-    d in minutesByDate
-      ? daily(d, minutesByDate[d]!)
-      : { localDate: d, heartbeatMinutes: 0, coverage: 0, apps: [] };
+    d in minutesByDate ? daily(d, minutesByDate[d]!) : { localDate: d, apps: [] };
   const h = { ...health(), usageAccessGranted: false };
 
   it('computes streak, Wick and today from real outcomes', () => {

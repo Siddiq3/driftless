@@ -58,8 +58,6 @@ beforeEach(async () => {
   } as unknown as ReturnType<typeof Tracking.health>);
   jest.mocked(Tracking.daily).mockImplementation((d) => ({
     localDate: d!,
-    coverage: 0.2,
-    heartbeatMinutes: 10,
     apps: [
       {
         package: 'instagram',
@@ -138,7 +136,6 @@ it('new-device restore deduplicates concurrent reads and merges by device/date/r
     views: 5,
     adViews: 0,
     minutes: 2,
-    coverage: 1,
     rev: 2,
   };
   const usageHistory = jest.fn().mockResolvedValue({ days: [row] });
@@ -253,7 +250,6 @@ it('hydration requests exactly the retained 400 local dates and excludes older s
         views: 4,
         adViews: 0,
         minutes: 1,
-        coverage: 1,
       },
     ],
   });

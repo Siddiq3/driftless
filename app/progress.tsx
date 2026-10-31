@@ -50,7 +50,6 @@ export default function ProgressScreen() {
       >
         PROGRESS
       </T>
-      <Button kind="secondary" label="History and stats" onPress={() => router.push('/history')} />
       <View accessibilityRole="tablist" style={styles.switcher}>
         {(['daily', 'weekly'] as const).map((value) => (
           <Pressable

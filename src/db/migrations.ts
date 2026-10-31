@@ -134,6 +134,19 @@ INSERT OR IGNORE INTO data_scopes(scope) VALUES ('legacy');
     name: 'personal_app_history',
     sql: 'ALTER TABLE daily_cache ADD COLUMN app_views_json TEXT;',
   },
+  {
+    version: 7,
+    name: 'remove_tracking_coverage',
+    // Queued batches are rebuilt without coverage: their days stay pending until acknowledged.
+    sql: `
+ALTER TABLE daily_cache RENAME TO daily_cache_v6;
+CREATE TABLE daily_cache (scope TEXT NOT NULL DEFAULT 'legacy', local_date TEXT NOT NULL, device_id TEXT NOT NULL, platform TEXT NOT NULL, tz TEXT NOT NULL, views INTEGER, ad_views INTEGER, minutes INTEGER, rev INTEGER NOT NULL, app_views_json TEXT, PRIMARY KEY (scope, local_date, device_id));
+INSERT INTO daily_cache (scope, local_date, device_id, platform, tz, views, ad_views, minutes, rev, app_views_json) SELECT scope, local_date, device_id, platform, tz, views, ad_views, minutes, rev, app_views_json FROM daily_cache_v6;
+DROP TABLE daily_cache_v6;
+UPDATE sync_days SET values_json = json_remove(values_json, '$.coverage');
+DELETE FROM sync_batch;
+`,
+  },
 ];
 
 /** Subset of expo-sqlite's SQLiteDatabase used here (keeps the runner unit-testable). */

@@ -37,7 +37,7 @@ object GoalNotifier {
         val rows = store.daily(today)
         val minutes = if(accounting) store.account.effectiveUsage("minutes")?.div(60000)?.toInt() else if (UsageReader.granted(context)) {
             (rows.sumOf { it.usageMs } / 60_000L).toInt()
-        } else if (store.heartbeatMinutes(today) > 0) {
+        } else if (rows.any { it.surfaceMs + it.unknownMs > 0 }) {
             (rows.sumOf { it.surfaceMs + it.unknownMs } / 60_000L).toInt()
         } else {
             null

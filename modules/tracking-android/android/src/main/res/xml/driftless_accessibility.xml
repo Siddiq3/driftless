@@ -12,4 +12,4 @@
   android:canPerformGestures="false"
   android:description="@string/driftless_a11y_description"
   android:notificationTimeout="32"
-  android:packageNames="com.instagram.android,com.google.android.youtube,com.facebook.katana,com.snapchat.android,in.mohalla.video,in.mohalla.sharechat" />
+  android:packageNames="com.instagram.android,com.google.android.youtube" />

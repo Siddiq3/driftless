@@ -35,7 +35,6 @@ export function dayResult(
     localDate: daily.localDate,
     views: a.views,
     minutes: a.minutes,
-    coverage: daily.coverage,
   };
   const active = goals.filter((g) => g.enabled);
   let outcome: DayOutcome = active.length === 0 ? 'unknown' : 'kept';

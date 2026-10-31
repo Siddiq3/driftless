@@ -57,8 +57,6 @@ beforeEach(() => {
   } as TrackingHealth);
   jest.mocked(Tracking.daily).mockImplementation((date) => ({
     localDate: date!,
-    heartbeatMinutes: 1,
-    coverage: 1,
     apps: [
       {
         package: 'com.instagram.android',
@@ -221,8 +219,6 @@ it('keeps initial errors separate from loading and never invents zero for unreco
   jest.mocked(Tracking.daily).mockImplementation((localDate) => ({
     localDate: localDate!,
     apps: [],
-    heartbeatMinutes: 0,
-    coverage: 0,
   }));
   await act(async () => {
     refresh();

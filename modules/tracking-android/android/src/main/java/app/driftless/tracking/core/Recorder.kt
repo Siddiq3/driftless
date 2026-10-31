@@ -40,8 +40,8 @@ interface TrackingStore {
     fun saveRing(pkg: String, ring: List<String>, savedAtMs: Long)
     /** Ring buffer saved within [maxAgeMs] of [nowMs], else empty (stale after a long gap). */
     fun loadRing(pkg: String, nowMs: Long, maxAgeMs: Long): List<String>
-    fun heartbeat(localDate: String, minuteOfDay: Int)
-    fun heartbeatMinutes(localDate: String): Int
+    /** A video-countable app is open: account accounting may mark the day as observed. Stores no history. */
+    fun onCountableAppActive(localDate: String) {}
     fun daily(localDate: String): List<DailyRow>
     fun events(sinceMs: Long): List<ViewEvent>
 }
@@ -114,7 +114,6 @@ class MemoryStore : TrackingStore {
     private val sessionSeq = HashSet<Pair<String, Int>>()
     private val agg = HashMap<Pair<String, String>, DailyRow>()
     private val rings = HashMap<String, Pair<List<String>, Long>>()
-    private val beats = HashSet<Pair<String, Int>>()
 
     private fun row(d: String, p: String) = agg[d to p] ?: DailyRow(d, p, 0, 0, 0, 0)
 
@@ -147,12 +146,6 @@ class MemoryStore : TrackingStore {
         val (r, at) = rings[pkg] ?: return emptyList()
         return if (nowMs - at <= maxAgeMs) r else emptyList()
     }
-
-    override fun heartbeat(localDate: String, minuteOfDay: Int) {
-        beats += localDate to minuteOfDay
-    }
-
-    override fun heartbeatMinutes(localDate: String): Int = beats.count { it.first == localDate }
 
     override fun daily(localDate: String): List<DailyRow> = agg.values.filter { it.localDate == localDate }.sortedBy { it.pkg }
 

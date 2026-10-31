@@ -15,7 +15,6 @@ export const DEFAULT_BLOCKING: BlockingConfig = {
   breakMinutes: 5,
   maxBypassesPerDay: 3,
   bypassMinutes: 5,
-  allowUnvalidatedCounts: false,
 };
 
 export async function loadBlocking(db: SQLiteDatabase): Promise<BlockingConfig> {

@@ -17,9 +17,6 @@ const health = (over: Partial<TrackingHealth> = {}): TrackingHealth => ({
   disclosureAccepted: true,
   serviceEnabled: true,
   serviceRunning: true,
-  lastConnectedMs: 0,
-  lastEventMs: 0,
-  heartbeatMinutesToday: 0,
   usageAccessGranted: true,
   debugBuild: false,
   apps: [
@@ -31,8 +28,6 @@ const health = (over: Partial<TrackingHealth> = {}): TrackingHealth => ({
 
 const daily = (over: Partial<Daily> = {}): Daily => ({
   localDate: '2026-10-18',
-  heartbeatMinutes: 600,
-  coverage: 0.9,
   apps: [
     {
       package: IG,
@@ -53,7 +48,7 @@ describe('aggregateDay (what may leave the phone)', () => {
     expect(a.views).toBeNull();
     expect(a.adViews).toBeNull();
     expect(a.minutes).toBe(40); // UsageStats: 25 + 15 min
-    expect(a.coverage).toBe(1);
+    expect(a).not.toHaveProperty('coverage');
   });
 
   it('sends counts only for validated apps', () => {
@@ -64,7 +59,7 @@ describe('aggregateDay (what may leave the phone)', () => {
       ],
     });
     const a = aggregateDay(daily(), h, DEV, 'Asia/Kolkata');
-    expect(a).toMatchObject({ views: 20, adViews: 2, coverage: 0.9 });
+    expect(a).toMatchObject({ views: 20, adViews: 2 });
   });
 
   it('falls back to counter minutes without Usage Access, and to null when nothing ran', () => {
@@ -72,7 +67,9 @@ describe('aggregateDay (what may leave the phone)', () => {
       16,
     );
     const none = aggregateDay(
-      daily({ heartbeatMinutes: 0 }),
+      daily({
+        apps: [{ package: IG, views: 0, adViews: 0, surfaceMs: 0, unknownMs: 0, usageMs: 60_000 }],
+      }),
       health({ usageAccessGranted: false }),
       DEV,
       'UTC',
@@ -82,14 +79,10 @@ describe('aggregateDay (what may leave the phone)', () => {
   });
 
   it('a day with no rows is not tracked, even with Usage Access (never 0 minutes)', () => {
-    const empty = aggregateDay(
-      { localDate: '2026-01-01', heartbeatMinutes: 0, coverage: 0, apps: [] },
-      health(),
-      DEV,
-      'UTC',
-    );
+    const empty = aggregateDay({ localDate: '2026-01-01', apps: [] }, health(), DEV, 'UTC');
     expect(empty.minutes).toBeNull();
-    expect(empty.coverage).toBe(0);
+    expect(empty.personalViews).toBeNull();
+    expect(empty).not.toHaveProperty('coverage');
   });
 
   it('clamps to contract limits', () => {
@@ -110,7 +103,6 @@ const day = (localDate: string, minutes: number) => ({
   views: null,
   adViews: null,
   minutes,
-  coverage: 1,
 });
 
 let n = 0;
@@ -294,14 +286,8 @@ it('keeps the original retry body on a partial response without losing successfu
   expect(await repo.getBatch()).toBeNull();
 });
 
-it('backs up recorded personal totals after historical heartbeats expire without promoting competitive counts', () => {
-  const recorded = aggregateDay(
-    daily({ heartbeatMinutes: 0 }),
-    health(),
-    DEV,
-    'Asia/Kolkata',
-    false,
-  );
+it('backs up recorded personal totals without promoting competitive counts', () => {
+  const recorded = aggregateDay(daily(), health(), DEV, 'Asia/Kolkata', false);
   expect(recorded).toMatchObject({ personalViews: 30, views: null, adViews: null });
 });
 
@@ -318,4 +304,53 @@ it('backfills personal counts for an already acknowledged day using a new revisi
     expect.objectContaining({ personalViews: 73, views: null, rev: 2 }),
   ]);
   expect(client.calls[0]!.key).not.toBe(client.calls[1]!.key);
+});
+
+it('daily backup does not serialize language-derived selection history from local inputs', async () => {
+  const local = {
+    ...daily(),
+    memeLanguage: 'te',
+    reactionIds: ['private-reaction'],
+    captionIndices: [7],
+  };
+  const status = { ...health(), memeSelectionHistory: { te: ['private-reaction'] } };
+  const repo = new MemorySyncRepo();
+  await stage(repo, [aggregateDay(local, status, DEV, 'Asia/Kolkata')]);
+  const usageSync = jest.fn(async () => ({ results: [] }));
+  await flush(repo, { usageSync }, { uuid: () => DEV }, Date.now());
+  const payload = JSON.stringify(usageSync.mock.calls);
+  expect(payload).not.toContain('private-reaction');
+  expect(payload).not.toContain('memeLanguage');
+  expect(payload).not.toContain('captionIndices');
+  expect(payload).not.toContain('coverage');
+  expect(payload).not.toContain('heartbeat');
+});
+
+it('synchronizes only the activity, date and account-reconciliation fields', () => {
+  const day = aggregateDay(daily(), health(), DEV, 'Asia/Kolkata');
+  expect(Object.keys(day).sort()).toEqual(
+    [
+      'adViews',
+      'deviceId',
+      'localDate',
+      'minutes',
+      'personalAppViews',
+      'personalViews',
+      'platform',
+      'tz',
+      'views',
+    ].sort(),
+  );
+});
+
+it('Usage Access minutes alone do not make a video count known', () => {
+  const day = aggregateDay(
+    daily({
+      apps: [{ package: IG, views: 0, adViews: 0, surfaceMs: 0, unknownMs: 0, usageMs: 60_000 }],
+    }),
+    health(),
+    DEV,
+    'UTC',
+  );
+  expect(day).toMatchObject({ personalViews: null, views: null, minutes: 1 });
 });

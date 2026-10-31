@@ -5,7 +5,6 @@ import {
   AppState,
   ImageBackground,
   Pressable,
-  ScrollView,
   Share,
   StyleSheet,
   Text,
@@ -26,6 +25,30 @@ import { clock, peakWindow, personality, type Recap } from './model';
 
 const cream = '#FFE9AD';
 type Story = { id: string; colors: [string, string]; label: string; content: ReactNode };
+/** Shrink factor that makes content fit; never enlarges, and waits for both measurements. */
+export function fitScale(available: number, content: number) {
+  return available > 0 && content > available ? available / content : 1;
+}
+
+/** A slide never scrolls: if it is taller than the space, the whole slide scales down evenly. */
+function FitToScreen({ children }: { children: ReactNode }) {
+  const [available, setAvailable] = useState(0);
+  const [content, setContent] = useState(0);
+  return (
+    <View
+      style={styles.fit}
+      onLayout={({ nativeEvent }) => setAvailable(nativeEvent.layout.height)}
+    >
+      <View
+        onLayout={({ nativeEvent }) => setContent(nativeEvent.layout.height)}
+        style={{ transform: [{ scale: fitScale(available, content) }] }}
+      >
+        {children}
+      </View>
+    </View>
+  );
+}
+
 export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initialIndex?: number }) {
   const insets = useSafeAreaInsets();
   const { width, height, fontScale } = useWindowDimensions();
@@ -342,10 +365,6 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
   ];
   stories.sort((a, b) => chapterOrder.indexOf(a.id) - chapterOrder.indexOf(b.id));
   const current = Math.max(0, Math.min(index, stories.length - 1));
-  const scroll = useRef<ScrollView>(null);
-  useEffect(() => {
-    scroll.current?.scrollTo({ y: 0, animated: false });
-  }, [current]);
   const story = stories[current]!;
   const transition = useDataMotion(story.id);
   const next = () => setIndex((i) => Math.min(stories.length - 1, i + 1));
@@ -507,12 +526,12 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
             <Text style={styles.control}>×</Text>
           </Pressable>
         </View>
-        <ScrollView ref={scroll} contentContainerStyle={styles.scroll}>
-          <Animated.View style={[styles.content, transition]} key={story.id}>
+        <FitToScreen key={story.id}>
+          <Animated.View style={[styles.content, transition]}>
             {label(story.label)}
             {story.content}
           </Animated.View>
-        </ScrollView>
+        </FitToScreen>
         <View
           style={{
             alignItems: 'center',
@@ -625,14 +644,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   control: { fontSize: 25, color: '#FFFFFF' },
-  scroll: {
+  fit: {
+    flex: 1,
     width: '100%',
     maxWidth: 680,
     alignSelf: 'center',
-    flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: 28,
-    paddingVertical: 20,
+    overflow: 'hidden',
   },
   content: { alignItems: 'center', gap: 22 },
   label: {

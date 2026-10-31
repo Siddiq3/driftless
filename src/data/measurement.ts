@@ -1,4 +1,9 @@
 import type { Daily, TrackingHealth, PersonalMeasurement } from 'tracking-android';
+/** A day is known only from recorded activity; Usage Access minutes say nothing about the counter. */
+export function hasRecordedActivity(daily: Daily): boolean {
+  return daily.apps.some((a) => a.views > 0 || a.adViews > 0 || a.surfaceMs > 0 || a.unknownMs > 0);
+}
+
 /** Personal display semantics only. Never use this for a competitive upload. */
 export function recordedMeasurement(
   daily: Daily,
@@ -7,10 +12,10 @@ export function recordedMeasurement(
   const packages = new Set(health.apps.map((a) => a.package));
   const rows = daily.apps.filter((a) => packages.has(a.package));
   const views = rows.reduce((n, a) => n + a.views, 0);
-  const ran = daily.heartbeatMinutes > 0;
-  const known = packages.size > 0 && (ran || views > 0);
+  const ran = hasRecordedActivity(daily);
+  const known = packages.size > 0 && ran;
   const approved = rows
-    .filter((r) => r.views > 0)
+    .filter((r) => hasRecordedActivity({ ...daily, apps: [r] }))
     .every((r) => health.apps.some((a) => a.package === r.package && a.validated));
   const minutes = rows.length
     ? health.usageAccessGranted
@@ -22,10 +27,7 @@ export function recordedMeasurement(
   return {
     views: known ? views : null,
     minutes,
-    status: !known
-      ? 'unavailable'
-      : approved && rows.some((r) => r.views > 0)
-        ? 'validated'
-        : 'experimental',
+    // A recorded zero on an approved app version is a real, verified zero.
+    status: !known ? 'unavailable' : approved ? 'validated' : 'experimental',
   };
 }

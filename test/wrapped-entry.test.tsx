@@ -68,28 +68,25 @@ async function mount() {
   });
 }
 
-test('hides both wrap buttons when completed periods have no measurements', async () => {
+test('hides the wrap button when yesterday has no measurements', async () => {
   await mount();
   expect(root.toJSON()).toBeNull();
 });
 test('shows only ready periods and never mounts an in-app wrap popup', async () => {
   data.daily = measured;
   await mount();
-  expect(buttons().map((node) => node.props.accessibilityLabel)).toEqual(['Open daily Wrapped']);
+  expect(buttons().map((node) => node.props.accessibilityLabel)).toEqual(['Open your daily wrap']);
   expect(root.root.findAllByType(Modal)).toHaveLength(0);
   await act(async () => buttons()[0]!.props.onPress());
   expect(router.push).toHaveBeenCalledWith({
     pathname: '/wrapped',
-    params: { period: 'daily', end: '2026-10-26' },
+    params: { end: '2026-10-26' },
   });
 });
-test('weekly availability is independent of yesterday and updates after restored data changes', async () => {
+test('weekly data never adds a weekly wrap', async () => {
   data.weekly = measured;
   await mount();
-  expect(buttons().map((node) => node.props.accessibilityLabel)).toEqual(['Open weekly Wrapped']);
-  data.daily = measured;
-  await act(async () => jest.mocked(observeStorage).mock.calls[0]![0]());
-  expect(buttons()).toHaveLength(2);
+  expect(root.toJSON()).toBeNull();
 });
 test('returning from a feed refreshes availability and a failed period read stays hidden', async () => {
   const listen = jest.spyOn(AppState, 'addEventListener');

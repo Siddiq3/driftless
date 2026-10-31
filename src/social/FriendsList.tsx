@@ -6,6 +6,7 @@ import type { ApiClient } from '@/api/client';
 import { ModalContent, Button, LoadingState, Notice, Screen, T } from '@/ui/kit';
 import { Icon } from '@/ui/Icon';
 import { Avatar } from './battleVisuals';
+import { friendName } from './ranking';
 export function FriendsList({ api }: { api: ApiClient | null }) {
   const [friends, setFriends] = useState<v1.Friend[] | null>(null),
     [selected, setSelected] = useState<v1.Friend | null>(null);
@@ -57,13 +58,13 @@ export function FriendsList({ api }: { api: ApiClient | null }) {
       if (live.current) setBusy(false);
     }
   };
-  const name = (f: v1.Friend) => f.displayName || `@${f.handle}`;
+  const name = friendName;
   return (
     <Screen hideHeader hideTabs backgroundColor="#0B0B08" contentStyle={{ padding: 24, gap: 24 }}>
       <View style={styles.header}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Back to War"
+          accessibilityLabel="Back to leaderboard"
           style={styles.back}
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/friends'))}
         >
@@ -77,7 +78,7 @@ export function FriendsList({ api }: { api: ApiClient | null }) {
         <>
           <Notice
             title="Sign in to see your friends"
-            body="Your battles are linked to your account."
+            body="Your friends are linked to your account."
           />
           <Button label="Sign in" onPress={() => router.push('/welcome')} />
         </>
@@ -152,7 +153,7 @@ export function FriendsList({ api }: { api: ApiClient | null }) {
                 {name(selected)}
               </T>
               <T v="caption" muted style={{ textAlign: 'center' }}>
-                Removing this friend also stops your battle and daily score sharing with each other.
+                This stops sharing both ways. Counts already on their phone may show until it refreshes.
               </T>
               {error && <Notice title="Could not remove friend" body={error} tone="warn" />}
               <Pressable

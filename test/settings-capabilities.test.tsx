@@ -7,7 +7,7 @@ import { AppState, Platform, Text } from 'react-native';
 import type { v1 } from '@siddiq3/driftless-contracts';
 import Settings from '../app/settings';
 import { ApiError, createApiClient } from '../src/api/client';
-import { cacheEntitlement } from '../src/billing/pro';
+import { cacheEntitlement } from '../src/billing/cache';
 import { Tracking } from 'tracking-android';
 
 jest.mock('expo-router', () => ({
@@ -26,7 +26,10 @@ jest.mock('@/api/client', () => ({
   ...jest.requireActual('@/api/client'),
   createApiClient: jest.fn(),
 }));
-jest.mock('@/billing/pro', () => ({ cacheEntitlement: jest.fn() }));
+jest.mock('@/billing/cache', () => ({
+  ...jest.requireActual('@/billing/cache'),
+  cacheEntitlement: jest.fn(),
+}));
 const mockRetry = jest.fn().mockResolvedValue(undefined);
 let mockBackup = { state: 'saved', message: 'Saved to your account' };
 jest.mock('@/sync/AccountBackupProvider', () => ({

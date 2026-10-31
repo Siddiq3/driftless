@@ -49,10 +49,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         }
       : {}),
     package: 'com.siddiqkolimi.scrollsnooze',
-    versionCode: 2,
+    versionCode: 3,
     adaptiveIcon: {
       foregroundImage: './assets/branding/adaptive-foreground.png',
-      backgroundColor: '#351700',
+      backgroundColor: '#2A0E02',
     },
     // Local usage data must not leave the device via cloud backup (THREAT_MODEL T4).
     allowBackup: false,
@@ -63,6 +63,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'android.permission.WRITE_EXTERNAL_STORAGE',
       'android.permission.SYSTEM_ALERT_WINDOW',
       'android.permission.RECORD_AUDIO',
+      // Added by libraries but unused: no purchases are offered; secure storage never asks
+      // for biometrics. Remove BILLING from this list before selling a subscription.
+      'com.android.vending.BILLING',
+      'android.permission.USE_BIOMETRIC',
+      'android.permission.USE_FINGERPRINT',
     ],
   },
   plugins: [

@@ -1,5 +1,5 @@
 import { BattleInvitePreviewSchema } from './battleLinks';
-import { BattleCreate, BattleSummary, BattleList, BattleLeaderboard } from './challenges';
+import { LeaderboardResponse, BattleCreate, BattleSummary, BattleList, BattleLeaderboard } from './challenges';
 import { withDeadline } from './deadline';
 import {
   AccountUsageHistory,
@@ -341,14 +341,6 @@ export function createApiClient(o: ApiClientOptions) {
       ).data,
     deletionStatus: async () =>
       (await request('GET', '/v1/account/delete', v1.DeletionStatus)).data,
-    wrapped: async (period: 'daily' | 'weekly', end: string) =>
-      (
-        await request(
-          'GET',
-          `/v1/wrapped?period=${period}&end=${encodeURIComponent(end)}`,
-          v1.WrapResponse,
-        )
-      ).data,
     getMe: (allowed?: () => boolean) =>
       request(
         'GET',
@@ -400,19 +392,19 @@ export function createApiClient(o: ApiClientOptions) {
           { body: { scoreConsent: true }, allowed },
         )
       ).data,
-    staleBattleDaily: (date: string): v1.FriendsDailyResponse | null => {
+    staleBattleDaily: (date: string): LeaderboardResponse | null => {
       if (credentialGeneration !== entitlementGeneration()) return null;
       const cached = reads.battleDisplay.get(readKey(battlePath(date))) as
-        | { data: v1.FriendsDailyResponse }
+        | { data: LeaderboardResponse }
         | undefined;
       return cached ? copyResponse(cached.data) : null;
     },
-    cachedBattleDaily: (date: string): v1.FriendsDailyResponse | null => {
-      const cached = cachedRead(battlePath(date)) as { data: v1.FriendsDailyResponse } | undefined;
+    cachedBattleDaily: (date: string): LeaderboardResponse | null => {
+      const cached = cachedRead(battlePath(date)) as { data: LeaderboardResponse } | undefined;
       return cached?.data ?? null;
     },
     battleDaily: async (date: string, allowed?: () => boolean, fresh = false) =>
-      (await request('GET', battlePath(date), v1.FriendsDailyResponse, { allowed, fresh })).data,
+      (await request('GET', battlePath(date), LeaderboardResponse, { allowed, fresh })).data,
     friends: async () => (await request('GET', '/v1/friends', v1.FriendsResponse)).data.friends,
     friendsDaily: async (date: string) => {
       v1.FriendsDailyQuery.parse({ date });
