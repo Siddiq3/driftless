@@ -164,9 +164,9 @@ it('a real zero stays a number and is not labelled missing', async () => {
   expect(text()).toContain('Your daily count: 0');
   expect(text()).not.toContain('No count yet');
 });
-it('labels experimental counts on both rows and leaves verified counts unlabelled', async () => {
+it('shows one experimental note, and none for verified counts', async () => {
   await mount();
-  expect(text()).not.toContain('Experimental count"');
+  expect(text()).not.toContain('Counts are experimental');
   await act(async () => tree.unmount());
   mockApi.battleDaily.mockImplementation(async (date: string) => {
     const d = daily(date, 3, 6);
@@ -177,12 +177,11 @@ it('labels experimental counts on both rows and leaves verified counts unlabelle
     };
   });
   await mount();
-  expect(text().match(/Experimental count"/g)).toHaveLength(2);
   expect(text()).toContain('Your daily count: 3, experimental');
   expect(text()).toContain('Daily count for Study Garage: 6, experimental');
-  expect(text()).toContain('may be less accurate');
+  expect(text().match(/Counts are experimental and may not be exact\./g)).toHaveLength(1);
 });
-it('labels only the friend whose count is experimental', async () => {
+it('shows the note when only a friend’s count is experimental', async () => {
   mockApi.battleDaily.mockImplementation(async (date: string) => {
     const d = daily(date, 3, 6);
     return {
@@ -191,7 +190,7 @@ it('labels only the friend whose count is experimental', async () => {
     };
   });
   await mount();
-  expect(text().match(/Experimental count"/g)).toHaveLength(1);
+  expect(text()).toContain('Counts are experimental and may not be exact.');
   expect(text()).toContain('Your daily count: 3"');
 });
 it('creating an invitation saves the Google sign-up name', async () => {
@@ -221,15 +220,25 @@ it('tells the inviter the page hides their name before anything is created', asy
 });
 it.each([
   ['verified zero', { views: 0, status: 'validated' }, 'Your daily count: 0"', false],
-  ['experimental zero', { views: 0, status: 'experimental' }, 'Your daily count: 0, experimental', true],
-  ['experimental count', { views: 5, status: 'experimental' }, 'Your daily count: 5, experimental', true],
+  [
+    'experimental zero',
+    { views: 0, status: 'experimental' },
+    'Your daily count: 0, experimental',
+    true,
+  ],
+  [
+    'experimental count',
+    { views: 5, status: 'experimental' },
+    'Your daily count: 5, experimental',
+    true,
+  ],
   ['missing', { views: null, status: 'unavailable' }, 'Your daily count: no count yet', false],
 ])('guest row: %s', async (_name, day, label, tagged) => {
   mockSignedIn = false;
   mockGuestDay = day;
   await mount();
   expect(text()).toContain(label);
-  expect(text().includes('Experimental count"')).toBe(tagged);
+  expect(text().includes('Counts are experimental')).toBe(tagged);
   mockGuestDay = { views: 92 };
 });
 it('after sign-out the board makes no account requests and shows no friends', async () => {

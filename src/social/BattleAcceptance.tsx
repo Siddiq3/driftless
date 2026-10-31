@@ -8,6 +8,7 @@ import type { BattleInvitePreview } from '@/api/battleLinks';
 import { Button, LoadingState, Notice, Screen, T } from '@/ui/kit';
 import { clearInvite, rememberInvite } from './pendingInvite';
 import { ensureSocialProfile } from './profile';
+import { Icon } from '@/ui/Icon';
 import { Avatar } from './battleVisuals';
 
 const invitationGone = (e: unknown) =>
@@ -83,23 +84,23 @@ export function BattleAcceptance({ code }: { code: string }) {
         <T v="title" style={styles.title}>
           A friend invited you to the Friends Leaderboard
         </T>
-        <View style={styles.bubble}>
-          <T style={{ fontSize: 18, color: '#13140E', fontWeight: '700', textAlign: 'center' }}>
-            Let’s see who scrolls less! 🤜
-          </T>
-        </View>
-        <View style={styles.versus}>
-          <View style={styles.person}>
-            <Avatar
-              name={session.status === 'signedIn' ? session.displayName || 'You' : 'You'}
-              size={88}
-            />
-            <T style={styles.name}>You</T>
+        <View style={styles.message}>
+          <View style={styles.bubble}>
+            <T style={styles.bubbleText}>Let’s see who scrolls less! 👊</T>
           </View>
-          <T style={{ fontSize: 28, color: '#E1C494' }}>🤝</T>
-          <View style={styles.person}>
-            <Avatar name="?" color="#009EAC" size={88} />
-            <T style={styles.name}>Your friend</T>
+          <View style={styles.tail} />
+          <View style={styles.versus}>
+            <View style={styles.person}>
+              <Avatar name="?" color="#409AAC" size={88} />
+              <T style={styles.name}>Your friend</T>
+            </View>
+            <T style={styles.cross}>×</T>
+            <View style={styles.person}>
+              <View style={styles.you}>
+                <Icon name="user" size={44} color="#C9A878" />
+              </View>
+              <T style={styles.name}>You</T>
+            </View>
           </View>
         </View>
       </View>
@@ -181,13 +182,36 @@ const styles = StyleSheet.create({
   },
   hero: { gap: 30, paddingVertical: 35 },
   title: { fontSize: 30, lineHeight: 39, fontWeight: '900', textAlign: 'center', color: '#FFFDF2' },
+  message: { gap: 0 },
   bubble: {
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
     backgroundColor: '#FFFDF4',
-    borderRadius: 40,
-    paddingVertical: 18,
-    paddingHorizontal: 16,
+    borderRadius: 26,
+    paddingVertical: 14,
+    paddingHorizontal: 22,
+  },
+  bubbleText: { fontSize: 17, color: '#13140E', fontWeight: '600' },
+  tail: {
+    width: 0,
+    height: 0,
+    marginLeft: 44,
+    marginBottom: 8,
+    borderTopWidth: 18,
+    borderRightWidth: 22,
+    borderTopColor: '#FFFDF4',
+    borderRightColor: 'transparent',
   },
   versus: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  cross: { fontSize: 34, color: '#B08A58', marginBottom: 28 },
+  you: {
+    height: 88,
+    width: 88,
+    borderRadius: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#7A5A30',
+  },
   person: { flex: 1, gap: 14, alignItems: 'center' },
   name: { fontSize: 16, fontWeight: '600', textAlign: 'center', color: '#FFFDF2' },
 });

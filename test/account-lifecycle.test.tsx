@@ -18,7 +18,7 @@ import { Text } from 'react-native';
 import { accountReady, markAccountReady } from '@/data/accountReady';
 import { backupAccount } from '@/sync/accountBackup';
 import { ApiError } from '@/api/client';
-import { AccountBoundary } from '@/auth/account';
+import { AccountBoundary, firstRestoreSettled } from '@/auth/account';
 import { createApiClient } from '@/api/client';
 import { resolvePersonalAccount, selectPersonalSession } from '@/data/session';
 
@@ -249,13 +249,44 @@ test.each(['profile', 'storage', 'usage', 'restore'])(
   },
 );
 
-test('does not mount empty screens while a partial restore is pending', async () => {
+test('an unfinished restore opens the app and is not marked complete', async () => {
   state = { state: 'active', incarnation };
   jest.mocked(backupAccount).mockResolvedValueOnce({ state: 'pending', message: 'More history' });
   await mount();
-  expect(visible()).not.toContain('private screens');
-  await press('Retry');
   expect(visible()).toContain('private screens');
+  expect(visible()).not.toContain('Account preparation could not finish');
+  expect(markAccountReady).not.toHaveBeenCalled();
+});
+
+test('a local restore failure opens the app instead of a dead end', async () => {
+  state = { state: 'active', incarnation };
+  jest.mocked(backupAccount).mockRejectedValueOnce(new Error('Guest goals are awaiting'));
+  await mount();
+  expect(visible()).toContain('private screens');
+  expect(markAccountReady).not.toHaveBeenCalled();
+});
+
+test('an account error during restore still stops with its message', async () => {
+  state = { state: 'active', incarnation };
+  jest.mocked(backupAccount).mockRejectedValueOnce(new ApiError(401, 'unauthorized', 'expired'));
+  await mount();
+  expect(visible()).not.toContain('private screens');
+  expect(visible()).toContain('Your Google session needs refreshing');
+});
+
+test('a slow restore stops waiting and can still finish afterwards', async () => {
+  let finish = () => {};
+  let done = false;
+  const slow = new Promise<void>((resolve) => {
+    finish = resolve;
+  }).then(() => {
+    done = true;
+  });
+  await firstRestoreSettled(slow, 1);
+  expect(done).toBe(false);
+  finish();
+  await slow;
+  expect(done).toBe(true);
 });
 
 test('incompatible bootstrap response asks for an update without endless Retry', async () => {

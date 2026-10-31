@@ -264,11 +264,7 @@ function WarBoard({ api }: { api: ApiClient | null }) {
             />
             <View style={{ flex: 1, minWidth: 0 }}>
               <T style={styles.person}>{row.name}</T>
-              {row.views === null ? (
-                <T style={styles.tag}>No count yet</T>
-              ) : (
-                row.experimental && <T style={styles.tag}>Experimental count</T>
-              )}
+              {row.views === null && <T style={styles.tag}>No count yet</T>}
             </View>
             <T
               accessibilityLabel={`${row.self ? 'Your daily count' : `Daily count for ${row.name}`}: ${
@@ -303,8 +299,7 @@ function WarBoard({ api }: { api: ApiClient | null }) {
         {issue && <Notice title="Leaderboard not updated" body={issue} tone="warn" />}
         {rows.some((row) => row.views !== null && row.experimental) && (
           <T v="caption" muted style={{ paddingTop: 18 }}>
-            Experimental counts come from app versions that haven’t passed our accuracy check, so
-            they may be less accurate.
+            Counts are experimental and may not be exact.
           </T>
         )}
         <Pressable

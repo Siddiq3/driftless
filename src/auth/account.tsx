@@ -27,6 +27,27 @@ import { Button, Notice, Screen } from '@/ui/kit';
 const Context = createContext<string | null>(null);
 export const useAccountIncarnation = () => useContext(Context);
 
+/**
+ * Phone data is safe and backup keeps retrying once the app is open, so an unfinished restore never
+ * blocks it. Account errors still stop here, because they need the person to act.
+ */
+export async function firstRestoreSettled(restore: Promise<void>, waitMs = 10_000) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const waited = new Promise<void>((resolve) => {
+    timer = setTimeout(resolve, waitMs);
+  });
+  try {
+    await Promise.race([
+      restore.catch((error: unknown) => {
+        if (error instanceof ApiError) throw error;
+      }),
+      waited,
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** Google authentication grants no dataset access. Resolve the lifecycle and select its exact
  * local incarnation before mounting screens or starting background backup. */
 export function AccountBoundary({ children }: { children: ReactNode }) {
@@ -166,11 +187,13 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
           bound.primeStartupReads(profileResult, usage, readStartedAt);
           if (!(await accountReady(db, allowed))) {
             progress('restore');
-            const backup = await measureStartup('account-first-restore', () =>
-              backupAccount(bound, allowed, undefined, me),
+            await firstRestoreSettled(
+              measureStartup('account-first-restore', () =>
+                backupAccount(bound, allowed, undefined, me),
+              ).then(async (backup) => {
+                if (backup.state === 'saved') await markAccountReady(db, allowed);
+              }),
             );
-            if (backup.state !== 'saved') throw new Error(backup.message);
-            await markAccountReady(db, allowed);
           }
           usageReady = true;
         }
