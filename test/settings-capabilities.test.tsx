@@ -137,19 +137,14 @@ it('keeps backup and sharing controls out of Settings', async () => {
     tree.root.findAll((n) => n.props.accessibilityLabel === 'Share my progress with friends'),
   ).toHaveLength(0);
 });
-it('reports local readiness during a backend outage, and refreshes revoked permissions on return', async () => {
+it('shows the offline notice during a backend outage, and retries on return', async () => {
   getMe.mockRejectedValue(new ApiError(null, 'network', 'offline'));
   await mount();
-  expect(contents()).toContain('local app minutes available');
-  expect(contents()).toContain('Backend status unavailable');
-  jest
-    .mocked(Tracking.health)
-    .mockReturnValue({ ...healthy, usageAccessGranted: false } as ReturnType<
-      typeof Tracking.health
-    >);
+  expect(contents()).toContain('Cloud features are unavailable');
+  expect(contents()).not.toContain('Device support');
+  getMe.mockResolvedValue({ data: me });
   await act(async () => onAppState('active'));
-  expect(contents()).toContain('Usage Access permission required');
-  expect(contents()).not.toContain('local app minutes available');
+  expect(contents()).not.toContain('Cloud features are unavailable');
 });
 it('does not let an old profile response overwrite a newer offline result', async () => {
   let finish!: (value: { data: v1.MeResponse }) => void;
@@ -164,7 +159,7 @@ it('does not let an old profile response overwrite a newer offline result', asyn
   await mount();
   await act(async () => onAppState('active'));
   await act(async () => finish({ data: me }));
-  expect(contents()).toContain('Backend status unavailable');
+  expect(contents()).toContain('Cloud features are unavailable');
 });
 
 it('a missing entitlement bridge does not misreport a working backend as offline', async () => {

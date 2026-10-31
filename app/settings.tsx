@@ -1,7 +1,5 @@
 import { useAccountIncarnation } from '@/auth/account';
 import type { v1 } from '@siddiq3/driftless-contracts';
-import { Tracking, type TrackingHealth } from 'tracking-android';
-import { capabilityReport } from '@/capabilities/model';
 import { Redirect, router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, AppState, Platform, Pressable, View } from 'react-native';
@@ -9,7 +7,7 @@ import { ApiError, createApiClient } from '@/api/client';
 import { useSession } from '@/auth/session';
 import { APP_VERSION, readEnv } from '@/config/env';
 import { cacheEntitlement, entitlementGeneration } from '@/billing/cache';
-import { Details, Notice, Screen } from '@/ui/kit';
+import { Notice, Screen } from '@/ui/kit';
 import { Icon } from '@/ui/Icon';
 import {
   SettingsCanvas,
@@ -19,15 +17,6 @@ import {
   SettingsDivider,
 } from '@/settings/SettingsControls';
 import { settingsTheme as t, settingsStyles as styles } from '@/settings/theme';
-
-const CAPABILITY_LABELS: Record<keyof v1.Capabilities, string> = {
-  videoCounting: 'Reels & Shorts counting',
-  minutesTracking: 'Time in apps',
-  blocking: 'App blocking',
-  schedules: 'Schedules',
-  advancedAnalytics: 'Advanced analytics',
-  socialSharingOfUsage: 'Friends leaderboard',
-};
 
 type Load =
   | { state: 'loading' }
@@ -53,7 +42,6 @@ export default function Settings() {
     [s.status, env?.apiUrl, incarnation],
   );
   const [load, setLoad] = useState<Load>({ state: 'loading' });
-  const [health, setHealth] = useState<TrackingHealth | null>(null);
   const requestGeneration = useRef(0);
 
   // State is only set from the request's callbacks, never synchronously inside the effect.
@@ -73,12 +61,6 @@ export default function Settings() {
           cacheEntitlement(data.entitlement, Date.now(), accountGeneration);
         } catch {
           // A missing native entitlement bridge does not make the backend unavailable.
-          // Runtime support and native health below still determine feature availability.
-        }
-        try {
-          setHealth(Tracking.health());
-        } catch {
-          setHealth(null);
         }
         setLoad({ state: 'ok', me: data });
       })
@@ -99,11 +81,6 @@ export default function Settings() {
   useFocusEffect(
     useCallback(() => {
       const update = () => {
-        try {
-          setHealth(Tracking.health());
-        } catch {
-          setHealth(null);
-        }
         setLoad({ state: 'loading' });
         fetchMe();
       };
@@ -112,30 +89,15 @@ export default function Settings() {
         if (state === 'active') update();
         else {
           requestGeneration.current++;
-          setHealth(null);
           setLoad({ state: 'loading' });
         }
       });
-      const timer = setInterval(() => {
-        try {
-          setHealth(Tracking.health());
-        } catch {
-          setHealth(null);
-        }
-      }, 5000);
       return () => {
         requestGeneration.current++;
         subscription.remove();
-        clearInterval(timer);
       };
     }, [fetchMe]),
   );
-  const report = capabilityReport({
-    platform: Platform.OS,
-    health,
-    support: Tracking.runtimeSupport(),
-    backend: load.state === 'ok' ? load.me : null,
-  });
 
   const retry = () => {
     setLoad({ state: 'loading' });
@@ -210,23 +172,6 @@ export default function Settings() {
             icon="lock"
             onPress={() => router.push('/privacy')}
           />
-        </SettingsSection>
-        <SettingsSection title="On this device">
-          <Details title="Device support" icon="help">
-            {(Object.keys(CAPABILITY_LABELS) as (keyof v1.Capabilities)[]).map((key) => (
-              <View key={key} style={styles.section}>
-                <View style={styles.header}>
-                  <Icon
-                    name={report[key].available ? 'check' : 'minus'}
-                    size={t.size.smallIcon}
-                    color={t.color.muted}
-                  />
-                  <SettingsText variant="row">{CAPABILITY_LABELS[key]}</SettingsText>
-                </View>
-                <SettingsText muted>{report[key].detail}</SettingsText>
-              </View>
-            ))}
-          </Details>
         </SettingsSection>
         <View style={styles.section}>
           <Pressable

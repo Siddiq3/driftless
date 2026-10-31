@@ -4,14 +4,12 @@ import { useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Linking,
   Platform,
   Pressable,
   Share,
   StyleSheet,
   View,
 } from 'react-native';
-import { websiteLinks } from '@/config/website';
 import { Tracking } from 'tracking-android';
 import { ApiError } from '@/api/client';
 import { useApi } from '@/api/useApi';
@@ -40,16 +38,6 @@ export default function Privacy() {
       return false;
     }
   });
-  const links = websiteLinks();
-  const openWebsite = (url: string) => {
-    void Linking.openURL(url).catch(() =>
-      Alert.alert(
-        'Could not open website',
-        'Please try again or contact siddiqkolimi.dev@gmail.com.',
-      ),
-    );
-  };
-
   const confirm = (title: string, body: string, action: string, fn: () => void) =>
     Alert.alert(title, body, [
       { text: 'Cancel', style: 'cancel' },
@@ -142,7 +130,7 @@ export default function Privacy() {
         </Group>
       )}
 
-      <Group title="How your data is used">
+      <Group title="Privacy">
         <Details title="What we store" icon="shield">
           <T muted>
             On this phone: counts, minutes, goals and first-launch answers. Uninstalling or
@@ -153,22 +141,6 @@ export default function Privacy() {
             interface trees and viewing events are not included in account backup.
           </T>
         </Details>
-        <Details title="Saving your progress" icon="clock">
-          <T muted>
-            Without an account, progress stays on this phone. Signing in backs up saved goals and
-            supported daily history automatically. Sign out to stop account backup. Signing in never
-            shares with friends. Sharing starts only when an invitation is accepted: your friend
-            sees your daily Reels and Shorts count from that day on, including experimental counts,
-            and your Google account name. Delete the friend to stop. Signing out stops new counts,
-            but friends can still see counts already backed up.
-          </T>
-        </Details>
-      </Group>
-
-      <Group
-        title="Permissions"
-        hint="Switch off “ScrollSnooze short-video counter” in Accessibility settings, and Usage Access for ScrollSnooze."
-      >
         {Platform.OS === 'android' && (
           <Row
             label="Read accessibility disclosure"
@@ -183,18 +155,6 @@ export default function Privacy() {
         )}
         <Row label="Usage Access settings" onPress={openUsageAccess} />
       </Group>
-
-      {links && (
-        <Group title="Policies & support">
-          <Row label="Read privacy policy" onPress={() => openWebsite(links.privacy)} />
-          <Row label="Terms of use" onPress={() => openWebsite(links.terms)} />
-          <Row label="Contact support" onPress={() => openWebsite(links.support)} />
-          <Row
-            label="Request deletion on the website"
-            onPress={() => openWebsite(links.deletion)}
-          />
-        </Group>
-      )}
 
       <Group title="Delete">
         <Row
