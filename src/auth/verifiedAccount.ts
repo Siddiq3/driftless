@@ -30,3 +30,10 @@ export async function rememberVerifiedAccount(userId: string, incarnation: strin
 
 export const forgetVerifiedAccount = () =>
   SecureStore.deleteItemAsync(VERIFIED_KEY).catch(() => undefined);
+
+let deletingHere = false;
+/** While this phone deletes its own account, the deletion flow owns sign-out and cleanup. */
+export const setDeletingAccount = (value: boolean) => {
+  deletingHere = value;
+};
+export const isDeletingAccount = () => deletingHere;

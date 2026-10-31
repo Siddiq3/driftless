@@ -1,25 +1,36 @@
 import { openUsageAccess } from '@/permissions/usageAccess';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Alert, Linking, Platform, Pressable, Share, StyleSheet, View } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Linking,
+  Platform,
+  Pressable,
+  Share,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { websiteLinks } from '@/config/website';
 import { Tracking } from 'tracking-android';
 import { ApiError } from '@/api/client';
 import { useApi } from '@/api/useApi';
 import { useSession } from '@/auth/session';
-import { Button, Section, Notice, Screen, T, Details } from '@/ui/kit';
+import { setDeletingAccount } from '@/auth/verifiedAccount';
+import { Screen, T, Details } from '@/ui/kit';
 import { wipePhone } from '@/data/reset';
 import { useOnboarding } from '@/onboarding/context';
 import { Icon } from '@/ui/Icon';
-import { VisualBanner } from '@/ui/Focus';
 import { useAccountBackup } from '@/sync/AccountBackupProvider';
+
+const RESET_BODY =
+  'Visible counts, minutes, goals and reminders on this phone will be removed. Cloud history stays saved. Account allowance accounting and pending accounting sync remain, so this does not give extra allowance. Cleared history will not be restored automatically.';
 
 export default function Privacy() {
   const api = useApi();
   const backup = useAccountBackup();
   const setup = useOnboarding();
   const s = useSession();
-  const [note, setNote] = useState<{ title: string; body: string; warn?: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
   // Settings is reachable here only to turn off; enabling goes through the disclosure first.
   const [serviceEnabled] = useState(() => {
@@ -32,11 +43,10 @@ export default function Privacy() {
   const links = websiteLinks();
   const openWebsite = (url: string) => {
     void Linking.openURL(url).catch(() =>
-      setNote({
-        title: 'Could not open website',
-        body: 'Please try again or contact siddiqkolimi.dev@gmail.com.',
-        warn: true,
-      }),
+      Alert.alert(
+        'Could not open website',
+        'Please try again or contact siddiqkolimi.dev@gmail.com.',
+      ),
     );
   };
 
@@ -49,202 +59,223 @@ export default function Privacy() {
   const deleteAccount = () =>
     confirm(
       'Delete your account?',
-      'This permanently deletes your account, history in the cloud, and friends.',
+      'This permanently deletes your account, history in the cloud, and friends. Google will ask you to confirm it’s you.',
       'Delete account',
-      () => {
-        if (!api || s.status !== 'signedIn') return;
-        backup.pause();
-        setBusy(true);
-        let cloudDeleted = false;
-        api
-          .deleteAccount()
-          .then(async () => {
-            cloudDeleted = true;
-            await wipePhone(true);
-            setup.reload();
-            await s.disconnect();
-            router.replace('/welcome');
-          })
-          .catch((e: unknown) => {
-            if (cloudDeleted) {
-              setNote({
-                warn: true,
-                title: 'Cloud account deleted',
-                body: 'Local cleanup or Google sign-out did not finish. Try signing out in Settings.',
-              });
-            } else if (e instanceof ApiError && e.status === 403) {
-              setNote({
-                warn: true,
-                title: 'Please sign in again first',
-                body: 'For your safety, deleting an account needs a fresh Google identity token. Sign out, sign back in, and try again within 5 minutes.',
-              });
-            } else {
-              setNote({
-                warn: true,
-                title: 'Account was not deleted',
-                body: e instanceof Error ? e.message : '',
-              });
-            }
-          })
-          .finally(() => setBusy(false));
-      },
+      () => void runDeletion(),
     );
+
+  const runDeletion = async () => {
+    if (!api || s.status !== 'signedIn' || busy) return;
+    setBusy(true);
+    backup.pause();
+    setDeletingAccount(true);
+    let cloudDeleted = false;
+    try {
+      if (!(await s.confirmIdentity())) {
+        backup.resume();
+        return;
+      }
+      await api.deleteAccount();
+      cloudDeleted = true;
+      await wipePhone(true);
+      setup.reload();
+      await s.disconnect();
+      router.replace('/welcome');
+    } catch (e) {
+      if (cloudDeleted) {
+        Alert.alert(
+          'Cloud account deleted',
+          'Local cleanup or Google sign-out did not finish. Try signing out in Settings.',
+        );
+      } else {
+        backup.resume();
+        Alert.alert(
+          e instanceof ApiError && e.status === 403
+            ? 'Please try again'
+            : 'Account was not deleted',
+          e instanceof ApiError && e.status === 403
+            ? 'For your safety, deleting an account needs a fresh Google sign-in. Your account has not changed.'
+            : e instanceof Error
+              ? e.message
+              : 'Please try again.',
+        );
+      }
+    } finally {
+      setDeletingAccount(false);
+      setBusy(false);
+    }
+  };
+
+  const downloadData = () => {
+    if (!api || busy) return;
+    setBusy(true);
+    api
+      .exportData()
+      .then((d) =>
+        Share.share({ message: JSON.stringify(d, null, 2), title: 'ScrollSnooze data export' }),
+      )
+      .catch((e: unknown) =>
+        Alert.alert('Export failed', e instanceof Error ? e.message : 'Please try again.'),
+      )
+      .finally(() => setBusy(false));
+  };
+
+  const deletePhoneData = () =>
+    confirm('Delete data on this phone?', RESET_BODY, 'Delete', () => {
+      backup.pause();
+      wipePhone()
+        .then(() => {
+          setup.reload();
+          Alert.alert('Deleted from this phone');
+          backup.resume();
+        })
+        .catch((e: unknown) =>
+          Alert.alert('Could not delete', e instanceof Error ? e.message : 'Please try again.'),
+        );
+    });
 
   return (
     <Screen>
-      <VisualBanner art="focus" title="Your data" />
-      {links && (
-        <Section>
-          <T v="heading">Policies & support</T>
-          <View style={styles.links}>
-            {[
-              { label: 'Read privacy policy', url: links.privacy },
-              { label: 'Request deletion on the website', url: links.deletion },
-              { label: 'Terms of use', url: links.terms },
-              { label: 'Contact support', url: links.support },
-            ].map(({ label, url }, i) => (
-              <Pressable
-                key={label}
-                accessibilityRole="button"
-                accessibilityLabel={label}
-                onPress={() => openWebsite(url)}
-                style={({ pressed }) => [
-                  styles.link,
-                  i > 0 && styles.linkDivider,
-                  { opacity: pressed ? 0.7 : 1 },
-                ]}
-              >
-                <T style={{ flex: 1, fontSize: 16 }}>{label}</T>
-                <Icon name="chevron" size={18} color="#B4B3AA" />
-              </Pressable>
-            ))}
-          </View>
-        </Section>
+      {api && (
+        <Group title="Your account">
+          <Row label="Download my data" busy={busy} onPress={downloadData} />
+        </Group>
       )}
-      {note && <Notice tone={note.warn ? 'warn' : 'info'} title={note.title} body={note.body} />}
 
-      <Details title="What we store" icon="shield">
-        <T muted>
-          On this phone: counts, minutes, goals and first-launch answers. Uninstalling or switching
-          phones loses unbacked-up local data. Setup answers are not uploaded. When you sign in, we
-          back up daily video and ad counts, minutes and goals to your account alongside your
-          profile and friends. Signed-in backup also includes per-app counts and minutes, the date,
-          timezone and a random device ID. Raw accessibility text, captions, interface trees and
-          viewing events are not included in account backup.
-        </T>
-      </Details>
+      <Group title="How your data is used">
+        <Details title="What we store" icon="shield">
+          <T muted>
+            On this phone: counts, minutes, goals and first-launch answers. Uninstalling or
+            switching phones loses unbacked-up local data. Setup answers are not uploaded. When you
+            sign in, we back up daily video and ad counts, minutes and goals to your account
+            alongside your profile and friends. Signed-in backup also includes per-app counts and
+            minutes, the date, timezone and a random device ID. Raw accessibility text, captions,
+            interface trees and viewing events are not included in account backup.
+          </T>
+        </Details>
+        <Details title="Saving your progress" icon="clock">
+          <T muted>
+            Without an account, progress stays on this phone. Signing in backs up saved goals and
+            supported daily history automatically. Sign out to stop account backup. Signing in never
+            shares with friends. Sharing starts only when an invitation is accepted: your friend
+            sees your daily Reels and Shorts count from that day on, including experimental counts,
+            and your Google account name. Delete the friend to stop. Signing out stops new counts,
+            but friends can still see counts already backed up.
+          </T>
+        </Details>
+      </Group>
 
-      <Section>
-        <T v="heading">Saving your progress</T>
-        <T muted>
-          Without an account, progress stays on this phone. Signing in backs up saved goals and
-          supported daily history automatically. Sign out to stop account backup. Signing in never
-          shares with friends. Sharing starts only when an invitation is accepted: your friend sees
-          your daily Reels and Shorts count from that day on, including experimental counts, and
-          your Google account name. Delete the friend to stop. Signing out stops new counts, but
-          friends can still see counts already backed up.
-        </T>
-      </Section>
-
-      {Platform.OS === 'android' && (
-        <Section>
-          <Button
-            kind="secondary"
+      <Group
+        title="Permissions"
+        hint="Switch off “ScrollSnooze short-video counter” in Accessibility settings, and Usage Access for ScrollSnooze."
+      >
+        {Platform.OS === 'android' && (
+          <Row
             label="Read accessibility disclosure"
             onPress={() => router.push('/disclosure?mode=read')}
           />
-        </Section>
-      )}
-
-      <Section>
-        <T v="heading">Turn counting off</T>
-        <T muted>
-          Switch off “ScrollSnooze short-video counter” in Accessibility settings, and Usage Access
-          for ScrollSnooze.
-        </T>
+        )}
         {serviceEnabled && (
-          <Button
-            kind="secondary"
+          <Row
             label="Turn off in Accessibility settings"
             onPress={Tracking.openAccessibilitySettings}
           />
         )}
-        <Button kind="secondary" label="Usage Access settings" onPress={openUsageAccess} />
-      </Section>
+        <Row label="Usage Access settings" onPress={openUsageAccess} />
+      </Group>
 
-      {api && (
-        <Section>
-          <T v="heading">Your account</T>
-          <Button
-            kind="secondary"
-            label="Download my data"
-            busy={busy}
-            onPress={() => {
-              setBusy(true);
-              api
-                .exportData()
-                .then((d) =>
-                  Share.share({
-                    message: JSON.stringify(d, null, 2),
-                    title: 'ScrollSnooze data export',
-                  }),
-                )
-                .catch((e: unknown) =>
-                  setNote({
-                    warn: true,
-                    title: 'Export failed',
-                    body: e instanceof Error ? e.message : '',
-                  }),
-                )
-                .finally(() => setBusy(false));
-            }}
+      {links && (
+        <Group title="Policies & support">
+          <Row label="Read privacy policy" onPress={() => openWebsite(links.privacy)} />
+          <Row label="Terms of use" onPress={() => openWebsite(links.terms)} />
+          <Row label="Contact support" onPress={() => openWebsite(links.support)} />
+          <Row
+            label="Request deletion on the website"
+            onPress={() => openWebsite(links.deletion)}
           />
-          <Button kind="danger" label="Delete my account" busy={busy} onPress={deleteAccount} />
-        </Section>
+        </Group>
       )}
 
-      <Section>
-        <T v="heading">This phone</T>
-        <Button
-          kind="danger"
-          label="Reset local history"
-          onPress={() =>
-            confirm(
-              'Reset local history?',
-              'Visible counts, minutes, goals and reminders on this phone will be removed. Cloud history stays saved. Account allowance accounting and pending accounting sync remain, so this does not give extra allowance. Cleared history will not be restored automatically.',
-              'Reset',
-              () => {
-                backup.pause();
-                wipePhone()
-                  .then(() => {
-                    setup.reload();
-                    setNote({ title: 'Deleted from this phone', body: '' });
-                    backup.resume();
-                  })
-                  .catch((e: unknown) =>
-                    setNote({
-                      warn: true,
-                      title: 'Could not delete',
-                      body: e instanceof Error ? e.message : '',
-                    }),
-                  );
-              },
-            )
-          }
+      <Group title="Delete">
+        <Row
+          danger
+          label="Delete data on this phone"
+          detail="Removes counts, minutes, goals and reminders here. Your account stays."
+          onPress={deletePhoneData}
         />
-      </Section>
+        {api && (
+          <Row
+            danger
+            busy={busy}
+            label="Delete my account"
+            detail="Permanently deletes your account, cloud history and friends."
+            onPress={deleteAccount}
+          />
+        )}
+      </Group>
     </Screen>
   );
 }
 
+function Group({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
+  return (
+    <View style={{ gap: 10 }}>
+      <T accessibilityRole="header" style={styles.groupTitle}>
+        {title}
+      </T>
+      <View style={styles.card}>{children}</View>
+      {hint && <T style={styles.hint}>{hint}</T>}
+    </View>
+  );
+}
+
+function Row({
+  label,
+  detail,
+  danger = false,
+  busy = false,
+  onPress,
+}: {
+  label: string;
+  detail?: string;
+  danger?: boolean;
+  busy?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ busy, disabled: busy }}
+      disabled={busy}
+      onPress={onPress}
+      style={({ pressed }) => [styles.row, { opacity: pressed || busy ? 0.6 : 1 }]}
+    >
+      <View style={{ flex: 1, gap: 2 }}>
+        <T style={danger ? styles.danger : styles.rowLabel}>{label}</T>
+        {detail && <T style={styles.hint}>{detail}</T>}
+      </View>
+      {busy ? (
+        <ActivityIndicator color="#B4B3AA" />
+      ) : (
+        <Icon name="chevron" size={18} color="#B4B3AA" />
+      )}
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  links: { borderRadius: 18, overflow: 'hidden', backgroundColor: '#17160F' },
-  link: {
+  groupTitle: { color: '#FFFFF8', fontSize: 17, fontWeight: '800' },
+  hint: { color: '#B4B3AA', fontSize: 13, lineHeight: 18 },
+  card: { borderRadius: 18, overflow: 'hidden', backgroundColor: '#17160F', paddingHorizontal: 4 },
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     minHeight: 56,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
-  linkDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#29271F' },
+  rowLabel: { color: '#FFFFF8', fontSize: 16 },
+  danger: { color: '#FF8A65', fontSize: 16, fontWeight: '700' },
 });

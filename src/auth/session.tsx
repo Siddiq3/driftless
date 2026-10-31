@@ -35,6 +35,8 @@ type SessionState =
       status: 'signedIn';
       displayName?: string | null;
       getAccessToken: (forceRefresh?: boolean) => Promise<string | null>;
+      /** Asks Google to confirm this user now. Sensitive actions need a freshly issued token. */
+      confirmIdentity: () => Promise<boolean>;
       signOut: () => Promise<void>;
       disconnect: () => Promise<void>;
     };
@@ -232,6 +234,16 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
     }
   }, [signOut, GoogleSignin]);
 
+  const confirmIdentity = useCallback(async () => {
+    const token = await googleIdentity(GoogleSignin, true);
+    if (!token) return false;
+    if (GoogleSignin.getCurrentUser()?.user.id !== accountOwner.current)
+      throw new Error('Choose the Google account you use with ScrollSnooze.');
+    tokenRequest.current = null;
+    cachedToken.current = { value: token, until: Date.now() + 60_000 };
+    return true;
+  }, [GoogleSignin]);
+
   const credentialGeneration = generation.current.value;
   const getAccessToken = useCallback(
     async (forceRefresh = false): Promise<string | null> => {
@@ -298,6 +310,7 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
             status: 'signedIn',
             displayName: googleDisplayName(GoogleSignin.getCurrentUser()?.user),
             getAccessToken,
+            confirmIdentity,
             signOut,
             disconnect,
           }

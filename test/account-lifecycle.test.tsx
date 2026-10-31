@@ -41,6 +41,7 @@ jest.mock('@/data/session', () => ({
   resolvePersonalAccount: jest.fn(),
   selectPersonalSession: jest.fn(),
 }));
+let mockDeleting = false;
 let mockVerified: { owner: string; userId: string; incarnation: string } | null = null;
 const mockForget = jest.fn(async () => undefined);
 const mockRemember = jest.fn(async () => undefined);
@@ -49,6 +50,7 @@ jest.mock('@/auth/verifiedAccount', () => ({
   rememberVerifiedAccount: (...a: unknown[]) =>
     (mockRemember as (...x: unknown[]) => unknown)(...a),
   forgetVerifiedAccount: () => mockForget(),
+  isDeletingAccount: () => mockDeleting,
 }));
 jest.mock('tracking-android', () => ({ Tracking: { setEntitlement: jest.fn() } }));
 jest.mock('expo-crypto', () => ({ randomUUID: () => '00000000-0000-4000-8000-000000000009' }));
@@ -326,14 +328,26 @@ describe('returning user', () => {
     expect(mockForget).not.toHaveBeenCalled();
   });
 
-  test('a changed account closes the saved data and rechecks in full', async () => {
+  test('a deleted account signs out to the home screen', async () => {
     returning();
+    mockSignOut.mockResolvedValueOnce(undefined);
     state = { state: 'deleted', incarnation };
     Object.defineProperty(AppState, 'currentState', { configurable: true, value: 'active' });
     await mount();
     expect(mockForget).toHaveBeenCalledTimes(1);
-    expect(visible()).not.toContain('private screens');
-    expect(visible()).toContain('Create a new account');
+    expect(mockSignOut).toHaveBeenCalledTimes(1);
+  });
+
+  test('a deletion running on this phone is left to finish', async () => {
+    returning();
+    mockDeleting = true;
+    state = { state: 'deleted', incarnation };
+    Object.defineProperty(AppState, 'currentState', { configurable: true, value: 'active' });
+    await mount();
+    mockDeleting = false;
+    expect(mockForget).not.toHaveBeenCalled();
+    expect(mockSignOut).not.toHaveBeenCalled();
+    expect(visible()).toContain('private screens');
   });
 
   test('an unfinished restore still takes the full path', async () => {

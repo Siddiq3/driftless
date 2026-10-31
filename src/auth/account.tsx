@@ -17,6 +17,7 @@ import { installAccountUsage } from '@/sync/accountUsage';
 import { useSession } from './session';
 import {
   forgetVerifiedAccount,
+  isDeletingAccount,
   readVerifiedAccount,
   rememberVerifiedAccount,
 } from './verifiedAccount';
@@ -252,18 +253,24 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
     if (!api || current?.state !== 'active') return;
     let alive = true;
     const check = () => {
-      if (AppState.currentState !== 'active') return;
+      if (AppState.currentState !== 'active' || isDeletingAccount()) return;
       void api
         .accountState()
         .then((state) => {
-          if (!alive) return;
+          if (!alive || isDeletingAccount()) return;
           if (state.state !== 'active' || state.incarnation !== current.incarnation) {
             invalidateEntitlement();
             savedAccountRejected.current = true;
             void forgetVerifiedAccount().finally(() => {
               if (!alive) return;
-              setResult(null);
-              setRevision((r) => r + 1);
+              const reset = () => {
+                setResult(null);
+                setRevision((r) => r + 1);
+              };
+              // This open account was deleted, so return to the signed-out home screen.
+              if (state.state === 'deleted' && session.status === 'signedIn')
+                void session.signOut().catch(reset);
+              else reset();
             });
           }
         })
