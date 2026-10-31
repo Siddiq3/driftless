@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.driftless.tracking.android.CountWidgetTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-31T11:05:21.163Z" hostname="runnervm48cm3" time="0.244">
+  <properties/>
+  <testcase name="widgetUsesVerifiedAccountDayAndNeverReusesPreviousAccountsCount" classname="app.driftless.tracking.android.CountWidgetTest" time="0.239"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

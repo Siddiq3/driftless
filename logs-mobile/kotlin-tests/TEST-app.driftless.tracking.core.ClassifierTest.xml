@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.driftless.tracking.core.ClassifierTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-10-31T11:05:29.485Z" hostname="runnervm48cm3" time="0.011">
+  <properties/>
+  <testcase name="nonShortVideoScreenIsOther" classname="app.driftless.tracking.core.ClassifierTest" time="0.002"/>
+  <testcase name="describedMetadataCaptionsIgnoreSidebarAndHiddenContent" classname="app.driftless.tracking.core.ClassifierTest" time="0.002"/>
+  <testcase name="metadataSignalsReuseOnlyVisibleCaptionInputsAndExcludeControls" classname="app.driftless.tracking.core.ClassifierTest" time="0.001"/>
+  <testcase name="detectsAdsByIdOrLabel" classname="app.driftless.tracking.core.ClassifierTest" time="0.0"/>
+  <testcase name="screensWithoutAPlayerAreNeverReadAsText" classname="app.driftless.tracking.core.ClassifierTest" time="0.001"/>
+  <testcase name="youtubeDescriptionOnlyMetadataBranchIgnoresAnonymousSidebarAndProgress" classname="app.driftless.tracking.core.ClassifierTest" time="0.0"/>
+  <testcase name="youtubeCaptionIdentityIsScopedAndIgnoresChangingControls" classname="app.driftless.tracking.core.ClassifierTest" time="0.001"/>
+  <testcase name="differentItemsGetDifferentFingerprints" classname="app.driftless.tracking.core.ClassifierTest" time="0.0"/>
+  <testcase name="youtubePlayerStructureDistinguishesReplacementFromCaptionOnlyEdits" classname="app.driftless.tracking.core.ClassifierTest" time="0.001"/>
+  <testcase name="recognisesSurfaceAndFingerprintsItem" classname="app.driftless.tracking.core.ClassifierTest" time="0.0"/>
+  <testcase name="ignoresInvisibleNodes" classname="app.driftless.tracking.core.ClassifierTest" time="0.0"/>
+  <testcase name="versionGate" classname="app.driftless.tracking.core.ClassifierTest" time="0.0"/>
+  <testcase name="nullRootIsUnknown" classname="app.driftless.tracking.core.ClassifierTest" time="0.0"/>
+  <testcase name="missingAnyItemPartMeansUnknownContent" classname="app.driftless.tracking.core.ClassifierTest" time="0.0"/>
+  <testcase name="traversalIsBounded" classname="app.driftless.tracking.core.ClassifierTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

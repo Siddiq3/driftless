@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.driftless.tracking.android.YouTubeShortsCountingTest" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-10-31T11:05:28.669Z" hostname="runnervm48cm3" time="0.802">
+  <properties/>
+  <testcase name="transientReplacementInsideTheSettlingBurstCountsBAndCInOneSession" classname="app.driftless.tracking.android.YouTubeShortsCountingTest" time="0.047"/>
+  <testcase name="instagramScrollCountingUsesItsExistingSamplingAndIdentityRules" classname="app.driftless.tracking.android.YouTubeShortsCountingTest" time="0.032"/>
+  <testcase name="captionAndControlEditsWithoutReplacementNeverBecomeExtraViews" classname="app.driftless.tracking.android.YouTubeShortsCountingTest" time="0.041"/>
+  <testcase name="pauseAndScopeChangeCannotRetainAStructuralSignalFromThePreviousDataset" classname="app.driftless.tracking.android.YouTubeShortsCountingTest" time="0.042"/>
+  <testcase name="unknownMetadataAndLoadingFramesNeverInventAView" classname="app.driftless.tracking.android.YouTubeShortsCountingTest" time="0.041"/>
+  <testcase name="overlayTextOutsideThePlayerAndWindowChangesDoNotCountAnotherShort" classname="app.driftless.tracking.android.YouTubeShortsCountingTest" time="0.045"/>
+  <testcase name="repeatedBurstCallbacksAreRateLimitedAndKeepOneTrailingSample" classname="app.driftless.tracking.android.YouTubeShortsCountingTest" time="0.047"/>
+  <testcase name="sqliteEventsDailyMeasurementAndReplayAgreeAfterThreeShorts" classname="app.driftless.tracking.android.YouTubeShortsCountingTest" time="0.043"/>
+  <testcase name="rapidSwipesRequireFullDwellOnTheSurvivingShort" classname="app.driftless.tracking.android.YouTubeShortsCountingTest" time="0.039"/>
+  <testcase name="homeNormalVideoCommentsAndAppReentryDoNotRecountRecentShorts" classname="app.driftless.tracking.android.YouTubeShortsCountingTest" time="0.066"/>
+  <testcase name="serviceDeliveryDoesNotCoalesceAwayTheEntireBurstSamplingWindow" classname="app.driftless.tracking.android.YouTubeShortsCountingTest" time="0.035"/>
+  <testcase name="ordinaryPagerScrollStillCountsWithAPersistentPlayerContainer" classname="app.driftless.tracking.android.YouTubeShortsCountingTest" time="0.04"/>
+  <testcase name="staleEventsCannotAuthorizeACaptionEdit" classname="app.driftless.tracking.android.YouTubeShortsCountingTest" time="0.032"/>
+  <testcase name="tenContentOnlySwipesWithPersistentPlayerCountOnceEachAfterDebounce" classname="app.driftless.tracking.android.YouTubeShortsCountingTest" time="0.097"/>
+  <testcase name="restartKeepsRecentIdentityRingAndNewSessionSequences" classname="app.driftless.tracking.android.YouTubeShortsCountingTest" time="0.058"/>
+  <testcase name="homeToANovelShortCountsOnceWithoutPackageOrActivityChange" classname="app.driftless.tracking.android.YouTubeShortsCountingTest" time="0.042"/>
+  <testcase name="capturedDescriptionOnlyLayoutCountsWithoutNamedMetadataOrButtonClasses" classname="app.driftless.tracking.android.YouTubeShortsCountingTest" time="0.049"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

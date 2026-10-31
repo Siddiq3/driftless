@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.driftless.tracking.android.FeedPauseTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-31T11:05:21.417Z" hostname="runnervm48cm3" time="1.171">
+  <properties/>
+  <testcase name="redesignedOverlayUpdatesCountdownAndUsesLatestBypassCallback" classname="app.driftless.tracking.android.FeedPauseTest" time="0.669"/>
+  <testcase name="overlayUpdatesDismissesAndCanBeShownAgain" classname="app.driftless.tracking.android.FeedPauseTest" time="0.283"/>
+  <testcase name="videoGoalPauseShowsTodaysCount" classname="app.driftless.tracking.android.FeedPauseTest" time="0.149"/>
+  <testcase name="settingsAndActiveBreakPersistAcrossPreferenceInstancesAndWipeClearsState" classname="app.driftless.tracking.android.FeedPauseTest" time="0.032"/>
+  <testcase name="breaksBypassesAndNotificationStateCannotCrossIncarnations" classname="app.driftless.tracking.android.FeedPauseTest" time="0.032"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.driftless.tracking.android.MemeCardTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-31T11:05:24.482Z" hostname="runnervm48cm3" time="0.635">
+  <properties/>
+  <testcase name="displayedCaptionAndButtonsFollowSelectedReactionIncludingMissingLanguageFallback" classname="app.driftless.tracking.android.MemeCardTest" time="0.245"/>
+  <testcase name="rotationDoesNotCrossAccountIncarnations" classname="app.driftless.tracking.android.MemeCardTest" time="0.022"/>
+  <testcase name="attachesOnlyOneCardAndCanDismissAndShowNextMilestone" classname="app.driftless.tracking.android.MemeCardTest" time="0.131"/>
+  <testcase name="selectedMemeLanguageHistoryPersists" classname="app.driftless.tracking.android.MemeCardTest" time="0.111"/>
+  <testcase name="persistsDeduplicationWithoutLoginAndClearsOnWipe" classname="app.driftless.tracking.android.MemeCardTest" time="0.023"/>
+  <testcase name="languageCyclesPersistIndependentlyAndWipeClearsAllPools" classname="app.driftless.tracking.android.MemeCardTest" time="0.036"/>
+  <testcase name="rotationSurvivesRecreationAndWipeClearsCaptionHistory" classname="app.driftless.tracking.android.MemeCardTest" time="0.024"/>
+  <testcase name="everyBundledMemeHasACatalogEntryAndValidGifHeader" classname="app.driftless.tracking.android.MemeCardTest" time="0.037"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

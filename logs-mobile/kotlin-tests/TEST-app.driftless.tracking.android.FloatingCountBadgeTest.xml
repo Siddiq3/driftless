@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.driftless.tracking.android.FloatingCountBadgeTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-31T11:05:22.594Z" hostname="runnervm48cm3" time="1.235">
+  <properties/>
+  <testcase name="tappingCounterOpensAppAndAccessibilityClickWorks" classname="app.driftless.tracking.android.FloatingCountBadgeTest" time="0.416"/>
+  <testcase name="eyesBlinkWithoutChangingCountAndStopWhenHidden" classname="app.driftless.tracking.android.FloatingCountBadgeTest" time="0.272"/>
+  <testcase name="longPressMovesBadgeAndBottomDropOffersPause" classname="app.driftless.tracking.android.FloatingCountBadgeTest" time="0.544"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

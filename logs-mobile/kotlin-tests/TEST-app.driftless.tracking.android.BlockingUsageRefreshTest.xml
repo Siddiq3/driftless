@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.driftless.tracking.android.BlockingUsageRefreshTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-31T11:05:20.938Z" hostname="runnervm48cm3" time="0.105">
+  <properties/>
+  <testcase name="minuteProtectionRefreshesUsageWithoutGoalsOrNotificationPermission" classname="app.driftless.tracking.android.BlockingUsageRefreshTest" time="0.102"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

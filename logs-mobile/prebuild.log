@@ -1,0 +1,8 @@
+- Creating native directory (./android)
+✔ Created native directory
+- Updating package.json
+✔ Updated package.json | no changes
+- Running prebuild
+Generated launcher icons and splash assets.
+- Running prebuild
+✔ Finished prebuild

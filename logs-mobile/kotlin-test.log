@@ -1,0 +1,750 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.3.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :gradle-plugin:shared:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:settings-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:settings-plugin:pluginDescriptors UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:pluginDescriptors UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:processResources UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:processResources UP-TO-DATE
+> Task :gradle-plugin:shared:compileKotlin UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:compileKotlin UP-TO-DATE
+> Task :gradle-plugin:shared:compileJava NO-SOURCE
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:compileJava NO-SOURCE
+> Task :gradle-plugin:shared:processResources NO-SOURCE
+> Task :gradle-plugin:shared:classes UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:processResources NO-SOURCE
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:classes UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:jar UP-TO-DATE
+> Task :gradle-plugin:shared:jar UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:compileKotlin UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:compileJava NO-SOURCE
+> Task :gradle-plugin:settings-plugin:classes UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:compileKotlin UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:jar UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:compileJava NO-SOURCE
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:classes UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:jar UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-gradle-plugin:expo-autolinking-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-gradle-plugin:expo-max-sdk-override-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-dev-launcher-gradle-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-dev-launcher-gradle-plugin:pluginDescriptors UP-TO-DATE
+> Task :expo-dev-launcher-gradle-plugin:processResources UP-TO-DATE
+> Task :expo-module-gradle-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-gradle-plugin:expo-max-sdk-override-plugin:compileKotlin UP-TO-DATE
+> Task :expo-module-gradle-plugin:pluginDescriptors UP-TO-DATE
+> Task :expo-gradle-plugin:expo-max-sdk-override-plugin:compileJava NO-SOURCE
+> Task :expo-gradle-plugin:expo-max-sdk-override-plugin:pluginDescriptors UP-TO-DATE
+> Task :expo-module-gradle-plugin:processResources UP-TO-DATE
+> Task :expo-gradle-plugin:expo-max-sdk-override-plugin:processResources UP-TO-DATE
+> Task :expo-gradle-plugin:expo-max-sdk-override-plugin:classes UP-TO-DATE
+> Task :expo-gradle-plugin:expo-max-sdk-override-plugin:jar UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:compileKotlin UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:compileJava NO-SOURCE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:pluginDescriptors UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:processResources UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:classes UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:jar UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:compileKotlin UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:compileJava NO-SOURCE
+> Task :gradle-plugin:react-native-gradle-plugin:pluginDescriptors UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:processResources UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:classes UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:jar UP-TO-DATE
+> Task :expo-module-gradle-plugin:compileKotlin UP-TO-DATE
+> Task :expo-dev-launcher-gradle-plugin:compileKotlin UP-TO-DATE
+> Task :expo-module-gradle-plugin:compileJava NO-SOURCE
+> Task :expo-module-gradle-plugin:classes UP-TO-DATE
+> Task :expo-dev-launcher-gradle-plugin:compileJava NO-SOURCE
+> Task :expo-dev-launcher-gradle-plugin:classes UP-TO-DATE
+> Task :expo-module-gradle-plugin:jar UP-TO-DATE
+> Task :expo-dev-launcher-gradle-plugin:jar UP-TO-DATE
+
+> Configure project :
+[32m[ExpoRootProject][0m Using the following versions:
+  - buildTools:  [32m36.0.0[0m
+  - minSdk:      [32m24[0m
+  - compileSdk:  [32m36[0m
+  - targetSdk:   [32m36[0m
+  - ndk:         [32m27.1.12297006[0m
+  - kotlin:      [32m2.1.20[0m
+  - ksp:         [32m2.1.20-2.0.1[0m
+
+> Configure project :app
+ ℹ️  [33mApplying gradle plugin[0m '[32mexpo-max-sdk-override-plugin[0m'
+  [expo-max-sdk-override-plugin] This plugin will find all permissions declared with `android:maxSdkVersion`. If there exists a declaration with the `android:maxSdkVersion` annotation and another one without, the plugin will remove the annotation from the final merged manifest. In order to see a log with the changes run a clean build of the app.
+ ℹ️  [33mApplying gradle plugin[0m '[32mexpo-dev-launcher-gradle-plugin[0m'
+
+> Configure project :expo
+
+Using expo modules
+  - [32mexpo-log-box[0m (57.0.4)
+  - [32mapp-updates-android[0m (0.1.0)
+  - [32mbattle-links[0m (0.1.0)
+  - [32mexpo-constants[0m (57.0.22)
+  - [32mexpo-dev-client[0m (57.0.20)
+  - [32mexpo-dev-launcher[0m (57.0.21)
+  - [32mexpo-dev-menu[0m (57.0.20)
+  - [32mexpo-dev-menu-interface[0m (57.0.0)
+  - [32mexpo-json-utils[0m (57.0.2)
+  - [32mexpo-manifests[0m (57.0.2)
+
+> Configure project :expo-modules-core
+Linking react-native-worklets native libs into expo-modules-core build tasks
+task ':react-native-worklets:mergeDebugNativeLibs'
+task ':react-native-worklets:mergeReleaseNativeLibs'
+
+> Configure project :expo
+  - [32mexpo-modules-core[0m (57.0.24)
+  - [32mexpo-updates-interface[0m (57.0.2)
+  - [32mtracking-android[0m (0.2.0)
+  - [33m[📦][0m [32mexpo-dom-webview[0m (57.0.1)
+  - [33m[📦][0m [32mexpo-ui[0m (57.0.26)
+  - [33m[📦][0m [32mexpo-application[0m (57.0.3)
+  - [33m[📦][0m [32mexpo-asset[0m (57.0.20)
+  - [33m[📦][0m [32mexpo-crypto[0m (57.0.4)
+  - [33m[📦][0m [32mexpo-file-system[0m (57.0.7)
+  - [33m[📦][0m [32mexpo-font[0m (57.0.4)
+  - [33m[📦][0m [32mexpo-haptics[0m (57.0.3)
+  - [33m[📦][0m [32mexpo-keep-awake[0m (57.0.2)
+  - [33m[📦][0m [32mexpo-linear-gradient[0m (57.0.2)
+  - [33m[📦][0m [32mexpo-linking[0m (57.0.13)
+  - [33m[📦][0m [32mexpo-localization[0m (57.0.2)
+  - [33m[📦][0m [32mexpo-notifications[0m (57.0.24)
+  - [33m[📦][0m [32mexpo-router[0m (57.0.29)
+  - [33m[📦][0m [32mexpo-secure-store[0m (57.0.4)
+  - [33m[📦][0m [32mexpo-sharing[0m (57.0.24)
+  - [33m[📦][0m [32mexpo-sqlite[0m (57.0.4)
+  - [33m[📦][0m [32mexpo-status-bar[0m (57.0.1)
+  - [33m[📦][0m [32mexpo-system-ui[0m (57.0.4)
+
+
+> Task :tracking-android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :tracking-android:preBuild UP-TO-DATE
+> Task :tracking-android:preDebugBuild UP-TO-DATE
+> Task :react-native-worklets:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-modules-core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-modules-core:preBuild UP-TO-DATE
+> Task :expo-modules-core:preDebugBuild UP-TO-DATE
+> Task :tracking-android:generateDebugBuildConfig UP-TO-DATE
+> Task :tracking-android:generateDebugResValues UP-TO-DATE
+> Task :expo-modules-core:generateDebugBuildConfig UP-TO-DATE
+> Task :expo-modules-core:generateDebugResValues UP-TO-DATE
+> Task :tracking-android:generateDebugResources UP-TO-DATE
+> Task :expo-modules-core:generateDebugResources UP-TO-DATE
+> Task :tracking-android:packageDebugResources UP-TO-DATE
+> Task :expo-modules-core:packageDebugResources UP-TO-DATE
+> Task :expo-modules-core:parseDebugLocalResources UP-TO-DATE
+> Task :tracking-android:parseDebugLocalResources UP-TO-DATE
+> Task :expo-modules-core:generateDebugRFile UP-TO-DATE
+> Task :expo-modules-core:javaPreCompileDebug UP-TO-DATE
+> Task :tracking-android:generateDebugRFile UP-TO-DATE
+> Task :expo-modules-core:compileDebugLibraryResources UP-TO-DATE
+> Task :tracking-android:javaPreCompileDebug UP-TO-DATE
+> Task :expo-modules-core:writeDebugAarMetadata UP-TO-DATE
+> Task :tracking-android:preDebugUnitTestBuild UP-TO-DATE
+> Task :expo-modules-core:extractDeepLinksDebug UP-TO-DATE
+> Task :tracking-android:writeDebugAarMetadata UP-TO-DATE
+> Task :expo-modules-core:processDebugManifest UP-TO-DATE
+> Task :expo-modules-core:mergeDebugShaders UP-TO-DATE
+> Task :tracking-android:compileDebugLibraryResources UP-TO-DATE
+> Task :expo-modules-core:compileDebugShaders NO-SOURCE
+> Task :expo-modules-core:generateDebugAssets UP-TO-DATE
+> Task :expo-modules-core:mergeDebugAssets UP-TO-DATE
+> Task :react-native-worklets:assertMinimalReactNativeVersionTask
+> Task :react-native-worklets:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-worklets:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :tracking-android:generateDebugUnitTestResValues
+> Task :react-native-worklets:prepareWorkletsHeadersForPrefabs UP-TO-DATE
+> Task :react-native-worklets:preBuild
+> Task :react-native-worklets:preDebugBuild
+> Task :tracking-android:generateDebugUnitTestResources
+> Task :tracking-android:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-worklets:generateDebugBuildConfig UP-TO-DATE
+> Task :react-native-worklets:generateDebugResValues UP-TO-DATE
+> Task :react-native-worklets:generateDebugResources UP-TO-DATE
+> Task :tracking-android:processDebugManifest UP-TO-DATE
+> Task :react-native-worklets:packageDebugResources UP-TO-DATE
+> Task :react-native-worklets:parseDebugLocalResources UP-TO-DATE
+> Task :react-native-worklets:generateDebugRFile UP-TO-DATE
+> Task :tracking-android:javaPreCompileDebugUnitTest
+> Task :react-native-worklets:compileDebugKotlin UP-TO-DATE
+> Task :react-native-worklets:javaPreCompileDebug UP-TO-DATE
+> Task :tracking-android:mapDebugUnitTestSourceSetPaths
+> Task :react-native-worklets:compileDebugJavaWithJavac UP-TO-DATE
+> Task :react-native-worklets:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :react-native-worklets:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :react-native-worklets:processDebugJavaRes UP-TO-DATE
+> Task :react-native-worklets:compileDebugLibraryResources UP-TO-DATE
+> Task :react-native-worklets:writeDebugAarMetadata UP-TO-DATE
+> Task :react-native-worklets:extractDeepLinksDebug UP-TO-DATE
+> Task :react-native-worklets:processDebugManifest UP-TO-DATE
+> Task :react-native-worklets:mergeDebugShaders UP-TO-DATE
+> Task :react-native-worklets:compileDebugShaders NO-SOURCE
+> Task :react-native-worklets:generateDebugAssets UP-TO-DATE
+> Task :react-native-worklets:mergeDebugAssets UP-TO-DATE
+> Task :expo-modules-core:compileDebugKotlin UP-TO-DATE
+> Task :expo-modules-core:compileDebugJavaWithJavac UP-TO-DATE
+> Task :expo-modules-core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :expo-modules-core:processDebugJavaRes UP-TO-DATE
+> Task :expo-modules-core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :tracking-android:compileDebugKotlin UP-TO-DATE
+> Task :tracking-android:compileDebugJavaWithJavac UP-TO-DATE
+> Task :tracking-android:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :tracking-android:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :tracking-android:mergeDebugUnitTestResources
+> Task :tracking-android:checkDebugUnitTestAarMetadata
+> Task :tracking-android:processDebugUnitTestManifest
+> Task :tracking-android:generateDebugUnitTestAssets UP-TO-DATE
+> Task :tracking-android:mergeDebugShaders UP-TO-DATE
+> Task :tracking-android:compileDebugShaders NO-SOURCE
+> Task :tracking-android:generateDebugAssets UP-TO-DATE
+> Task :tracking-android:mergeDebugAssets UP-TO-DATE
+> Task :tracking-android:mergeDebugUnitTestAssets
+> Task :tracking-android:processDebugJavaRes UP-TO-DATE
+> Task :tracking-android:processDebugUnitTestResources
+> Task :tracking-android:packageDebugUnitTestForUnitTest
+> Task :tracking-android:generateDebugUnitTestConfig
+
+> Task :tracking-android:compileDebugUnitTestKotlin
+w: file:///home/runner/work/driftless/driftless/modules/tracking-android/android/src/test/java/app/driftless/tracking/android/AccessibilityConsentTest.kt:51:28 'static fun obtain(p0: Int): AccessibilityEvent!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/driftless/driftless/modules/tracking-android/android/src/test/java/app/driftless/tracking/android/AccessibilityConsentTest.kt:62:42 'static fun obtain(): AccessibilityNodeInfo!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/driftless/driftless/modules/tracking-android/android/src/test/java/app/driftless/tracking/android/AccessibilityConsentTest.kt:65:42 'static fun obtain(): AccessibilityNodeInfo!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/driftless/driftless/modules/tracking-android/android/src/test/java/app/driftless/tracking/android/AccessibilityConsentTest.kt:338:42 'static fun obtain(): AccessibilityNodeInfo!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/driftless/driftless/modules/tracking-android/android/src/test/java/app/driftless/tracking/android/AccessibilityConsentTest.kt:341:55 'static fun obtain(): AccessibilityNodeInfo!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/driftless/driftless/modules/tracking-android/android/src/test/java/app/driftless/tracking/android/BlockingUsageRefreshTest.kt:34:15 'fun addEvent(p0: String!, p1: Long, p2: Int): Unit' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/driftless/driftless/modules/tracking-android/android/src/test/java/app/driftless/tracking/android/BlockingUsageRefreshTest.kt:35:15 'fun addEvent(p0: String!, p1: Long, p2: Int): Unit' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/driftless/driftless/modules/tracking-android/android/src/test/java/app/driftless/tracking/android/FloatingCountBadgeTest.kt:142:42 'fun addResolveInfoForIntent(p0: Intent!, p1: ResolveInfo!): Unit' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/driftless/driftless/modules/tracking-android/android/src/test/java/app/driftless/tracking/android/GuestAccountLifecycleTest.kt:141:15 'fun addEvent(p0: String!, p1: Long, p2: Int): Unit' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/driftless/driftless/modules/tracking-android/android/src/test/java/app/driftless/tracking/android/GuestAccountLifecycleTest.kt:142:15 'fun addEvent(p0: String!, p1: Long, p2: Int): Unit' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/driftless/driftless/modules/tracking-android/android/src/test/java/app/driftless/tracking/android/GuestAccountLifecycleTest.kt:143:15 'fun addEvent(p0: String!, p1: Long, p2: Int): Unit' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/driftless/driftless/modules/tracking-android/android/src/test/java/app/driftless/tracking/android/GuestAccountLifecycleTest.kt:144:15 'fun addEvent(p0: String!, p1: Long, p2: Int): Unit' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/driftless/driftless/modules/tracking-android/android/src/test/java/app/driftless/tracking/android/ServiceRecoveryTest.kt:44:153 'static fun obtain(p0: Int): AccessibilityEvent!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/driftless/driftless/modules/tracking-android/android/src/test/java/app/driftless/tracking/android/ServiceRecoveryTest.kt:45:62 'static fun obtain(): AccessibilityNodeInfo!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/driftless/driftless/modules/tracking-android/android/src/test/java/app/driftless/tracking/android/YouTubeShortsCountingTest.kt:34:37 'static fun obtain(): AccessibilityNodeInfo!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/driftless/driftless/modules/tracking-android/android/src/test/java/app/driftless/tracking/android/YouTubeShortsCountingTest.kt:42:119 Redundant spread (*) operator.
+w: file:///home/runner/work/driftless/driftless/modules/tracking-android/android/src/test/java/app/driftless/tracking/android/YouTubeShortsCountingTest.kt:43:53 Redundant spread (*) operator.
+w: file:///home/runner/work/driftless/driftless/modules/tracking-android/android/src/test/java/app/driftless/tracking/android/YouTubeShortsCountingTest.kt:51:57 'static fun obtain(p0: Int): AccessibilityEvent!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/driftless/driftless/modules/tracking-android/android/src/test/java/app/driftless/tracking/android/YouTubeShortsCountingTest.kt:74:68 Redundant spread (*) operator.
+w: file:///home/runner/work/driftless/driftless/modules/tracking-android/android/src/test/java/app/driftless/tracking/android/YouTubeShortsCountingTest.kt:75:58 Redundant spread (*) operator.
+w: file:///home/runner/work/driftless/driftless/modules/tracking-android/android/src/test/java/app/driftless/tracking/android/YouTubeShortsCountingTest.kt:76:45 Redundant spread (*) operator.
+w: file:///home/runner/work/driftless/driftless/modules/tracking-android/android/src/test/java/app/driftless/tracking/android/YouTubeShortsCountingTest.kt:92:90 Redundant spread (*) operator.
+w: file:///home/runner/work/driftless/driftless/modules/tracking-android/android/src/test/java/app/driftless/tracking/android/YouTubeShortsCountingTest.kt:93:57 Redundant spread (*) operator.
+w: file:///home/runner/work/driftless/driftless/modules/tracking-android/android/src/test/java/app/driftless/tracking/android/YouTubeShortsCountingTest.kt:94:32 Redundant spread (*) operator.
+w: file:///home/runner/work/driftless/driftless/modules/tracking-android/android/src/test/java/app/driftless/tracking/android/YouTubeShortsCountingTest.kt:94:55 Redundant spread (*) operator.
+w: file:///home/runner/work/driftless/driftless/modules/tracking-android/android/src/test/java/app/driftless/tracking/android/YouTubeShortsCountingTest.kt:189:38 Redundant spread (*) operator.
+w: file:///home/runner/work/driftless/driftless/modules/tracking-android/android/src/test/java/app/driftless/tracking/android/YouTubeShortsCountingTest.kt:212:82 Redundant spread (*) operator.
+
+> Task :tracking-android:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :tracking-android:processDebugUnitTestJavaRes
+
+> Task :tracking-android:testDebugUnitTest
+
+AccessibilityConsentTest > preConsentConnectionKeepsOnlyBindingStatusWithoutViewingDiagnostics PASSED
+
+AccessibilityConsentTest > timeoutReportsUnconfirmedChangeThenQueuedRevocationDiscardsWithoutFlush PASSED
+
+AccessibilityConsentTest > delayedDebugCaptureRechecksConsentAndValidDebugExportsStillWork PASSED
+
+AccessibilityConsentTest > freshInstallWithoutConsentDoesNotTrack PASSED
+
+AccessibilityConsentTest > completedRecordsSurviveRevocationAndReacceptanceCountsANewItem PASSED
+
+AccessibilityConsentTest > releaseExecutionRejectsEventExportAndCaptureEvenWithConsent PASSED
+
+AccessibilityConsentTest > delayedTickAlreadyCapturedBeforeRevocationCannotCreditActivity PASSED
+
+AccessibilityConsentTest > revokedScreenOffCannotCreditPendingActivity PASSED
+
+AccessibilityConsentTest > backgroundRevocationReturnsOnlyAfterMainAppliesConsentAndDiscardsSession PASSED
+
+AccessibilityConsentTest > revocationJustBeforeThresholdKeepsOnlyPreviouslyRecordedTime PASSED
+
+AccessibilityConsentTest > revokedShutdownWhileBoundCannotCreditPendingActivity PASSED
+
+AccessibilityConsentTest > revokedScopeChangeDiscardsWithoutCreditingEitherScope PASSED
+
+AccessibilityConsentTest > queuedOverlayRefreshAfterRevocationCannotCreditActivity PASSED
+
+AccessibilityConsentTest > revokedInterruptionCannotCreditPendingActivity PASSED
+
+AccessibilityConsentTest > inFlightAccountingFinishesBeforeAppliedRevocationAndCannotOverlapIt PASSED
+
+AccessibilityConsentTest > delayedClassificationAlreadyCapturedBeforeRevocationCannotCreditActivity PASSED
+
+AccessibilityConsentTest > anOlderDisclosureVersionCannotTrackUntilTheCurrentOneIsAffirmativelyAccepted PASSED
+
+AccessibilityConsentTest > revokedUnbindWhileBoundCannotCreditPendingActivity PASSED
+
+AccessibilityConsentTest > revocationBeforeDwellDiscardsUnfinishedCountAndTimeImmediately PASSED
+
+AccessibilityConsentTest > revokedClockRefreshExecutesItsBodyWithoutCreditingPendingActivity PASSED
+
+AccessibilityGuideTest > opensActualAccessibilitySettingsWhenPipIsUnavailable PASSED
+
+AccessibilityGuideTest > waitsForPipThenSeparatesSettingsAndKeepsGuideForExistingGrant PASSED
+
+AccessibilityGuideTest > cannotOpenSettingsWithoutCountingConsent PASSED
+
+AccessibilityGuideTest > delayedPipCallbackFallsBackOnceAndNewEnablementClosesGuide PASSED
+
+AccountScopeTest > restoredRowsUseRevisionUpsertsWithoutDuplicatingCurrentDeviceMeasurements PASSED
+
+AccountScopeTest > scopesSeparateRecordedDataAndOldRecorderCallbacks PASSED
+
+AccountScopeTest > reopenKeepsTheScopeAndItsPendingOfflineMeasurements PASSED
+
+AccountScopeTest > fiftyGuestEventsRetainStableRecoveryRecordsAndImportOnce PASSED
+
+AccountScopeTest > freshInstallationRestoresPersonalCountAndAddsOnlyNewLocalObservations PASSED
+
+AccountScopeTest > guestImportIsIdempotentAndCannotBeReassigned PASSED
+
+AccountScopeTest > freshIncarnationDoesNotAdoptLegacyBindingsOrDelayedRecorderWrites PASSED
+
+AccountUsageTest > switchAndFreshIncarnationDoNotAdoptOldLedgerOrGrants PASSED
+
+AccountUsageTest > historicalSummaryFloorsOnlyAfterAddingDeviceMilliseconds PASSED
+
+AccountUsageTest > staleSnapshotCannotReduceAcceptedUsageOrRestoreCredit PASSED
+
+AccountUsageTest > measuredZeroIsDifferentFromUnavailableOsHistoryAndViewsOnlyAffectVideoSurface PASSED
+
+AccountUsageTest > dayStaysUnknownUntilACountableAppOpensThenLimitsWork PASSED
+
+AccountUsageTest > staleAndOfflineStatusIsHonestAndRolloverNeedsFreshCredit PASSED
+
+AccountUsageTest > deduplicatesEventsAndBlocksAtOwnReservationWithoutDoubleCountingAcceptedUsage PASSED
+
+AccountUsageTest > delayedRecorderRetainsItsIncarnationTimezoneAcrossAnAccountSwitch PASSED
+
+AccountUsageTest > accountCreditPausesRespectMasterSwitchSelectedAppsAndVideoGoalOptIn PASSED
+
+AccountUsageTest > fixedTimezoneSurvivesDeviceTimezoneChangeAndDstDayIsNot24Hours PASSED
+
+AccountUsageTest > resetTwicePreservesCumulativeCloudBackupWithoutRevealingItsBaseline PASSED
+
+AccountUsageTest > permissionChangesReviseNullablePayloadsWithoutReusingFrozenRevisions PASSED
+
+AccountUsageTest > unlimitedMetricsDoNotRequireFreshCreditAfterMidnightOrReboot PASSED
+
+AccountUsageTest > personalAndAllowanceCopiesOfOneDeviceAreReconciledWithoutAddingTwice PASSED
+
+AccountUsageTest > delayedPreResetRecorderCannotRestoreIntervalsOrCachedHistory PASSED
+
+AccountUsageTest > rebootRequiresVerifiedClockAndCannotReuseYesterdayCredit PASSED
+
+AccountUsageTest > restoredPersonalBackupIsNotHiddenByAnEmptyAllowanceSnapshot PASSED
+
+AccountUsageTest > resetKeepsAccountingDeduplicationAndFrozenRevisionsButClearsVisibleHistory PASSED
+
+AccountUsageTest > processRestartRetainsOfflineLedgerGrantAndResetFence PASSED
+
+AccountUsageTest > remainingIsCappedByOwnReservationNeverNegativeAndRepeatedRolloverDoesNotRestoreIt PASSED
+
+AccountUsageTest > transitionDoesNotImportExistingLocalCountersIntoAccounting PASSED
+
+AndroidLayerTest > itemIdentifiersStayInMemoryAndExpire PASSED
+
+AndroidLayerTest > accessibilityConfigIsNotAnAccessibilityToolAndIsScopedToSupportedApps PASSED
+
+AndroidLayerTest > purgeKeepsAggregatesAndDropsRawEvents PASSED
+
+AndroidLayerTest > usageMinutesOverwriteInsteadOfAccumulating PASSED
+
+AndroidLayerTest > bundledRulesParseAndAreMarkedUnvalidated PASSED
+
+AndroidLayerTest > schemaHasNoColumnsForContent PASSED
+
+AndroidLayerTest > consentDefaultsToOff PASSED
+
+AndroidLayerTest > v6UpgradeRemovesDiagnosticsAndKeepsHistoryAndPendingBackup PASSED
+
+AndroidLayerTest > recordViewIsIdempotentAndTransactional PASSED
+
+AndroidLayerTest > storesNoHeartbeatsItemIdentifiersCoverageOrEventVersions PASSED
+
+AndroidLayerTest > upgradesAVersion1DatabaseWithoutLosingCounts PASSED
+
+AndroidLayerTest > dataSurvivesReopenLikeARestart PASSED
+
+AndroidLayerTest > oldNarrowDisclosureConsentMustBeRenewedForExpandedAppScope PASSED
+
+BadgePreferenceTest > popupSettingsPersistAndSizeStaysWithinBounds PASSED
+
+BadgePreferenceTest > defaultsVisibleButHonorsExplicitOptOutAcrossPreferenceInstances PASSED
+
+BlockingUsageRefreshTest > minuteProtectionRefreshesUsageWithoutGoalsOrNotificationPermission PASSED
+
+BundledVideoTest > canSwitchBetweenOnboardingAndAccessibilityWithoutConfusingTheContent PASSED
+
+BundledVideoTest > onlyBundledVideosAreAccepted PASSED
+
+CountWidgetTest > widgetUsesVerifiedAccountDayAndNeverReusesPreviousAccountsCount PASSED
+
+FeedPauseTest > redesignedOverlayUpdatesCountdownAndUsesLatestBypassCallback PASSED
+
+FeedPauseTest > overlayUpdatesDismissesAndCanBeShownAgain PASSED
+
+FeedPauseTest > videoGoalPauseShowsTodaysCount PASSED
+
+FeedPauseTest > settingsAndActiveBreakPersistAcrossPreferenceInstancesAndWipeClearsState PASSED
+
+FeedPauseTest > breaksBypassesAndNotificationStateCannotCrossIncarnations PASSED
+
+FloatingCountBadgeTest > tappingCounterOpensAppAndAccessibilityClickWorks PASSED
+
+FloatingCountBadgeTest > eyesBlinkWithoutChangingCountAndStopWhenHidden PASSED
+
+FloatingCountBadgeTest > longPressMovesBadgeAndBottomDropOffersPause PASSED
+
+GuestAccountLifecycleTest > usageRefreshKeepsImportedGuestMinutesWithoutChargingThemAsSignedInUsage PASSED
+
+GuestAccountLifecycleTest > restoredOldDeviceHistoryAndNewGuestActivityAddWithoutRestagingOrDuplicatingTheOldDevice PASSED
+
+GuestAccountLifecycleTest > newerSameDeviceAccountingBreakdownRepairsLegacyPersonalAttributionWithoutRawEvents PASSED
+
+GuestAccountLifecycleTest > concurrentCapturedRecorderAndImportPreserveEveryUniqueEventOnce PASSED
+
+GuestAccountLifecycleTest > singlePlatformImportsKeepInstagramAndYoutubeCountsSeparate PASSED
+
+GuestAccountLifecycleTest > midnightDatesPackageAndStableEventMetadataSurviveMigrationAndRollback PASSED
+
+GuestAccountLifecycleTest > repeatedMixedPlatformLogoutLoginAddsOnlyTheNewGuestActivity PASSED
+
+GuestAccountLifecycleTest > legacyCombinedCountsRemainKnownWhileUnprovablePlatformAttributionRemainsUnknown PASSED
+
+LocalActivityDetailsTest > recordedTimezoneCountedTimestampAndLocalDateBoundariesArePreserved PASSED
+
+LocalActivityDetailsTest > localHistoryKeepsOlderRulesWhileAdsAndUnsupportedAppsStayExcluded PASSED
+
+LocalActivityDetailsTest > missingApprovedConfigurationDefaultsToUntrustedInsteadOfCrashing PASSED
+
+LocalActivityDetailsTest > instagramAndYoutubeAppearWithEmptyApprovedVersionsAndMatchPopupWithoutDuplicates PASSED
+
+MemeCardTest > displayedCaptionAndButtonsFollowSelectedReactionIncludingMissingLanguageFallback PASSED
+
+MemeCardTest > rotationDoesNotCrossAccountIncarnations PASSED
+
+MemeCardTest > attachesOnlyOneCardAndCanDismissAndShowNextMilestone PASSED
+
+MemeCardTest > selectedMemeLanguageHistoryPersists PASSED
+
+MemeCardTest > persistsDeduplicationWithoutLoginAndClearsOnWipe PASSED
+
+MemeCardTest > languageCyclesPersistIndependentlyAndWipeClearsAllPools PASSED
+
+MemeCardTest > rotationSurvivesRecreationAndWipeClearsCaptionHistory PASSED
+
+MemeCardTest > everyBundledMemeHasACatalogEntryAndValidGifHeader PASSED
+
+PauseActivityTest > leaveFeedReturnsHomeWithoutConsumingBypass PASSED
+
+PauseActivityTest > staleBypassButtonCannotChangeAnotherIncarnationOrConsumeTwoUses PASSED
+
+PauseActivityTest > singleTaskIntentReplacesOldBypassUiWithAccountCreditRecovery PASSED
+
+PauseActivityTest > bypassStillGrantsExactlyFiveMinutesAndConsumesOneDailyUse PASSED
+
+PauseActivityTest > detachedButtonFromAnOlderIntentCannotSnoozeTheNewAccount PASSED
+
+PauseActivityTest > changingASelectedRuleToDisabledDismissesTheOldPauseOnTheNextCheck PASSED
+
+PauseActivityTest > scheduleUsesScheduleExplanationAndExhaustedBypassesStayUnavailable PASSED
+
+PauseActivityTest > systemInsetsAreReplacedOnWindowChangesWithoutAccumulatingPadding PASSED
+
+PauseSurfaceTest > countdownUpdatesInPlaceAndThePrimaryActionStaysUsable PASSED
+
+PauseSurfaceTest > aPauseWithoutANumberHidesTheFigureAndKeepsTheFooter PASSED
+
+ServiceRecoveryTest > verifyingANewClockRecreatesOnlyTheCurrentScopesRecorder PASSED
+
+ServiceRecoveryTest > repeatedBlockingCallbacksStartOneActivityUntilTheUserLeavesAndReturns PASSED
+
+ServiceRecoveryTest > staleAndCrossAppScrollCannotAuthorizeTheCurrentPlayer PASSED
+
+ServiceRecoveryTest > periodicSamplingDoesNotLeaveAnOlderSettlingTaskQueued PASSED
+
+ServiceRecoveryTest > interruptionStopsWorkAndANewEventRestartsOnlyOneLoop PASSED
+
+ServiceRecoveryTest > repeatedConnectionHasOneTickOneClassificationAndDestroyRemovesThem PASSED
+
+ServiceRecoveryTest > screenOffClearsTransitionAndOverlayStateAndScopeChangeCancelsOldClassification PASSED
+
+StoredDatesTest > boundsDateEnumerationAndWipeRemovesResults PASSED
+
+StoredDatesTest > returnsRetainedDatesBeyondAWeekWithoutChangingAggregates PASSED
+
+YouTubeShortsCountingTest > transientReplacementInsideTheSettlingBurstCountsBAndCInOneSession PASSED
+
+YouTubeShortsCountingTest > instagramScrollCountingUsesItsExistingSamplingAndIdentityRules PASSED
+
+YouTubeShortsCountingTest > captionAndControlEditsWithoutReplacementNeverBecomeExtraViews PASSED
+
+YouTubeShortsCountingTest > pauseAndScopeChangeCannotRetainAStructuralSignalFromThePreviousDataset PASSED
+
+YouTubeShortsCountingTest > unknownMetadataAndLoadingFramesNeverInventAView PASSED
+
+YouTubeShortsCountingTest > overlayTextOutsideThePlayerAndWindowChangesDoNotCountAnotherShort PASSED
+
+YouTubeShortsCountingTest > repeatedBurstCallbacksAreRateLimitedAndKeepOneTrailingSample PASSED
+
+YouTubeShortsCountingTest > sqliteEventsDailyMeasurementAndReplayAgreeAfterThreeShorts PASSED
+
+YouTubeShortsCountingTest > rapidSwipesRequireFullDwellOnTheSurvivingShort PASSED
+
+YouTubeShortsCountingTest > homeNormalVideoCommentsAndAppReentryDoNotRecountRecentShorts PASSED
+
+YouTubeShortsCountingTest > serviceDeliveryDoesNotCoalesceAwayTheEntireBurstSamplingWindow PASSED
+
+YouTubeShortsCountingTest > ordinaryPagerScrollStillCountsWithAPersistentPlayerContainer PASSED
+
+YouTubeShortsCountingTest > staleEventsCannotAuthorizeACaptionEdit PASSED
+
+YouTubeShortsCountingTest > tenContentOnlySwipesWithPersistentPlayerCountOnceEachAfterDebounce PASSED
+
+YouTubeShortsCountingTest > restartKeepsRecentIdentityRingAndNewSessionSequences PASSED
+
+YouTubeShortsCountingTest > homeToANovelShortCountsOnceWithoutPackageOrActivityChange PASSED
+
+YouTubeShortsCountingTest > capturedDescriptionOnlyLayoutCountsWithoutNamedMetadataOrButtonClasses PASSED
+
+BadgeStateTest > reelTransitionOnlyChangesNumberWhenSavedCountChanges PASSED
+
+BadgeStateTest > visibleOnlyForAnEnabledConsentedUnlockedShortVideo PASSED
+
+BadgeStateTest > accountLongTotalsAndUnavailableMeasurementsAreNotDisplayedAsZero PASSED
+
+BadgeStateTest > drainedAtTheExactEnforcedLimit PASSED
+
+BadgeStateTest > moodReflectsSavedCountEvenWhileIdentityIsPending PASSED
+
+BadgeStateTest > savedCountStaysVisibleWhileNextVideoIsBeingIdentified PASSED
+
+BlockPolicyTest > capabilityEntitlementUsesEnforcementExpiryBoundary PASSED
+
+BlockPolicyTest > schedulesBlockInsideTheWindow PASSED
+
+BlockPolicyTest > expiredPurchaseDoesNotDisableIncludedFeatures PASSED
+
+BlockPolicyTest > emptyWindowNeverBlocks PASSED
+
+BlockPolicyTest > onlySelectedAppsAndOnlyWhenEnabled PASSED
+
+BlockPolicyTest > includedFeaturesBlockWithoutAPurchase PASSED
+
+BlockPolicyTest > overnightSchedulesWrapIntoTheNextDay PASSED
+
+BlockPolicyTest > blocksAtTheDailyLimit PASSED
+
+BlockPolicyTest > snoozeAllowsTemporarily PASSED
+
+BlockPolicyTest > unknownMinutesNeverBlockOnTheLimit PASSED
+
+BlockPolicyTest > cachedEntitlementIsCappedByOfflineGrace PASSED
+
+ClassifierTest > nonShortVideoScreenIsOther PASSED
+
+ClassifierTest > describedMetadataCaptionsIgnoreSidebarAndHiddenContent PASSED
+
+ClassifierTest > metadataSignalsReuseOnlyVisibleCaptionInputsAndExcludeControls PASSED
+
+ClassifierTest > detectsAdsByIdOrLabel PASSED
+
+ClassifierTest > screensWithoutAPlayerAreNeverReadAsText PASSED
+
+ClassifierTest > youtubeDescriptionOnlyMetadataBranchIgnoresAnonymousSidebarAndProgress PASSED
+
+ClassifierTest > youtubeCaptionIdentityIsScopedAndIgnoresChangingControls PASSED
+
+ClassifierTest > differentItemsGetDifferentFingerprints PASSED
+
+ClassifierTest > youtubePlayerStructureDistinguishesReplacementFromCaptionOnlyEdits PASSED
+
+ClassifierTest > recognisesSurfaceAndFingerprintsItem PASSED
+
+ClassifierTest > ignoresInvisibleNodes PASSED
+
+ClassifierTest > versionGate PASSED
+
+ClassifierTest > nullRootIsUnknown PASSED
+
+ClassifierTest > missingAnyItemPartMeansUnknownContent PASSED
+
+ClassifierTest > traversalIsBounded PASSED
+
+EngineTest > timeIsSplitAtLocalMidnight PASSED
+
+EngineTest > afterALongGapThePreviousItemMayCountAgain PASSED
+
+EngineTest > discardNeverAdvancesPendingDwellButOrdinaryLeaveStillDoes PASSED
+
+EngineTest > noSupportedAppMeansNoAccountingEvidence PASSED
+
+EngineTest > backwardsTickCannotMarkThePreviousDayObserved PASSED
+
+EngineTest > replayingTheSameEventDoesNotDoubleCount PASSED
+
+EngineTest > leavingStopsAccountingAndASessionAcrossMidnightMarksTheNewDay PASSED
+
+EngineTest > delayedTickAttributesViewToDwellThresholdBeforeMidnight PASSED
+
+EngineTest > uuidV7IsTimeOrderedAndVersioned PASSED
+
+EngineTest > fingerprintsAreSaltedAndNotPlaintext PASSED
+
+EngineTest > unsupportedPackageEndsTheSession PASSED
+
+EngineTest > screenOffInterruptAndReconnectDoNotCreditTheUnobservedGap PASSED
+
+EngineTest > timeOnlyAppIsNotEvidence PASSED
+
+EngineTest > appVersionChangeStartsANewRecorderWithoutRecountingTheSameItem PASSED
+
+EngineTest > discardPreservesCommittedRecordsAndStartsNewDwellOnNextObservation PASSED
+
+EngineTest > delayedLeaveCannotDropTheActiveSessionOrCreateANewCount PASSED
+
+EngineTest > timeZoneChangeUsesTheNewZoneForNewEvents PASSED
+
+EngineTest > serviceRestartWithinRingWindowDoesNotRecount PASSED
+
+EngineTest > openingACountableAppIsEvidenceAtOnceEvenOutsideTheVideoPlayer PASSED
+
+EngineTest > staleCrossAppCallbackCannotReplaceCurrentSessionOrCreditTimeTwice PASSED
+
+EngineTest > recordsEventsWithUniqueIdsAndMonotonicSequence PASSED
+
+EngineTest > thresholdAfterMidnightBelongsToNewDailyAllowance PASSED
+
+FeedLimitPolicyTest > includedFeaturesStillRespectSurfaceAndDetectionGates PASSED
+
+FeedLimitPolicyTest > invalidDurationsAreBoundedAndNewDayDropsOldBreakAndBypass PASSED
+
+FeedLimitPolicyTest > timedBreakIsPersistentAndOnlyTriggersOncePerMilestone PASSED
+
+FeedLimitPolicyTest > bypassBudgetAndExpiryApplyAcrossAppRestartsAndResetOnNewLocalDay PASSED
+
+FeedLimitPolicyTest > pausesAtTheNthVideoAndDailyCapSurvivesBreakExpiry PASSED
+
+FeedLimitPolicyTest > repeatedExpiryAndRolloverAreIdempotent PASSED
+
+LimitAlertsTest > unknownUsageNeverAlerts PASSED
+
+LimitAlertsTest > nothingBelow80Percent PASSED
+
+LimitAlertsTest > jumpingStraightPast100SendsOnlyTheHigherAlert PASSED
+
+LimitAlertsTest > firesAt80ThenAt100Once PASSED
+
+LimitAlertsTest > keysAreScopedToTheDay PASSED
+
+MemeCollectionTest > randomRotationUsesEveryMemeBeforeRepeatingAndDoesNotFixMemeToCount PASSED
+
+MemeCollectionTest > collectionHasTwentyDistinctReactionsAndNativeScriptCopy PASSED
+
+MemeCollectionTest > composedCaptionsHaveFortyEightVariantsAndKeepCountAndPlatformInAllLanguages PASSED
+
+MemeCollectionTest > languagePoolCyclesWithinTheRequestedLanguageAndFallsBackWhenAssetsAreMissing PASSED
+
+MemeCollectionTest > repeatedReactionChangesCaptionAndEmptyOrSingletonPoolsAreSafe PASSED
+
+MemeCollectionTest > firstCountUsesGreetingInsteadOfHighCountRoast PASSED
+
+MemeMilestoneTest > firstCountShowsOnceIncludingFirstObservationAndNewDay PASSED
+
+MemeMilestoneTest > automaticallyUsesConfiguredLanguageWithEnglishFallback PASSED
+
+MemeMilestoneTest > noReplayAfterReconnectDateChangeOrCorrection PASSED
+
+MemeMilestoneTest > delayedWritesShowOnlyLatestMilestone PASSED
+
+MemeMilestoneTest > newFiftyCrossingsOnly PASSED
+
+PlayerTransitionTest > leavingResetsCandidateButKeepsEngineRecentItemDedupeIncludingAppReopen PASSED
+
+PlayerTransitionTest > captionLossEditsAndStaleOrCrossAppReplacementsDoNotAuthorizeCounts PASSED
+
+PlayerTransitionTest > staleFrameCannotArmOrConsumeANewReplacement PASSED
+
+PlayerTransitionTest > replacementsKeepDwellDeduplicationAndRapidSwipeRules PASSED
+
+PlayerTransitionTest > persistentReplacementKeepsAdsSeparateAndNeverCountsARapidIntermediateShort PASSED
+
+PlayerTransitionTest > persistentPlayerCountsThreeSettledIdentitiesAndDedupesRepeatedEvents PASSED
+
+PlayerTransitionTest > replacementIsOneStructuralSignalWithoutScrollEvents PASSED
+
+PlayerTransitionTest > disconnectClearsAnUnconsumedPlayerReplacement PASSED
+
+PlayerTransitionTest > partialReplacementMetadataDoesNotEraseTheLastCompleteIdentity PASSED
+
+PlayerTransitionTest > unstablePartialAndSingleSignalMetadataNeverAuthorizesAReplacement PASSED
+
+UsageMathTest > unpairedPauseAfterPairIsIgnored PASSED
+
+UsageMathTest > appAlreadyOpenAtStartIsCountedFromStart PASSED
+
+UsageMathTest > duplicateResumesAreMerged PASSED
+
+UsageMathTest > dayBoundsAreDstAware PASSED
+
+UsageMathTest > appStillOpenIsCountedUntilNowNotEndOfDay PASSED
+
+UsageMathTest > transitionsOutsideWindowAreClipped PASSED
+
+UsageMathTest > sumsResumePausePairsPerPackage PASSED
+
+UsageMathTest > otherPackagesAreIgnoredAndMissingOnesAreZero PASSED
+
+ViewCounterTest > adsCountSeparately PASSED
+
+ViewCounterTest > enteringSurfaceCountsFirstItem PASSED
+
+ViewCounterTest > delayedCaptionAfterUnknownEntryStillCounts PASSED
+
+ViewCounterTest > restoredRingPreventsRecountAfterServiceRestart PASSED
+
+ViewCounterTest > fastScrollingBelowDwellIsNotCounted PASSED
+
+ViewCounterTest > lateStructuralSignalCannotReviveStaleOrRestoredIdentity PASSED
+
+ViewCounterTest > returningToPreviousItemIsNotRecounted PASSED
+
+ViewCounterTest > outOfOrderObservationsAreIgnored PASSED
+
+ViewCounterTest > unknownContentIsTimeOnly PASSED
+
+ViewCounterTest > leavingClearsPendingIdentityAndSkippedItemDoesNotCount PASSED
+
+ViewCounterTest > appSwitchAndBackToSameItemIsNotRecounted PASSED
+
+ViewCounterTest > contentChangeWithoutStructuralSignalIsNotATransition PASSED
+
+ViewCounterTest > commentsOrProfileAndBackIsNoNewView PASSED
+
+ViewCounterTest > countsNormalSequence PASSED
+
+ViewCounterTest > repeatedCallbacksForSameItemCountOnce PASSED
+
+ViewCounterTest > itemsOlderThanRingCanCountAgain PASSED
+
+ViewCounterTest > swipeBeforeCaptionArrivesStillCountsTheNextVideoOnce PASSED
+
+ViewCounterTest > delayedIdentityCannotBorrowExpiredOrConsumedSwipe PASSED
+
+ViewCounterTest > identityBeforeStructuralSignalCountsAfterFreshDwell PASSED
+
+[Incubating] Problems report is available at: file:///home/runner/work/driftless/driftless/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.3.1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 1m 29s
+104 actionable tasks: 15 executed, 89 up-to-date

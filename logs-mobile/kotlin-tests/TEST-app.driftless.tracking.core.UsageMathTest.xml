@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.driftless.tracking.core.UsageMathTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-31T11:05:29.570Z" hostname="runnervm48cm3" time="0.003">
+  <properties/>
+  <testcase name="unpairedPauseAfterPairIsIgnored" classname="app.driftless.tracking.core.UsageMathTest" time="0.002"/>
+  <testcase name="appAlreadyOpenAtStartIsCountedFromStart" classname="app.driftless.tracking.core.UsageMathTest" time="0.0"/>
+  <testcase name="duplicateResumesAreMerged" classname="app.driftless.tracking.core.UsageMathTest" time="0.0"/>
+  <testcase name="dayBoundsAreDstAware" classname="app.driftless.tracking.core.UsageMathTest" time="0.0"/>
+  <testcase name="appStillOpenIsCountedUntilNowNotEndOfDay" classname="app.driftless.tracking.core.UsageMathTest" time="0.001"/>
+  <testcase name="transitionsOutsideWindowAreClipped" classname="app.driftless.tracking.core.UsageMathTest" time="0.0"/>
+  <testcase name="sumsResumePausePairsPerPackage" classname="app.driftless.tracking.core.UsageMathTest" time="0.0"/>
+  <testcase name="otherPackagesAreIgnoredAndMissingOnesAreZero" classname="app.driftless.tracking.core.UsageMathTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

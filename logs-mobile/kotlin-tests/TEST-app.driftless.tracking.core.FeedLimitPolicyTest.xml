@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.driftless.tracking.core.FeedLimitPolicyTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-31T11:05:29.523Z" hostname="runnervm48cm3" time="0.001">
+  <properties/>
+  <testcase name="includedFeaturesStillRespectSurfaceAndDetectionGates" classname="app.driftless.tracking.core.FeedLimitPolicyTest" time="0.0"/>
+  <testcase name="invalidDurationsAreBoundedAndNewDayDropsOldBreakAndBypass" classname="app.driftless.tracking.core.FeedLimitPolicyTest" time="0.001"/>
+  <testcase name="timedBreakIsPersistentAndOnlyTriggersOncePerMilestone" classname="app.driftless.tracking.core.FeedLimitPolicyTest" time="0.0"/>
+  <testcase name="bypassBudgetAndExpiryApplyAcrossAppRestartsAndResetOnNewLocalDay" classname="app.driftless.tracking.core.FeedLimitPolicyTest" time="0.0"/>
+  <testcase name="pausesAtTheNthVideoAndDailyCapSurvivesBreakExpiry" classname="app.driftless.tracking.core.FeedLimitPolicyTest" time="0.0"/>
+  <testcase name="repeatedExpiryAndRolloverAreIdempotent" classname="app.driftless.tracking.core.FeedLimitPolicyTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

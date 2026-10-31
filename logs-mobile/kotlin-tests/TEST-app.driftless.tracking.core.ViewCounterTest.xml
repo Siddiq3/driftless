@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.driftless.tracking.core.ViewCounterTest" tests="19" skipped="0" failures="0" errors="0" timestamp="2026-10-31T11:05:29.575Z" hostname="runnervm48cm3" time="0.005">
+  <properties/>
+  <testcase name="adsCountSeparately" classname="app.driftless.tracking.core.ViewCounterTest" time="0.001"/>
+  <testcase name="enteringSurfaceCountsFirstItem" classname="app.driftless.tracking.core.ViewCounterTest" time="0.0"/>
+  <testcase name="delayedCaptionAfterUnknownEntryStillCounts" classname="app.driftless.tracking.core.ViewCounterTest" time="0.0"/>
+  <testcase name="restoredRingPreventsRecountAfterServiceRestart" classname="app.driftless.tracking.core.ViewCounterTest" time="0.0"/>
+  <testcase name="fastScrollingBelowDwellIsNotCounted" classname="app.driftless.tracking.core.ViewCounterTest" time="0.0"/>
+  <testcase name="lateStructuralSignalCannotReviveStaleOrRestoredIdentity" classname="app.driftless.tracking.core.ViewCounterTest" time="0.0"/>
+  <testcase name="returningToPreviousItemIsNotRecounted" classname="app.driftless.tracking.core.ViewCounterTest" time="0.002"/>
+  <testcase name="outOfOrderObservationsAreIgnored" classname="app.driftless.tracking.core.ViewCounterTest" time="0.0"/>
+  <testcase name="unknownContentIsTimeOnly" classname="app.driftless.tracking.core.ViewCounterTest" time="0.0"/>
+  <testcase name="leavingClearsPendingIdentityAndSkippedItemDoesNotCount" classname="app.driftless.tracking.core.ViewCounterTest" time="0.0"/>
+  <testcase name="appSwitchAndBackToSameItemIsNotRecounted" classname="app.driftless.tracking.core.ViewCounterTest" time="0.0"/>
+  <testcase name="contentChangeWithoutStructuralSignalIsNotATransition" classname="app.driftless.tracking.core.ViewCounterTest" time="0.0"/>
+  <testcase name="commentsOrProfileAndBackIsNoNewView" classname="app.driftless.tracking.core.ViewCounterTest" time="0.0"/>
+  <testcase name="countsNormalSequence" classname="app.driftless.tracking.core.ViewCounterTest" time="0.0"/>
+  <testcase name="repeatedCallbacksForSameItemCountOnce" classname="app.driftless.tracking.core.ViewCounterTest" time="0.0"/>
+  <testcase name="itemsOlderThanRingCanCountAgain" classname="app.driftless.tracking.core.ViewCounterTest" time="0.001"/>
+  <testcase name="swipeBeforeCaptionArrivesStillCountsTheNextVideoOnce" classname="app.driftless.tracking.core.ViewCounterTest" time="0.0"/>
+  <testcase name="delayedIdentityCannotBorrowExpiredOrConsumedSwipe" classname="app.driftless.tracking.core.ViewCounterTest" time="0.0"/>
+  <testcase name="identityBeforeStructuralSignalCountsAfterFreshDwell" classname="app.driftless.tracking.core.ViewCounterTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

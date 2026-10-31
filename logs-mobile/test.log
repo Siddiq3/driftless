@@ -1,0 +1,1062 @@
+
+> scrollsnooze@1.0.2 test /home/runner/work/driftless/driftless
+> jest --ci
+
+(node:2836) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS test/personal-architecture.test.ts
+PASS test/api-client.test.ts
+PASS test/google-session.test.tsx
+  ● Console
+
+    console.error
+      An update to GoogleSession inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+    [0m [90m 107 |[39m   jest[33m.[39mspyOn(console[33m,[39m [32m'error'[39m)[33m.[39mmockImplementation(([33m...[39margs[33m:[39m unknown[]) [33m=>[39m {
+     [90m 108 |[39m     [36mif[39m ([33mString[39m(args[[35m0[39m])[33m.[39mincludes([32m'react-test-renderer is deprecated'[39m)) [36mreturn[39m[33m;[39m
+    [31m[1m>[22m[39m[90m 109 |[39m     original([33m...[39margs)[33m;[39m
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 110 |[39m   })[33m;[39m
+     [90m 111 |[39m })[33m;[39m
+     [90m 112 |[39m afterEach([36masync[39m () [33m=>[39m {[0m
+
+      at console.original (test/google-session.test.tsx:109:5)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at dispatchReducerAction (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:6155:13)
+      at identityLoaded (src/auth/session.tsx:290:62)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12
+      at apply (src/auth/session.tsx:292:10)
+
+    console.error
+      An update to GoogleSession inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+    [0m [90m 107 |[39m   jest[33m.[39mspyOn(console[33m,[39m [32m'error'[39m)[33m.[39mmockImplementation(([33m...[39margs[33m:[39m unknown[]) [33m=>[39m {
+     [90m 108 |[39m     [36mif[39m ([33mString[39m(args[[35m0[39m])[33m.[39mincludes([32m'react-test-renderer is deprecated'[39m)) [36mreturn[39m[33m;[39m
+    [31m[1m>[22m[39m[90m 109 |[39m     original([33m...[39margs)[33m;[39m
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 110 |[39m   })[33m;[39m
+     [90m 111 |[39m })[33m;[39m
+     [90m 112 |[39m afterEach([36masync[39m () [33m=>[39m {[0m
+
+      at console.original (test/google-session.test.tsx:109:5)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at dispatchReducerAction (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:6155:13)
+      at identityLoaded (src/auth/session.tsx:290:62)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12
+      at apply (src/auth/session.tsx:292:10)
+
+    console.error
+      An update to GoogleSession inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+    [0m [90m 107 |[39m   jest[33m.[39mspyOn(console[33m,[39m [32m'error'[39m)[33m.[39mmockImplementation(([33m...[39margs[33m:[39m unknown[]) [33m=>[39m {
+     [90m 108 |[39m     [36mif[39m ([33mString[39m(args[[35m0[39m])[33m.[39mincludes([32m'react-test-renderer is deprecated'[39m)) [36mreturn[39m[33m;[39m
+    [31m[1m>[22m[39m[90m 109 |[39m     original([33m...[39margs)[33m;[39m
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 110 |[39m   })[33m;[39m
+     [90m 111 |[39m })[33m;[39m
+     [90m 112 |[39m afterEach([36masync[39m () [33m=>[39m {[0m
+
+      at console.original (test/google-session.test.tsx:109:5)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at dispatchReducerAction (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:6155:13)
+      at identityLoaded (src/auth/session.tsx:290:62)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12
+      at apply (src/auth/session.tsx:292:10)
+
+    console.error
+      An update to GoogleSession inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+    [0m [90m 107 |[39m   jest[33m.[39mspyOn(console[33m,[39m [32m'error'[39m)[33m.[39mmockImplementation(([33m...[39margs[33m:[39m unknown[]) [33m=>[39m {
+     [90m 108 |[39m     [36mif[39m ([33mString[39m(args[[35m0[39m])[33m.[39mincludes([32m'react-test-renderer is deprecated'[39m)) [36mreturn[39m[33m;[39m
+    [31m[1m>[22m[39m[90m 109 |[39m     original([33m...[39margs)[33m;[39m
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 110 |[39m   })[33m;[39m
+     [90m 111 |[39m })[33m;[39m
+     [90m 112 |[39m afterEach([36masync[39m () [33m=>[39m {[0m
+
+      at console.original (test/google-session.test.tsx:109:5)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at dispatchReducerAction (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:6155:13)
+      at identityLoaded (src/auth/session.tsx:290:62)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12
+      at apply (src/auth/session.tsx:292:10)
+
+    console.info
+      startup_timing { stage: 'google-session', elapsedMs: 10000 }
+
+      at info (src/startup/timing.ts:17:54)
+          at Generator.throw (<anonymous>)
+
+PASS test/sync.test.ts
+PASS test/account-lifecycle.test.tsx (8.228 s)
+  ● Console
+
+    console.warn
+      account_bootstrap_failed { stage: 'account', code: 'local_initialization' }
+
+    [0m [90m 243 |[39m         setError(failure[33m.[39mmessage)[33m;[39m
+     [90m 244 |[39m         [90m// Codes/stages only: never log identity, credentials, URLs or private payloads.[39m
+    [31m[1m>[22m[39m[90m 245 |[39m         console[33m.[39mwarn([32m'account_bootstrap_failed'[39m[33m,[39m { stage[33m:[39m failedStage[33m,[39m code[33m:[39m failure[33m.[39mcode })[33m;[39m
+     [90m     |[39m                 [31m[1m^[22m[39m
+     [90m 246 |[39m       }
+     [90m 247 |[39m     })[33m;[39m
+     [90m 248 |[39m     [36mreturn[39m () [33m=>[39m {[0m
+
+      at warn (src/auth/account.tsx:245:17)
+
+    console.warn
+      account_bootstrap_failed { stage: 'registration', code: 'local_initialization' }
+
+    [0m [90m 243 |[39m         setError(failure[33m.[39mmessage)[33m;[39m
+     [90m 244 |[39m         [90m// Codes/stages only: never log identity, credentials, URLs or private payloads.[39m
+    [31m[1m>[22m[39m[90m 245 |[39m         console[33m.[39mwarn([32m'account_bootstrap_failed'[39m[33m,[39m { stage[33m:[39m failedStage[33m,[39m code[33m:[39m failure[33m.[39mcode })[33m;[39m
+     [90m     |[39m                 [31m[1m^[22m[39m
+     [90m 246 |[39m       }
+     [90m 247 |[39m     })[33m;[39m
+     [90m 248 |[39m     [36mreturn[39m () [33m=>[39m {[0m
+
+      at warn (src/auth/account.tsx:245:17)
+
+    console.warn
+      account_bootstrap_failed { stage: 'account', code: 'network' }
+
+    [0m [90m 243 |[39m         setError(failure[33m.[39mmessage)[33m;[39m
+     [90m 244 |[39m         [90m// Codes/stages only: never log identity, credentials, URLs or private payloads.[39m
+    [31m[1m>[22m[39m[90m 245 |[39m         console[33m.[39mwarn([32m'account_bootstrap_failed'[39m[33m,[39m { stage[33m:[39m failedStage[33m,[39m code[33m:[39m failure[33m.[39mcode })[33m;[39m
+     [90m     |[39m                 [31m[1m^[22m[39m
+     [90m 246 |[39m       }
+     [90m 247 |[39m     })[33m;[39m
+     [90m 248 |[39m     [36mreturn[39m () [33m=>[39m {[0m
+
+      at warn (src/auth/account.tsx:245:17)
+
+    console.warn
+      account_bootstrap_failed { stage: 'profile', code: 'unavailable' }
+
+    [0m [90m 243 |[39m         setError(failure[33m.[39mmessage)[33m;[39m
+     [90m 244 |[39m         [90m// Codes/stages only: never log identity, credentials, URLs or private payloads.[39m
+    [31m[1m>[22m[39m[90m 245 |[39m         console[33m.[39mwarn([32m'account_bootstrap_failed'[39m[33m,[39m { stage[33m:[39m failedStage[33m,[39m code[33m:[39m failure[33m.[39mcode })[33m;[39m
+     [90m     |[39m                 [31m[1m^[22m[39m
+     [90m 246 |[39m       }
+     [90m 247 |[39m     })[33m;[39m
+     [90m 248 |[39m     [36mreturn[39m () [33m=>[39m {[0m
+
+      at warn (src/auth/account.tsx:245:17)
+
+    console.warn
+      account_bootstrap_failed { stage: 'storage', code: 'unavailable' }
+
+    [0m [90m 243 |[39m         setError(failure[33m.[39mmessage)[33m;[39m
+     [90m 244 |[39m         [90m// Codes/stages only: never log identity, credentials, URLs or private payloads.[39m
+    [31m[1m>[22m[39m[90m 245 |[39m         console[33m.[39mwarn([32m'account_bootstrap_failed'[39m[33m,[39m { stage[33m:[39m failedStage[33m,[39m code[33m:[39m failure[33m.[39mcode })[33m;[39m
+     [90m     |[39m                 [31m[1m^[22m[39m
+     [90m 246 |[39m       }
+     [90m 247 |[39m     })[33m;[39m
+     [90m 248 |[39m     [36mreturn[39m () [33m=>[39m {[0m
+
+      at warn (src/auth/account.tsx:245:17)
+
+    console.warn
+      account_bootstrap_failed { stage: 'profile', code: 'unavailable' }
+
+    [0m [90m 243 |[39m         setError(failure[33m.[39mmessage)[33m;[39m
+     [90m 244 |[39m         [90m// Codes/stages only: never log identity, credentials, URLs or private payloads.[39m
+    [31m[1m>[22m[39m[90m 245 |[39m         console[33m.[39mwarn([32m'account_bootstrap_failed'[39m[33m,[39m { stage[33m:[39m failedStage[33m,[39m code[33m:[39m failure[33m.[39mcode })[33m;[39m
+     [90m     |[39m                 [31m[1m^[22m[39m
+     [90m 246 |[39m       }
+     [90m 247 |[39m     })[33m;[39m
+     [90m 248 |[39m     [36mreturn[39m () [33m=>[39m {[0m
+
+      at warn (src/auth/account.tsx:245:17)
+
+    console.warn
+      account_bootstrap_failed { stage: 'restore', code: 'unavailable' }
+
+    [0m [90m 243 |[39m         setError(failure[33m.[39mmessage)[33m;[39m
+     [90m 244 |[39m         [90m// Codes/stages only: never log identity, credentials, URLs or private payloads.[39m
+    [31m[1m>[22m[39m[90m 245 |[39m         console[33m.[39mwarn([32m'account_bootstrap_failed'[39m[33m,[39m { stage[33m:[39m failedStage[33m,[39m code[33m:[39m failure[33m.[39mcode })[33m;[39m
+     [90m     |[39m                 [31m[1m^[22m[39m
+     [90m 246 |[39m       }
+     [90m 247 |[39m     })[33m;[39m
+     [90m 248 |[39m     [36mreturn[39m () [33m=>[39m {[0m
+
+      at warn (src/auth/account.tsx:245:17)
+
+    console.warn
+      account_bootstrap_failed { stage: 'restore', code: 'unauthorized' }
+
+    [0m [90m 243 |[39m         setError(failure[33m.[39mmessage)[33m;[39m
+     [90m 244 |[39m         [90m// Codes/stages only: never log identity, credentials, URLs or private payloads.[39m
+    [31m[1m>[22m[39m[90m 245 |[39m         console[33m.[39mwarn([32m'account_bootstrap_failed'[39m[33m,[39m { stage[33m:[39m failedStage[33m,[39m code[33m:[39m failure[33m.[39mcode })[33m;[39m
+     [90m     |[39m                 [31m[1m^[22m[39m
+     [90m 246 |[39m       }
+     [90m 247 |[39m     })[33m;[39m
+     [90m 248 |[39m     [36mreturn[39m () [33m=>[39m {[0m
+
+      at warn (src/auth/account.tsx:245:17)
+
+    console.warn
+      account_bootstrap_failed { stage: 'account', code: 'contract_mismatch' }
+
+    [0m [90m 243 |[39m         setError(failure[33m.[39mmessage)[33m;[39m
+     [90m 244 |[39m         [90m// Codes/stages only: never log identity, credentials, URLs or private payloads.[39m
+    [31m[1m>[22m[39m[90m 245 |[39m         console[33m.[39mwarn([32m'account_bootstrap_failed'[39m[33m,[39m { stage[33m:[39m failedStage[33m,[39m code[33m:[39m failure[33m.[39mcode })[33m;[39m
+     [90m     |[39m                 [31m[1m^[22m[39m
+     [90m 246 |[39m       }
+     [90m 247 |[39m     })[33m;[39m
+     [90m 248 |[39m     [36mreturn[39m () [33m=>[39m {[0m
+
+      at warn (src/auth/account.tsx:245:17)
+
+    console.warn
+      account_bootstrap_failed { stage: 'timezone', code: 'unavailable' }
+
+    [0m [90m 243 |[39m         setError(failure[33m.[39mmessage)[33m;[39m
+     [90m 244 |[39m         [90m// Codes/stages only: never log identity, credentials, URLs or private payloads.[39m
+    [31m[1m>[22m[39m[90m 245 |[39m         console[33m.[39mwarn([32m'account_bootstrap_failed'[39m[33m,[39m { stage[33m:[39m failedStage[33m,[39m code[33m:[39m failure[33m.[39mcode })[33m;[39m
+     [90m     |[39m                 [31m[1m^[22m[39m
+     [90m 246 |[39m       }
+     [90m 247 |[39m     })[33m;[39m
+     [90m 248 |[39m     [36mreturn[39m () [33m=>[39m {[0m
+
+      at warn (src/auth/account.tsx:245:17)
+
+    console.warn
+      account_bootstrap_failed { stage: 'timezone', code: 'local_initialization' }
+
+    [0m [90m 243 |[39m         setError(failure[33m.[39mmessage)[33m;[39m
+     [90m 244 |[39m         [90m// Codes/stages only: never log identity, credentials, URLs or private payloads.[39m
+    [31m[1m>[22m[39m[90m 245 |[39m         console[33m.[39mwarn([32m'account_bootstrap_failed'[39m[33m,[39m { stage[33m:[39m failedStage[33m,[39m code[33m:[39m failure[33m.[39mcode })[33m;[39m
+     [90m     |[39m                 [31m[1m^[22m[39m
+     [90m 246 |[39m       }
+     [90m 247 |[39m     })[33m;[39m
+     [90m 248 |[39m     [36mreturn[39m () [33m=>[39m {[0m
+
+      at warn (src/auth/account.tsx:245:17)
+
+PASS test/account-backup.test.ts
+(node:2835) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS test/goals-sync.test.ts
+FAIL test/guest-migration.test.ts
+  ● 50 guest Reels and goals survive upload/readback and concurrent repeat backup
+
+    unable to open database file
+
+    [0m [90m 4 |[39m [90m/** Execute the production SQL against SQLite, with real rollback semantics. */[39m
+     [90m 5 |[39m [36mexport[39m [36mfunction[39m sqlite(filename [33m=[39m [32m':memory:'[39m) {
+    [31m[1m>[22m[39m[90m 6 |[39m   [36mconst[39m raw [33m=[39m [36mnew[39m [33mDatabaseSync[39m(filename)[33m;[39m
+     [90m   |[39m               [31m[1m^[22m[39m
+     [90m 7 |[39m   [36mconst[39m adapter [33m=[39m {
+     [90m 8 |[39m     execAsync[33m:[39m [36masync[39m (sql[33m:[39m string) [33m=>[39m {
+     [90m 9 |[39m       raw[33m.[39mexec(sql)[33m;[39m[0m
+
+      at sqlite (test/helpers/sqlite.ts:6:15)
+      at Object.<anonymous> (test/guest-migration.test.ts:45:26)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● 50 guest Reels and goals survive upload/readback and concurrent repeat backup
+
+    TypeError: close is not a function
+
+    [0m [90m 127 |[39m })[33m;[39m
+     [90m 128 |[39m afterEach(() [33m=>[39m {
+    [31m[1m>[22m[39m[90m 129 |[39m   close()[33m;[39m
+     [90m     |[39m   [31m[1m^[22m[39m
+     [90m 130 |[39m   unlinkSync(filename)[33m;[39m
+     [90m 131 |[39m   selectStorageScope([32m'legacy'[39m)[33m;[39m
+     [90m 132 |[39m })[33m;[39m[0m
+
+      at Object.close (test/guest-migration.test.ts:129:3)
+
+  ● registration/import followed by upload failure preserves source and retries the same batch
+
+    unable to open database file
+
+    [0m [90m 4 |[39m [90m/** Execute the production SQL against SQLite, with real rollback semantics. */[39m
+     [90m 5 |[39m [36mexport[39m [36mfunction[39m sqlite(filename [33m=[39m [32m':memory:'[39m) {
+    [31m[1m>[22m[39m[90m 6 |[39m   [36mconst[39m raw [33m=[39m [36mnew[39m [33mDatabaseSync[39m(filename)[33m;[39m
+     [90m   |[39m               [31m[1m^[22m[39m
+     [90m 7 |[39m   [36mconst[39m adapter [33m=[39m {
+     [90m 8 |[39m     execAsync[33m:[39m [36masync[39m (sql[33m:[39m string) [33m=>[39m {
+     [90m 9 |[39m       raw[33m.[39mexec(sql)[33m;[39m[0m
+
+      at sqlite (test/helpers/sqlite.ts:6:15)
+      at Object.<anonymous> (test/guest-migration.test.ts:45:26)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● registration/import followed by upload failure preserves source and retries the same batch
+
+    TypeError: close is not a function
+
+    [0m [90m 127 |[39m })[33m;[39m
+     [90m 128 |[39m afterEach(() [33m=>[39m {
+    [31m[1m>[22m[39m[90m 129 |[39m   close()[33m;[39m
+     [90m     |[39m   [31m[1m^[22m[39m
+     [90m 130 |[39m   unlinkSync(filename)[33m;[39m
+     [90m 131 |[39m   selectStorageScope([32m'legacy'[39m)[33m;[39m
+     [90m 132 |[39m })[33m;[39m[0m
+
+      at Object.close (test/guest-migration.test.ts:129:3)
+
+  ● lost readback never acknowledges the guest source and resumes without duplicating remote records
+
+    unable to open database file
+
+    [0m [90m 4 |[39m [90m/** Execute the production SQL against SQLite, with real rollback semantics. */[39m
+     [90m 5 |[39m [36mexport[39m [36mfunction[39m sqlite(filename [33m=[39m [32m':memory:'[39m) {
+    [31m[1m>[22m[39m[90m 6 |[39m   [36mconst[39m raw [33m=[39m [36mnew[39m [33mDatabaseSync[39m(filename)[33m;[39m
+     [90m   |[39m               [31m[1m^[22m[39m
+     [90m 7 |[39m   [36mconst[39m adapter [33m=[39m {
+     [90m 8 |[39m     execAsync[33m:[39m [36masync[39m (sql[33m:[39m string) [33m=>[39m {
+     [90m 9 |[39m       raw[33m.[39mexec(sql)[33m;[39m[0m
+
+      at sqlite (test/helpers/sqlite.ts:6:15)
+      at Object.<anonymous> (test/guest-migration.test.ts:45:26)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● lost readback never acknowledges the guest source and resumes without duplicating remote records
+
+    TypeError: close is not a function
+
+    [0m [90m 127 |[39m })[33m;[39m
+     [90m 128 |[39m afterEach(() [33m=>[39m {
+    [31m[1m>[22m[39m[90m 129 |[39m   close()[33m;[39m
+     [90m     |[39m   [31m[1m^[22m[39m
+     [90m 130 |[39m   unlinkSync(filename)[33m;[39m
+     [90m 131 |[39m   selectStorageScope([32m'legacy'[39m)[33m;[39m
+     [90m 132 |[39m })[33m;[39m[0m
+
+      at Object.close (test/guest-migration.test.ts:129:3)
+
+  ● existing remote device history is preserved alongside the guest device identity
+
+    unable to open database file
+
+    [0m [90m 4 |[39m [90m/** Execute the production SQL against SQLite, with real rollback semantics. */[39m
+     [90m 5 |[39m [36mexport[39m [36mfunction[39m sqlite(filename [33m=[39m [32m':memory:'[39m) {
+    [31m[1m>[22m[39m[90m 6 |[39m   [36mconst[39m raw [33m=[39m [36mnew[39m [33mDatabaseSync[39m(filename)[33m;[39m
+     [90m   |[39m               [31m[1m^[22m[39m
+     [90m 7 |[39m   [36mconst[39m adapter [33m=[39m {
+     [90m 8 |[39m     execAsync[33m:[39m [36masync[39m (sql[33m:[39m string) [33m=>[39m {
+     [90m 9 |[39m       raw[33m.[39mexec(sql)[33m;[39m[0m
+
+      at sqlite (test/helpers/sqlite.ts:6:15)
+      at Object.<anonymous> (test/guest-migration.test.ts:45:26)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● existing remote device history is preserved alongside the guest device identity
+
+    TypeError: close is not a function
+
+    [0m [90m 127 |[39m })[33m;[39m
+     [90m 128 |[39m afterEach(() [33m=>[39m {
+    [31m[1m>[22m[39m[90m 129 |[39m   close()[33m;[39m
+     [90m     |[39m   [31m[1m^[22m[39m
+     [90m 130 |[39m   unlinkSync(filename)[33m;[39m
+     [90m 131 |[39m   selectStorageScope([32m'legacy'[39m)[33m;[39m
+     [90m 132 |[39m })[33m;[39m[0m
+
+      at Object.close (test/guest-migration.test.ts:129:3)
+
+  ● reopens its durable import journal after process termination and finishes readback once
+
+    unable to open database file
+
+    [0m [90m 4 |[39m [90m/** Execute the production SQL against SQLite, with real rollback semantics. */[39m
+     [90m 5 |[39m [36mexport[39m [36mfunction[39m sqlite(filename [33m=[39m [32m':memory:'[39m) {
+    [31m[1m>[22m[39m[90m 6 |[39m   [36mconst[39m raw [33m=[39m [36mnew[39m [33mDatabaseSync[39m(filename)[33m;[39m
+     [90m   |[39m               [31m[1m^[22m[39m
+     [90m 7 |[39m   [36mconst[39m adapter [33m=[39m {
+     [90m 8 |[39m     execAsync[33m:[39m [36masync[39m (sql[33m:[39m string) [33m=>[39m {
+     [90m 9 |[39m       raw[33m.[39mexec(sql)[33m;[39m[0m
+
+      at sqlite (test/helpers/sqlite.ts:6:15)
+      at Object.<anonymous> (test/guest-migration.test.ts:45:26)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● reopens its durable import journal after process termination and finishes readback once
+
+    TypeError: close is not a function
+
+    [0m [90m 127 |[39m })[33m;[39m
+     [90m 128 |[39m afterEach(() [33m=>[39m {
+    [31m[1m>[22m[39m[90m 129 |[39m   close()[33m;[39m
+     [90m     |[39m   [31m[1m^[22m[39m
+     [90m 130 |[39m   unlinkSync(filename)[33m;[39m
+     [90m 131 |[39m   selectStorageScope([32m'legacy'[39m)[33m;[39m
+     [90m 132 |[39m })[33m;[39m[0m
+
+      at Object.close (test/guest-migration.test.ts:129:3)
+
+  ● keeps auth-window recording in the current guest source while JS remains quarantined
+
+    unable to open database file
+
+    [0m [90m 4 |[39m [90m/** Execute the production SQL against SQLite, with real rollback semantics. */[39m
+     [90m 5 |[39m [36mexport[39m [36mfunction[39m sqlite(filename [33m=[39m [32m':memory:'[39m) {
+    [31m[1m>[22m[39m[90m 6 |[39m   [36mconst[39m raw [33m=[39m [36mnew[39m [33mDatabaseSync[39m(filename)[33m;[39m
+     [90m   |[39m               [31m[1m^[22m[39m
+     [90m 7 |[39m   [36mconst[39m adapter [33m=[39m {
+     [90m 8 |[39m     execAsync[33m:[39m [36masync[39m (sql[33m:[39m string) [33m=>[39m {
+     [90m 9 |[39m       raw[33m.[39mexec(sql)[33m;[39m[0m
+
+      at sqlite (test/helpers/sqlite.ts:6:15)
+      at Object.<anonymous> (test/guest-migration.test.ts:45:26)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● keeps auth-window recording in the current guest source while JS remains quarantined
+
+    TypeError: close is not a function
+
+    [0m [90m 127 |[39m })[33m;[39m
+     [90m 128 |[39m afterEach(() [33m=>[39m {
+    [31m[1m>[22m[39m[90m 129 |[39m   close()[33m;[39m
+     [90m     |[39m   [31m[1m^[22m[39m
+     [90m 130 |[39m   unlinkSync(filename)[33m;[39m
+     [90m 131 |[39m   selectStorageScope([32m'legacy'[39m)[33m;[39m
+     [90m 132 |[39m })[33m;[39m[0m
+
+      at Object.close (test/guest-migration.test.ts:129:3)
+
+  ● does not verify a migration if server readback loses its platform breakdown
+
+    unable to open database file
+
+    [0m [90m 4 |[39m [90m/** Execute the production SQL against SQLite, with real rollback semantics. */[39m
+     [90m 5 |[39m [36mexport[39m [36mfunction[39m sqlite(filename [33m=[39m [32m':memory:'[39m) {
+    [31m[1m>[22m[39m[90m 6 |[39m   [36mconst[39m raw [33m=[39m [36mnew[39m [33mDatabaseSync[39m(filename)[33m;[39m
+     [90m   |[39m               [31m[1m^[22m[39m
+     [90m 7 |[39m   [36mconst[39m adapter [33m=[39m {
+     [90m 8 |[39m     execAsync[33m:[39m [36masync[39m (sql[33m:[39m string) [33m=>[39m {
+     [90m 9 |[39m       raw[33m.[39mexec(sql)[33m;[39m[0m
+
+      at sqlite (test/helpers/sqlite.ts:6:15)
+      at Object.<anonymous> (test/guest-migration.test.ts:45:26)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● does not verify a migration if server readback loses its platform breakdown
+
+    TypeError: close is not a function
+
+    [0m [90m 127 |[39m })[33m;[39m
+     [90m 128 |[39m afterEach(() [33m=>[39m {
+    [31m[1m>[22m[39m[90m 129 |[39m   close()[33m;[39m
+     [90m     |[39m   [31m[1m^[22m[39m
+     [90m 130 |[39m   unlinkSync(filename)[33m;[39m
+     [90m 131 |[39m   selectStorageScope([32m'legacy'[39m)[33m;[39m
+     [90m 132 |[39m })[33m;[39m[0m
+
+      at Object.close (test/guest-migration.test.ts:129:3)
+
+PASS test/responsive-layout.test.tsx
+PASS test/wrapped.test.ts
+PASS test/activity.test.ts
+PASS test/circle-board.test.tsx (8.684 s)
+  ● Console
+
+    console.warn
+      Clipboard has been extracted from react-native core and will be removed in a future release. It can now be installed and imported from '@react-native-clipboard/clipboard' instead of 'react-native'. See https://github.com/react-native-clipboard/clipboard
+
+    [0m [90m 118 |[39m   mockApi[33m.[39mcreateBattleInvite[33m.[39mmockResolvedValue({ code[33m:[39m [32m'ABCDEFGHJK'[39m })[33m;[39m
+     [90m 119 |[39m   jest[33m.[39mspyOn([33mShare[39m[33m,[39m [32m'share'[39m)[33m.[39mmockResolvedValue({ action[33m:[39m [33mShare[39m[33m.[39msharedAction })[33m;[39m
+    [31m[1m>[22m[39m[90m 120 |[39m   jest[33m.[39mspyOn([33mClipboard[39m[33m,[39m [32m'setString'[39m)[33m.[39mmockImplementation(() [33m=>[39m undefined)[33m;[39m
+     [90m     |[39m              [31m[1m^[22m[39m
+     [90m 121 |[39m })[33m;[39m
+     [90m 122 |[39m afterEach([36masync[39m () [33m=>[39m {
+     [90m 123 |[39m   [36mif[39m (tree) [36mawait[39m act([36masync[39m () [33m=>[39m tree[33m.[39munmount())[33m;[39m[0m
+
+      at warn (node_modules/react-native/Libraries/Utilities/warnOnce.js:27:11)
+      at Object.warnOnce [as Clipboard] (node_modules/react-native/index.js:218:5)
+      at Object.Clipboard (test/circle-board.test.tsx:120:14)
+
+PASS test/focus-screen.test.tsx
+PASS test/account-usage.test.ts
+PASS test/app-update-boundary.test.tsx
+  ● Console
+
+    console.info
+      startup_timing { stage: 'play-update', elapsedMs: 1500 }
+
+      at info (src/startup/timing.ts:17:54)
+
+PASS test/home-swr.test.tsx
+PASS test/onboarding-motion.test.tsx
+PASS test/wrapped-stories.test.tsx
+PASS test/settings-capabilities.test.tsx
+PASS test/onboarding.test.ts
+PASS test/account-backup-provider.test.tsx
+PASS test/battles-screen.test.tsx
+
+  ●  Cannot log after tests are done. Did you forget to wait for something async in your test?
+    Attempted to log "startup_timing { stage: 'google-session', elapsedMs: 10787 }".
+
+    [0m [90m 15 |[39m     timings[33m.[39mpush(timing)[33m;[39m
+     [90m 16 |[39m     [36mif[39m (timings[33m.[39mlength [33m>[39m [35m32[39m) timings[33m.[39mshift()[33m;[39m
+    [31m[1m>[22m[39m[90m 17 |[39m     [36mif[39m (__DEV__ [33m&&[39m timing[33m.[39melapsedMs [33m>=[39m [35m1000[39m) console[33m.[39minfo([32m'startup_timing'[39m[33m,[39m timing)[33m;[39m
+     [90m    |[39m                                                      [31m[1m^[22m[39m
+     [90m 18 |[39m   }
+     [90m 19 |[39m }
+     [90m 20 |[39m[0m
+
+      at console.info (node_modules/@jest/console/build/BufferedConsole.js:153:10)
+      at info (src/startup/timing.ts:17:54)
+          at Generator.throw (<anonymous>)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _throw (node_modules/@babel/runtime/helpers/asyncToGenerator.js:20:9)
+
+PASS test/capabilities.test.ts
+PASS test/local-reset.test.ts
+PASS test/brain-state.test.ts
+PASS test/battle-invite-coordinator.test.tsx
+PASS test/disclosure-renewal.test.tsx
+(node:2834) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS test/migrations.test.ts
+PASS test/accessibility-setup.test.tsx
+PASS test/progress.test.ts
+PASS test/wrapped-entry.test.tsx
+PASS test/profile.test.tsx
+PASS test/ios-screen-time.test.tsx
+PASS test/help.test.tsx
+  ● Console
+
+    console.error
+      An update to Root inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+    [0m [90m 54 |[39m   })[33m;[39m
+     [90m 55 |[39m })[33m;[39m
+    [31m[1m>[22m[39m[90m 56 |[39m afterEach(() [33m=>[39m tree[33m.[39munmount())[33m;[39m
+     [90m    |[39m                      [31m[1m^[22m[39m
+     [90m 57 |[39m
+     [90m 58 |[39m it([32m'lists only ScrollSnooze features and no subscription option'[39m[33m,[39m [36masync[39m () [33m=>[39m {
+     [90m 59 |[39m   [36mawait[39m tap([32m'Report an issue'[39m)[33m;[39m[0m
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at updateContainerImpl (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14984:9)
+      at updateContainer (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14927:7)
+      at Object.unmount (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:17413:14)
+      at Object.unmount (test/help.test.tsx:56:22)
+
+    console.error
+      An update to Root inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+    [0m [90m 54 |[39m   })[33m;[39m
+     [90m 55 |[39m })[33m;[39m
+    [31m[1m>[22m[39m[90m 56 |[39m afterEach(() [33m=>[39m tree[33m.[39munmount())[33m;[39m
+     [90m    |[39m                      [31m[1m^[22m[39m
+     [90m 57 |[39m
+     [90m 58 |[39m it([32m'lists only ScrollSnooze features and no subscription option'[39m[33m,[39m [36masync[39m () [33m=>[39m {
+     [90m 59 |[39m   [36mawait[39m tap([32m'Report an issue'[39m)[33m;[39m[0m
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at updateContainerImpl (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14984:9)
+      at updateContainer (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14927:7)
+      at Object.unmount (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:17413:14)
+      at Object.unmount (test/help.test.tsx:56:22)
+
+    console.error
+      An update to Root inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+    [0m [90m 54 |[39m   })[33m;[39m
+     [90m 55 |[39m })[33m;[39m
+    [31m[1m>[22m[39m[90m 56 |[39m afterEach(() [33m=>[39m tree[33m.[39munmount())[33m;[39m
+     [90m    |[39m                      [31m[1m^[22m[39m
+     [90m 57 |[39m
+     [90m 58 |[39m it([32m'lists only ScrollSnooze features and no subscription option'[39m[33m,[39m [36masync[39m () [33m=>[39m {
+     [90m 59 |[39m   [36mawait[39m tap([32m'Report an issue'[39m)[33m;[39m[0m
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at updateContainerImpl (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14984:9)
+      at updateContainer (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14927:7)
+      at Object.unmount (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:17413:14)
+      at Object.unmount (test/help.test.tsx:56:22)
+
+    console.error
+      An update to Root inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+    [0m [90m 54 |[39m   })[33m;[39m
+     [90m 55 |[39m })[33m;[39m
+    [31m[1m>[22m[39m[90m 56 |[39m afterEach(() [33m=>[39m tree[33m.[39munmount())[33m;[39m
+     [90m    |[39m                      [31m[1m^[22m[39m
+     [90m 57 |[39m
+     [90m 58 |[39m it([32m'lists only ScrollSnooze features and no subscription option'[39m[33m,[39m [36masync[39m () [33m=>[39m {
+     [90m 59 |[39m   [36mawait[39m tap([32m'Report an issue'[39m)[33m;[39m[0m
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at updateContainerImpl (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14984:9)
+      at updateContainer (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14927:7)
+      at Object.unmount (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:17413:14)
+      at Object.unmount (test/help.test.tsx:56:22)
+
+    console.error
+      An update to Root inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+    [0m [90m 54 |[39m   })[33m;[39m
+     [90m 55 |[39m })[33m;[39m
+    [31m[1m>[22m[39m[90m 56 |[39m afterEach(() [33m=>[39m tree[33m.[39munmount())[33m;[39m
+     [90m    |[39m                      [31m[1m^[22m[39m
+     [90m 57 |[39m
+     [90m 58 |[39m it([32m'lists only ScrollSnooze features and no subscription option'[39m[33m,[39m [36masync[39m () [33m=>[39m {
+     [90m 59 |[39m   [36mawait[39m tap([32m'Report an issue'[39m)[33m;[39m[0m
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at updateContainerImpl (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14984:9)
+      at updateContainer (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14927:7)
+      at Object.unmount (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:17413:14)
+      at Object.unmount (test/help.test.tsx:56:22)
+
+PASS test/protection-status.test.ts
+PASS test/setup-sign-in.test.tsx
+PASS test/privacy-delete.test.tsx
+PASS test/google-auth.test.ts
+PASS test/goals-screen.test.tsx
+PASS test/social-profile.test.ts
+FAIL test/battle-requests.test.ts
+  ● lost response persists the original intent across database reopen and concurrent retries
+
+    unable to open database file
+
+    [0m [90m 4 |[39m [90m/** Execute the production SQL against SQLite, with real rollback semantics. */[39m
+     [90m 5 |[39m [36mexport[39m [36mfunction[39m sqlite(filename [33m=[39m [32m':memory:'[39m) {
+    [31m[1m>[22m[39m[90m 6 |[39m   [36mconst[39m raw [33m=[39m [36mnew[39m [33mDatabaseSync[39m(filename)[33m;[39m
+     [90m   |[39m               [31m[1m^[22m[39m
+     [90m 7 |[39m   [36mconst[39m adapter [33m=[39m {
+     [90m 8 |[39m     execAsync[33m:[39m [36masync[39m (sql[33m:[39m string) [33m=>[39m {
+     [90m 9 |[39m       raw[33m.[39mexec(sql)[33m;[39m[0m
+
+      at sqlite (test/helpers/sqlite.ts:6:15)
+      at Object.<anonymous> (test/battle-requests.test.ts:25:23)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+PASS test/startup-boundary.test.tsx
+PASS test/candidate-count.test.ts
+PASS test/brain-companion.test.tsx
+PASS test/ios-tracking.test.ts
+PASS test/friends-list.test.tsx
+PASS test/character-motion.test.tsx
+PASS test/account-allowance-notice.test.tsx
+PASS test/tracking-state.test.ts
+PASS test/battle-links.test.ts
+PASS test/updating-mascot.test.tsx
+PASS test/reels-demo.test.tsx
+PASS test/account-ready.test.ts
+PASS test/usage-access.test.ts
+PASS test/startup-screen.test.tsx
+PASS test/ios-screen-time-build.test.ts
+PASS test/focus-schedules.test.ts
+PASS test/startup-timing.test.ts
+PASS test/db-retry.test.ts
+PASS test/measurement-status.test.ts
+PASS test/accessibility-disclosure.test.ts
+PASS test/home-count.test.ts
+PASS test/tracking-support.test.ts
+PASS test/design-tokens.test.ts
+PASS test/bootstrap-failure.test.ts
+PASS test/focus-theme.test.ts
+PASS test/outbox.test.ts
+
+Summary of all failing tests
+FAIL test/guest-migration.test.ts
+  ● 50 guest Reels and goals survive upload/readback and concurrent repeat backup
+
+    unable to open database file
+
+    [0m [90m 4 |[39m [90m/** Execute the production SQL against SQLite, with real rollback semantics. */[39m
+     [90m 5 |[39m [36mexport[39m [36mfunction[39m sqlite(filename [33m=[39m [32m':memory:'[39m) {
+    [31m[1m>[22m[39m[90m 6 |[39m   [36mconst[39m raw [33m=[39m [36mnew[39m [33mDatabaseSync[39m(filename)[33m;[39m
+     [90m   |[39m               [31m[1m^[22m[39m
+     [90m 7 |[39m   [36mconst[39m adapter [33m=[39m {
+     [90m 8 |[39m     execAsync[33m:[39m [36masync[39m (sql[33m:[39m string) [33m=>[39m {
+     [90m 9 |[39m       raw[33m.[39mexec(sql)[33m;[39m[0m
+
+      at sqlite (test/helpers/sqlite.ts:6:15)
+      at Object.<anonymous> (test/guest-migration.test.ts:45:26)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● 50 guest Reels and goals survive upload/readback and concurrent repeat backup
+
+    TypeError: close is not a function
+
+    [0m [90m 127 |[39m })[33m;[39m
+     [90m 128 |[39m afterEach(() [33m=>[39m {
+    [31m[1m>[22m[39m[90m 129 |[39m   close()[33m;[39m
+     [90m     |[39m   [31m[1m^[22m[39m
+     [90m 130 |[39m   unlinkSync(filename)[33m;[39m
+     [90m 131 |[39m   selectStorageScope([32m'legacy'[39m)[33m;[39m
+     [90m 132 |[39m })[33m;[39m[0m
+
+      at Object.close (test/guest-migration.test.ts:129:3)
+
+  ● registration/import followed by upload failure preserves source and retries the same batch
+
+    unable to open database file
+
+    [0m [90m 4 |[39m [90m/** Execute the production SQL against SQLite, with real rollback semantics. */[39m
+     [90m 5 |[39m [36mexport[39m [36mfunction[39m sqlite(filename [33m=[39m [32m':memory:'[39m) {
+    [31m[1m>[22m[39m[90m 6 |[39m   [36mconst[39m raw [33m=[39m [36mnew[39m [33mDatabaseSync[39m(filename)[33m;[39m
+     [90m   |[39m               [31m[1m^[22m[39m
+     [90m 7 |[39m   [36mconst[39m adapter [33m=[39m {
+     [90m 8 |[39m     execAsync[33m:[39m [36masync[39m (sql[33m:[39m string) [33m=>[39m {
+     [90m 9 |[39m       raw[33m.[39mexec(sql)[33m;[39m[0m
+
+      at sqlite (test/helpers/sqlite.ts:6:15)
+      at Object.<anonymous> (test/guest-migration.test.ts:45:26)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● registration/import followed by upload failure preserves source and retries the same batch
+
+    TypeError: close is not a function
+
+    [0m [90m 127 |[39m })[33m;[39m
+     [90m 128 |[39m afterEach(() [33m=>[39m {
+    [31m[1m>[22m[39m[90m 129 |[39m   close()[33m;[39m
+     [90m     |[39m   [31m[1m^[22m[39m
+     [90m 130 |[39m   unlinkSync(filename)[33m;[39m
+     [90m 131 |[39m   selectStorageScope([32m'legacy'[39m)[33m;[39m
+     [90m 132 |[39m })[33m;[39m[0m
+
+      at Object.close (test/guest-migration.test.ts:129:3)
+
+  ● lost readback never acknowledges the guest source and resumes without duplicating remote records
+
+    unable to open database file
+
+    [0m [90m 4 |[39m [90m/** Execute the production SQL against SQLite, with real rollback semantics. */[39m
+     [90m 5 |[39m [36mexport[39m [36mfunction[39m sqlite(filename [33m=[39m [32m':memory:'[39m) {
+    [31m[1m>[22m[39m[90m 6 |[39m   [36mconst[39m raw [33m=[39m [36mnew[39m [33mDatabaseSync[39m(filename)[33m;[39m
+     [90m   |[39m               [31m[1m^[22m[39m
+     [90m 7 |[39m   [36mconst[39m adapter [33m=[39m {
+     [90m 8 |[39m     execAsync[33m:[39m [36masync[39m (sql[33m:[39m string) [33m=>[39m {
+     [90m 9 |[39m       raw[33m.[39mexec(sql)[33m;[39m[0m
+
+      at sqlite (test/helpers/sqlite.ts:6:15)
+      at Object.<anonymous> (test/guest-migration.test.ts:45:26)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● lost readback never acknowledges the guest source and resumes without duplicating remote records
+
+    TypeError: close is not a function
+
+    [0m [90m 127 |[39m })[33m;[39m
+     [90m 128 |[39m afterEach(() [33m=>[39m {
+    [31m[1m>[22m[39m[90m 129 |[39m   close()[33m;[39m
+     [90m     |[39m   [31m[1m^[22m[39m
+     [90m 130 |[39m   unlinkSync(filename)[33m;[39m
+     [90m 131 |[39m   selectStorageScope([32m'legacy'[39m)[33m;[39m
+     [90m 132 |[39m })[33m;[39m[0m
+
+      at Object.close (test/guest-migration.test.ts:129:3)
+
+  ● existing remote device history is preserved alongside the guest device identity
+
+    unable to open database file
+
+    [0m [90m 4 |[39m [90m/** Execute the production SQL against SQLite, with real rollback semantics. */[39m
+     [90m 5 |[39m [36mexport[39m [36mfunction[39m sqlite(filename [33m=[39m [32m':memory:'[39m) {
+    [31m[1m>[22m[39m[90m 6 |[39m   [36mconst[39m raw [33m=[39m [36mnew[39m [33mDatabaseSync[39m(filename)[33m;[39m
+     [90m   |[39m               [31m[1m^[22m[39m
+     [90m 7 |[39m   [36mconst[39m adapter [33m=[39m {
+     [90m 8 |[39m     execAsync[33m:[39m [36masync[39m (sql[33m:[39m string) [33m=>[39m {
+     [90m 9 |[39m       raw[33m.[39mexec(sql)[33m;[39m[0m
+
+      at sqlite (test/helpers/sqlite.ts:6:15)
+      at Object.<anonymous> (test/guest-migration.test.ts:45:26)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● existing remote device history is preserved alongside the guest device identity
+
+    TypeError: close is not a function
+
+    [0m [90m 127 |[39m })[33m;[39m
+     [90m 128 |[39m afterEach(() [33m=>[39m {
+    [31m[1m>[22m[39m[90m 129 |[39m   close()[33m;[39m
+     [90m     |[39m   [31m[1m^[22m[39m
+     [90m 130 |[39m   unlinkSync(filename)[33m;[39m
+     [90m 131 |[39m   selectStorageScope([32m'legacy'[39m)[33m;[39m
+     [90m 132 |[39m })[33m;[39m[0m
+
+      at Object.close (test/guest-migration.test.ts:129:3)
+
+  ● reopens its durable import journal after process termination and finishes readback once
+
+    unable to open database file
+
+    [0m [90m 4 |[39m [90m/** Execute the production SQL against SQLite, with real rollback semantics. */[39m
+     [90m 5 |[39m [36mexport[39m [36mfunction[39m sqlite(filename [33m=[39m [32m':memory:'[39m) {
+    [31m[1m>[22m[39m[90m 6 |[39m   [36mconst[39m raw [33m=[39m [36mnew[39m [33mDatabaseSync[39m(filename)[33m;[39m
+     [90m   |[39m               [31m[1m^[22m[39m
+     [90m 7 |[39m   [36mconst[39m adapter [33m=[39m {
+     [90m 8 |[39m     execAsync[33m:[39m [36masync[39m (sql[33m:[39m string) [33m=>[39m {
+     [90m 9 |[39m       raw[33m.[39mexec(sql)[33m;[39m[0m
+
+      at sqlite (test/helpers/sqlite.ts:6:15)
+      at Object.<anonymous> (test/guest-migration.test.ts:45:26)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● reopens its durable import journal after process termination and finishes readback once
+
+    TypeError: close is not a function
+
+    [0m [90m 127 |[39m })[33m;[39m
+     [90m 128 |[39m afterEach(() [33m=>[39m {
+    [31m[1m>[22m[39m[90m 129 |[39m   close()[33m;[39m
+     [90m     |[39m   [31m[1m^[22m[39m
+     [90m 130 |[39m   unlinkSync(filename)[33m;[39m
+     [90m 131 |[39m   selectStorageScope([32m'legacy'[39m)[33m;[39m
+     [90m 132 |[39m })[33m;[39m[0m
+
+      at Object.close (test/guest-migration.test.ts:129:3)
+
+  ● keeps auth-window recording in the current guest source while JS remains quarantined
+
+    unable to open database file
+
+    [0m [90m 4 |[39m [90m/** Execute the production SQL against SQLite, with real rollback semantics. */[39m
+     [90m 5 |[39m [36mexport[39m [36mfunction[39m sqlite(filename [33m=[39m [32m':memory:'[39m) {
+    [31m[1m>[22m[39m[90m 6 |[39m   [36mconst[39m raw [33m=[39m [36mnew[39m [33mDatabaseSync[39m(filename)[33m;[39m
+     [90m   |[39m               [31m[1m^[22m[39m
+     [90m 7 |[39m   [36mconst[39m adapter [33m=[39m {
+     [90m 8 |[39m     execAsync[33m:[39m [36masync[39m (sql[33m:[39m string) [33m=>[39m {
+     [90m 9 |[39m       raw[33m.[39mexec(sql)[33m;[39m[0m
+
+      at sqlite (test/helpers/sqlite.ts:6:15)
+      at Object.<anonymous> (test/guest-migration.test.ts:45:26)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● keeps auth-window recording in the current guest source while JS remains quarantined
+
+    TypeError: close is not a function
+
+    [0m [90m 127 |[39m })[33m;[39m
+     [90m 128 |[39m afterEach(() [33m=>[39m {
+    [31m[1m>[22m[39m[90m 129 |[39m   close()[33m;[39m
+     [90m     |[39m   [31m[1m^[22m[39m
+     [90m 130 |[39m   unlinkSync(filename)[33m;[39m
+     [90m 131 |[39m   selectStorageScope([32m'legacy'[39m)[33m;[39m
+     [90m 132 |[39m })[33m;[39m[0m
+
+      at Object.close (test/guest-migration.test.ts:129:3)
+
+  ● does not verify a migration if server readback loses its platform breakdown
+
+    unable to open database file
+
+    [0m [90m 4 |[39m [90m/** Execute the production SQL against SQLite, with real rollback semantics. */[39m
+     [90m 5 |[39m [36mexport[39m [36mfunction[39m sqlite(filename [33m=[39m [32m':memory:'[39m) {
+    [31m[1m>[22m[39m[90m 6 |[39m   [36mconst[39m raw [33m=[39m [36mnew[39m [33mDatabaseSync[39m(filename)[33m;[39m
+     [90m   |[39m               [31m[1m^[22m[39m
+     [90m 7 |[39m   [36mconst[39m adapter [33m=[39m {
+     [90m 8 |[39m     execAsync[33m:[39m [36masync[39m (sql[33m:[39m string) [33m=>[39m {
+     [90m 9 |[39m       raw[33m.[39mexec(sql)[33m;[39m[0m
+
+      at sqlite (test/helpers/sqlite.ts:6:15)
+      at Object.<anonymous> (test/guest-migration.test.ts:45:26)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● does not verify a migration if server readback loses its platform breakdown
+
+    TypeError: close is not a function
+
+    [0m [90m 127 |[39m })[33m;[39m
+     [90m 128 |[39m afterEach(() [33m=>[39m {
+    [31m[1m>[22m[39m[90m 129 |[39m   close()[33m;[39m
+     [90m     |[39m   [31m[1m^[22m[39m
+     [90m 130 |[39m   unlinkSync(filename)[33m;[39m
+     [90m 131 |[39m   selectStorageScope([32m'legacy'[39m)[33m;[39m
+     [90m 132 |[39m })[33m;[39m[0m
+
+      at Object.close (test/guest-migration.test.ts:129:3)
+
+FAIL test/battle-requests.test.ts
+  ● lost response persists the original intent across database reopen and concurrent retries
+
+    unable to open database file
+
+    [0m [90m 4 |[39m [90m/** Execute the production SQL against SQLite, with real rollback semantics. */[39m
+     [90m 5 |[39m [36mexport[39m [36mfunction[39m sqlite(filename [33m=[39m [32m':memory:'[39m) {
+    [31m[1m>[22m[39m[90m 6 |[39m   [36mconst[39m raw [33m=[39m [36mnew[39m [33mDatabaseSync[39m(filename)[33m;[39m
+     [90m   |[39m               [31m[1m^[22m[39m
+     [90m 7 |[39m   [36mconst[39m adapter [33m=[39m {
+     [90m 8 |[39m     execAsync[33m:[39m [36masync[39m (sql[33m:[39m string) [33m=>[39m {
+     [90m 9 |[39m       raw[33m.[39mexec(sql)[33m;[39m[0m
+
+      at sqlite (test/helpers/sqlite.ts:6:15)
+      at Object.<anonymous> (test/battle-requests.test.ts:25:23)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+
+Test Suites: 2 failed, 65 passed, 67 total
+Tests:       8 failed, 589 passed, 597 total
+Snapshots:   0 total
+Time:        20.605 s
+Ran all test suites.
+ ELIFECYCLE  Test failed. See above for more details.

@@ -1,0 +1,15 @@
+
+> scrollsnooze@1.0.2 format:check /home/runner/work/driftless/driftless
+> prettier --check .
+
+Checking formatting...
+[[33mwarn[39m] src/api/client.ts
+[[33mwarn[39m] src/billing/blocking.ts
+[[33mwarn[39m] src/goals/sync.ts
+[[33mwarn[39m] src/social/FriendInviteSheet.tsx
+[[33mwarn[39m] src/sync/run.ts
+[[33mwarn[39m] test/account-allowance-notice.test.tsx
+[[33mwarn[39m] test/measurement-status.test.ts
+[[33mwarn[39m] test/usage-access.test.ts
+[[33mwarn[39m] Code style issues found in 8 files. Run Prettier with --write to fix.
+ ELIFECYCLE  Command failed with exit code 1.

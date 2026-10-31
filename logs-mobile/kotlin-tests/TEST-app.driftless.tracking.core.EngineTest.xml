@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.driftless.tracking.core.EngineTest" tests="22" skipped="0" failures="0" errors="0" timestamp="2026-10-31T11:05:29.498Z" hostname="runnervm48cm3" time="0.023">
+  <properties/>
+  <testcase name="timeIsSplitAtLocalMidnight" classname="app.driftless.tracking.core.EngineTest" time="0.005"/>
+  <testcase name="afterALongGapThePreviousItemMayCountAgain" classname="app.driftless.tracking.core.EngineTest" time="0.0"/>
+  <testcase name="discardNeverAdvancesPendingDwellButOrdinaryLeaveStillDoes" classname="app.driftless.tracking.core.EngineTest" time="0.001"/>
+  <testcase name="noSupportedAppMeansNoAccountingEvidence" classname="app.driftless.tracking.core.EngineTest" time="0.001"/>
+  <testcase name="backwardsTickCannotMarkThePreviousDayObserved" classname="app.driftless.tracking.core.EngineTest" time="0.001"/>
+  <testcase name="replayingTheSameEventDoesNotDoubleCount" classname="app.driftless.tracking.core.EngineTest" time="0.0"/>
+  <testcase name="leavingStopsAccountingAndASessionAcrossMidnightMarksTheNewDay" classname="app.driftless.tracking.core.EngineTest" time="0.001"/>
+  <testcase name="delayedTickAttributesViewToDwellThresholdBeforeMidnight" classname="app.driftless.tracking.core.EngineTest" time="0.0"/>
+  <testcase name="uuidV7IsTimeOrderedAndVersioned" classname="app.driftless.tracking.core.EngineTest" time="0.001"/>
+  <testcase name="fingerprintsAreSaltedAndNotPlaintext" classname="app.driftless.tracking.core.EngineTest" time="0.0"/>
+  <testcase name="unsupportedPackageEndsTheSession" classname="app.driftless.tracking.core.EngineTest" time="0.0"/>
+  <testcase name="screenOffInterruptAndReconnectDoNotCreditTheUnobservedGap" classname="app.driftless.tracking.core.EngineTest" time="0.001"/>
+  <testcase name="timeOnlyAppIsNotEvidence" classname="app.driftless.tracking.core.EngineTest" time="0.001"/>
+  <testcase name="appVersionChangeStartsANewRecorderWithoutRecountingTheSameItem" classname="app.driftless.tracking.core.EngineTest" time="0.0"/>
+  <testcase name="discardPreservesCommittedRecordsAndStartsNewDwellOnNextObservation" classname="app.driftless.tracking.core.EngineTest" time="0.001"/>
+  <testcase name="delayedLeaveCannotDropTheActiveSessionOrCreateANewCount" classname="app.driftless.tracking.core.EngineTest" time="0.001"/>
+  <testcase name="timeZoneChangeUsesTheNewZoneForNewEvents" classname="app.driftless.tracking.core.EngineTest" time="0.0"/>
+  <testcase name="serviceRestartWithinRingWindowDoesNotRecount" classname="app.driftless.tracking.core.EngineTest" time="0.004"/>
+  <testcase name="openingACountableAppIsEvidenceAtOnceEvenOutsideTheVideoPlayer" classname="app.driftless.tracking.core.EngineTest" time="0.0"/>
+  <testcase name="staleCrossAppCallbackCannotReplaceCurrentSessionOrCreditTimeTwice" classname="app.driftless.tracking.core.EngineTest" time="0.001"/>
+  <testcase name="recordsEventsWithUniqueIdsAndMonotonicSequence" classname="app.driftless.tracking.core.EngineTest" time="0.002"/>
+  <testcase name="thresholdAfterMidnightBelongsToNewDailyAllowance" classname="app.driftless.tracking.core.EngineTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

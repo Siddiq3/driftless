@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.driftless.tracking.core.MemeMilestoneTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-31T11:05:29.563Z" hostname="runnervm48cm3" time="0.002">
+  <properties/>
+  <testcase name="firstCountShowsOnceIncludingFirstObservationAndNewDay" classname="app.driftless.tracking.core.MemeMilestoneTest" time="0.0"/>
+  <testcase name="automaticallyUsesConfiguredLanguageWithEnglishFallback" classname="app.driftless.tracking.core.MemeMilestoneTest" time="0.002"/>
+  <testcase name="noReplayAfterReconnectDateChangeOrCorrection" classname="app.driftless.tracking.core.MemeMilestoneTest" time="0.0"/>
+  <testcase name="delayedWritesShowOnlyLatestMilestone" classname="app.driftless.tracking.core.MemeMilestoneTest" time="0.0"/>
+  <testcase name="newFiftyCrossingsOnly" classname="app.driftless.tracking.core.MemeMilestoneTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

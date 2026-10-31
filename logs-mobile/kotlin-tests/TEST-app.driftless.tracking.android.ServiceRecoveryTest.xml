@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.driftless.tracking.android.ServiceRecoveryTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-31T11:05:27.853Z" hostname="runnervm48cm3" time="0.639">
+  <properties/>
+  <testcase name="verifyingANewClockRecreatesOnlyTheCurrentScopesRecorder" classname="app.driftless.tracking.android.ServiceRecoveryTest" time="0.106"/>
+  <testcase name="repeatedBlockingCallbacksStartOneActivityUntilTheUserLeavesAndReturns" classname="app.driftless.tracking.android.ServiceRecoveryTest" time="0.03"/>
+  <testcase name="staleAndCrossAppScrollCannotAuthorizeTheCurrentPlayer" classname="app.driftless.tracking.android.ServiceRecoveryTest" time="0.095"/>
+  <testcase name="periodicSamplingDoesNotLeaveAnOlderSettlingTaskQueued" classname="app.driftless.tracking.android.ServiceRecoveryTest" time="0.138"/>
+  <testcase name="interruptionStopsWorkAndANewEventRestartsOnlyOneLoop" classname="app.driftless.tracking.android.ServiceRecoveryTest" time="0.112"/>
+  <testcase name="repeatedConnectionHasOneTickOneClassificationAndDestroyRemovesThem" classname="app.driftless.tracking.android.ServiceRecoveryTest" time="0.041"/>
+  <testcase name="screenOffClearsTransitionAndOverlayStateAndScopeChangeCancelsOldClassification" classname="app.driftless.tracking.android.ServiceRecoveryTest" time="0.113"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=android.intent.action.SCREEN_OFF }; Matching wrappers: [Wrapper[receiver=[app.driftless.tracking.android.DriftlessAccessibilityService$screenOff$1@31fc964f], context=[android.app.ContextImpl@44e40a70], intentFilter=[android.content.IntentFilter@1b7aa60d]]]
+]]></system-err>
+</testsuite>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.driftless.tracking.android.AccessibilityGuideTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-31T11:05:16.673Z" hostname="runnervm48cm3" time="1.721">
+  <properties/>
+  <testcase name="opensActualAccessibilitySettingsWhenPipIsUnavailable" classname="app.driftless.tracking.android.AccessibilityGuideTest" time="1.534"/>
+  <testcase name="waitsForPipThenSeparatesSettingsAndKeepsGuideForExistingGrant" classname="app.driftless.tracking.android.AccessibilityGuideTest" time="0.07"/>
+  <testcase name="cannotOpenSettingsWithoutCountingConsent" classname="app.driftless.tracking.android.AccessibilityGuideTest" time="0.055"/>
+  <testcase name="delayedPipCallbackFallsBackOnceAndNewEnablementClosesGuide" classname="app.driftless.tracking.android.AccessibilityGuideTest" time="0.059"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

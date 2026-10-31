@@ -1,0 +1,13 @@
+
+> scrollsnooze@1.0.2 lint /home/runner/work/driftless/driftless
+> expo lint
+
+
+/home/runner/work/driftless/driftless/src/api/challenges.ts
+  25:13  warning  'LeaderboardResponse' is already defined  @typescript-eslint/no-redeclare
+
+/home/runner/work/driftless/driftless/src/auth/account.tsx
+  287:6  warning  React Hook useEffect has missing dependencies: 'result?.unconfirmed' and 'session'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+✖ 2 problems (0 errors, 2 warnings)
+

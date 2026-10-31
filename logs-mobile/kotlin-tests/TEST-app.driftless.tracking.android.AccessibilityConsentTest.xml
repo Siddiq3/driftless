@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.driftless.tracking.android.AccessibilityConsentTest" tests="20" skipped="0" failures="0" errors="0" timestamp="2026-10-31T11:05:07.551Z" hostname="runnervm48cm3" time="9.119">
+  <properties/>
+  <testcase name="preConsentConnectionKeepsOnlyBindingStatusWithoutViewingDiagnostics" classname="app.driftless.tracking.android.AccessibilityConsentTest" time="5.154"/>
+  <testcase name="timeoutReportsUnconfirmedChangeThenQueuedRevocationDiscardsWithoutFlush" classname="app.driftless.tracking.android.AccessibilityConsentTest" time="0.263"/>
+  <testcase name="delayedDebugCaptureRechecksConsentAndValidDebugExportsStillWork" classname="app.driftless.tracking.android.AccessibilityConsentTest" time="0.141"/>
+  <testcase name="freshInstallWithoutConsentDoesNotTrack" classname="app.driftless.tracking.android.AccessibilityConsentTest" time="0.064"/>
+  <testcase name="completedRecordsSurviveRevocationAndReacceptanceCountsANewItem" classname="app.driftless.tracking.android.AccessibilityConsentTest" time="0.183"/>
+  <testcase name="releaseExecutionRejectsEventExportAndCaptureEvenWithConsent" classname="app.driftless.tracking.android.AccessibilityConsentTest" time="0.081"/>
+  <testcase name="delayedTickAlreadyCapturedBeforeRevocationCannotCreditActivity" classname="app.driftless.tracking.android.AccessibilityConsentTest" time="0.078"/>
+  <testcase name="revokedScreenOffCannotCreditPendingActivity" classname="app.driftless.tracking.android.AccessibilityConsentTest" time="0.088"/>
+  <testcase name="backgroundRevocationReturnsOnlyAfterMainAppliesConsentAndDiscardsSession" classname="app.driftless.tracking.android.AccessibilityConsentTest" time="0.065"/>
+  <testcase name="revocationJustBeforeThresholdKeepsOnlyPreviouslyRecordedTime" classname="app.driftless.tracking.android.AccessibilityConsentTest" time="0.067"/>
+  <testcase name="revokedShutdownWhileBoundCannotCreditPendingActivity" classname="app.driftless.tracking.android.AccessibilityConsentTest" time="0.063"/>
+  <testcase name="revokedScopeChangeDiscardsWithoutCreditingEitherScope" classname="app.driftless.tracking.android.AccessibilityConsentTest" time="0.068"/>
+  <testcase name="queuedOverlayRefreshAfterRevocationCannotCreditActivity" classname="app.driftless.tracking.android.AccessibilityConsentTest" time="0.083"/>
+  <testcase name="revokedInterruptionCannotCreditPendingActivity" classname="app.driftless.tracking.android.AccessibilityConsentTest" time="0.053"/>
+  <testcase name="inFlightAccountingFinishesBeforeAppliedRevocationAndCannotOverlapIt" classname="app.driftless.tracking.android.AccessibilityConsentTest" time="0.066"/>
+  <testcase name="delayedClassificationAlreadyCapturedBeforeRevocationCannotCreditActivity" classname="app.driftless.tracking.android.AccessibilityConsentTest" time="0.066"/>
+  <testcase name="anOlderDisclosureVersionCannotTrackUntilTheCurrentOneIsAffirmativelyAccepted" classname="app.driftless.tracking.android.AccessibilityConsentTest" time="0.055"/>
+  <testcase name="revokedUnbindWhileBoundCannotCreditPendingActivity" classname="app.driftless.tracking.android.AccessibilityConsentTest" time="0.056"/>
+  <testcase name="revocationBeforeDwellDiscardsUnfinishedCountAndTimeImmediately" classname="app.driftless.tracking.android.AccessibilityConsentTest" time="0.049"/>
+  <testcase name="revokedClockRefreshExecutesItsBodyWithoutCreditingPendingActivity" classname="app.driftless.tracking.android.AccessibilityConsentTest" time="0.054"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=android.intent.action.SCREEN_OFF }; Matching wrappers: [Wrapper[receiver=[app.driftless.tracking.android.DriftlessAccessibilityService$screenOff$1@71c7d7d0], context=[android.app.ContextImpl@299142ac], intentFilter=[android.content.IntentFilter@3e4ef3b7]]]
+]]></system-err>
+</testsuite>

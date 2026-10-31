@@ -1,0 +1,39 @@
+test_ad_counted_as_view_is_tracked (test_score.ScoreTest.test_ad_counted_as_view_is_tracked) ... ok
+test_align_recovers_a_clock_offset (test_score.ScoreTest.test_align_recovers_a_clock_offset) ... ok
+test_cli_exit_code_and_json (test_score.ScoreTest.test_cli_exit_code_and_json) ... ok
+test_counted_skip_is_a_false_positive (test_score.ScoreTest.test_counted_skip_is_a_false_positive) ... ok
+test_other_packages_and_out_of_window_events_are_ignored (test_score.ScoreTest.test_other_packages_and_out_of_window_events_are_ignored) ... ok
+test_perfect_session_passes (test_score.ScoreTest.test_perfect_session_passes) ... ok
+test_pooled_sums_sessions (test_score.ScoreTest.test_pooled_sums_sessions) ... ok
+test_reads_labels_with_header (test_score.ScoreTest.test_reads_labels_with_header) ... ok
+test_rejects_bad_label_files (test_score.ScoreTest.test_rejects_bad_label_files) ... ok
+test_sample_session_metrics (test_score.ScoreTest.test_sample_session_metrics) ... ok
+
+----------------------------------------------------------------------
+Ran 10 tests in 0.006s
+
+OK
+[
+  {
+    "session": "sample-labels",
+    "package": "com.instagram.android",
+    "appVersion": "400.0.0.0",
+    "precision": 1.0,
+    "recall": 1.0,
+    "dupRate": 0.0,
+    "tp": 4,
+    "fp": 0,
+    "fn": 0,
+    "dup": 0,
+    "countedSkips": 0,
+    "adAsView": 0,
+    "adTp": 1,
+    "adMissed": 0,
+    "offsetMs": 0,
+    "pass": true
+  }
+]
+session                 app                               P      R    dup  TP/FP/FN  skips ads(ok/asView/miss)  verdict
+sample-labels           com.instagram.android 400.0.0.0  1.000  0.750  0.250  3/0/1      0  1/0/0  FAIL
+
+G-2 thresholds: precision >= 0.95, recall >= 0.9, duplicates <= 0.01

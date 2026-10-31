@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.driftless.tracking.android.BundledVideoTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-31T11:05:21.056Z" hostname="runnervm48cm3" time="0.105">
+  <properties/>
+  <testcase name="canSwitchBetweenOnboardingAndAccessibilityWithoutConfusingTheContent" classname="app.driftless.tracking.android.BundledVideoTest" time="0.058"/>
+  <testcase name="onlyBundledVideosAreAccepted" classname="app.driftless.tracking.android.BundledVideoTest" time="0.044"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

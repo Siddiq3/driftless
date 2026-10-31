@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.driftless.tracking.android.AndroidLayerTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-10-31T11:05:20.354Z" hostname="runnervm48cm3" time="0.503">
+  <properties/>
+  <testcase name="itemIdentifiersStayInMemoryAndExpire" classname="app.driftless.tracking.android.AndroidLayerTest" time="0.039"/>
+  <testcase name="accessibilityConfigIsNotAnAccessibilityToolAndIsScopedToSupportedApps" classname="app.driftless.tracking.android.AndroidLayerTest" time="0.021"/>
+  <testcase name="purgeKeepsAggregatesAndDropsRawEvents" classname="app.driftless.tracking.android.AndroidLayerTest" time="0.04"/>
+  <testcase name="usageMinutesOverwriteInsteadOfAccumulating" classname="app.driftless.tracking.android.AndroidLayerTest" time="0.043"/>
+  <testcase name="bundledRulesParseAndAreMarkedUnvalidated" classname="app.driftless.tracking.android.AndroidLayerTest" time="0.029"/>
+  <testcase name="schemaHasNoColumnsForContent" classname="app.driftless.tracking.android.AndroidLayerTest" time="0.036"/>
+  <testcase name="consentDefaultsToOff" classname="app.driftless.tracking.android.AndroidLayerTest" time="0.026"/>
+  <testcase name="v6UpgradeRemovesDiagnosticsAndKeepsHistoryAndPendingBackup" classname="app.driftless.tracking.android.AndroidLayerTest" time="0.046"/>
+  <testcase name="recordViewIsIdempotentAndTransactional" classname="app.driftless.tracking.android.AndroidLayerTest" time="0.04"/>
+  <testcase name="storesNoHeartbeatsItemIdentifiersCoverageOrEventVersions" classname="app.driftless.tracking.android.AndroidLayerTest" time="0.049"/>
+  <testcase name="upgradesAVersion1DatabaseWithoutLosingCounts" classname="app.driftless.tracking.android.AndroidLayerTest" time="0.041"/>
+  <testcase name="dataSurvivesReopenLikeARestart" classname="app.driftless.tracking.android.AndroidLayerTest" time="0.056"/>
+  <testcase name="oldNarrowDisclosureConsentMustBeRenewedForExpandedAppScope" classname="app.driftless.tracking.android.AndroidLayerTest" time="0.032"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
