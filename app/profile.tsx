@@ -112,7 +112,7 @@ export default function Profile() {
         ) : (
           <View style={styles.account}>
             <T accessibilityRole="header" style={title}>
-              Login/Create An Account
+              Log in or create an account
             </T>
             {session.status === 'signedOut' && (
               <Pressable

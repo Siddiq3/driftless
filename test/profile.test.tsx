@@ -60,7 +60,7 @@ it('profile offers only current features, with no Pro, refund or language', asyn
     tree = create(<Profile />);
   });
   for (const label of [
-    'Login/Create An Account',
+    'Log in or create an account',
     'Widgets',
     'Friends',
     'Send Feedback',

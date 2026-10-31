@@ -92,7 +92,7 @@ export default function Privacy() {
 
   return (
     <Screen>
-      <VisualBanner art="focus" title="Your data stays yours" />
+      <VisualBanner art="focus" title="Your data" />
       {links && (
         <Section>
           <T v="heading">Policies & support</T>

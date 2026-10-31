@@ -176,6 +176,6 @@ Replaces the current description, which promises six apps, weekly wraps and scro
 
 The Console entry is "Username / phone number, password, instructions", and the app signs in only through Google. The account must be a dedicated Google test account that works without 2-step verification or a phone prompt. Do not use a personal account. Suggested instructions:
 
-> ScrollSnooze works as a guest, so you can test counting, goals and pauses without signing in. To test account features, tap Profile, then Login/Create An Account, and choose Continue with Google using the test account above. To see Friends, tap the Friends tab and tap Invite to create an invitation. Accepting one requires a second account.
+> ScrollSnooze works as a guest, so you can test counting, goals and pauses without signing in. To test account features, tap Profile, then Log in or create an account, and choose Continue with Google using the test account above. To see Friends, tap the Friends tab and tap Invite to create an invitation. Accepting one requires a second account.
 
 **Production draft warning:** the pasted Console summary lists a Production "initial release" and "Start full rollout". Do not send this for review with the current build. The next upload must be a new build with a version code above 2.
