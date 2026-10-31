@@ -162,7 +162,7 @@ Replaces the current description, which promises six apps, weekly wraps and scro
 > No account is needed for counting and controls on your phone. Guest progress stays on your phone. Sign in with Google to automatically back up daily counts, minutes and goals.
 >
 > A NOTE ABOUT COUNTING
-> ScrollSnooze supports Instagram and YouTube only. Counting depends on app versions and layouts, so counts may be incomplete or inaccurate. Counts from app versions that haven't passed our accuracy check are labelled experimental.
+> ScrollSnooze supports Instagram and YouTube only. Counting depends on app versions and layouts, so counts may be incomplete or inaccurate.
 >
 > WHY SCROLLSNOOZE ASKS FOR ACCESSIBILITY PERMISSION
 > ScrollSnooze uses Android's AccessibilityService API to count the Reels and Shorts you watch, measure your time on them, and show your count, goal alerts, meme breaks and the pauses you set. It works only in Instagram and YouTube. Visible text is read only while a Reels or Shorts player is detected, is processed on your phone, and is never saved or uploaded. ScrollSnooze takes no screenshots. The Leave feed button performs Android Back only when you tap it. You choose whether to allow this, and you can turn it off anytime in Android settings.

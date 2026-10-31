@@ -12,6 +12,7 @@ jest.mock('@/sync/accountBackup', () => ({
 jest.mock('@/sync/accountUsage', () => ({
   installAccountUsage: jest.fn().mockResolvedValue(undefined),
 }));
+import { AppState } from 'react-native';
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { Text } from 'react-native';
@@ -39,6 +40,15 @@ jest.mock('@/api/client', () => ({
 jest.mock('@/data/session', () => ({
   resolvePersonalAccount: jest.fn(),
   selectPersonalSession: jest.fn(),
+}));
+let mockVerified: { owner: string; userId: string; incarnation: string } | null = null;
+const mockForget = jest.fn(async () => undefined);
+const mockRemember = jest.fn(async () => undefined);
+jest.mock('@/auth/verifiedAccount', () => ({
+  readVerifiedAccount: async () => mockVerified,
+  rememberVerifiedAccount: (...a: unknown[]) =>
+    (mockRemember as (...x: unknown[]) => unknown)(...a),
+  forgetVerifiedAccount: () => mockForget(),
 }));
 jest.mock('tracking-android', () => ({ Tracking: { setEntitlement: jest.fn() } }));
 jest.mock('expo-crypto', () => ({ randomUUID: () => '00000000-0000-4000-8000-000000000009' }));
@@ -289,6 +299,52 @@ test('a slow restore stops waiting and can still finish afterwards', async () =>
   expect(done).toBe(true);
 });
 
+describe('returning user', () => {
+  afterEach(() => {
+    mockVerified = null;
+    jest.mocked(accountReady).mockResolvedValue(false);
+    discovery.accountState.mockReset().mockImplementation(async () => state);
+  });
+  const returning = () => {
+    mockVerified = { owner: 'g', userId: 'u', incarnation };
+    jest.mocked(accountReady).mockResolvedValue(true);
+  };
+
+  test('opens saved data without waiting for the server', async () => {
+    returning();
+    discovery.accountState.mockImplementation(() => new Promise(() => {}));
+    await mount();
+    expect(visible()).toContain('private screens');
+    expect(backupAccount).not.toHaveBeenCalled();
+  });
+
+  test('stays open offline', async () => {
+    returning();
+    discovery.accountState.mockRejectedValue(new ApiError(null, 'network', 'offline'));
+    await mount();
+    expect(visible()).toContain('private screens');
+    expect(mockForget).not.toHaveBeenCalled();
+  });
+
+  test('a changed account closes the saved data and rechecks in full', async () => {
+    returning();
+    state = { state: 'deleted', incarnation };
+    Object.defineProperty(AppState, 'currentState', { configurable: true, value: 'active' });
+    await mount();
+    expect(mockForget).toHaveBeenCalledTimes(1);
+    expect(visible()).not.toContain('private screens');
+    expect(visible()).toContain('Create a new account');
+  });
+
+  test('an unfinished restore still takes the full path', async () => {
+    mockVerified = { owner: 'g', userId: 'u', incarnation };
+    jest.mocked(accountReady).mockResolvedValue(false);
+    state = { state: 'active', incarnation };
+    await mount();
+    expect(backupAccount).toHaveBeenCalled();
+  });
+});
+
 test('incompatible bootstrap response asks for an update without endless Retry', async () => {
   discovery.accountState.mockRejectedValueOnce(new ApiError(200, 'contract_mismatch', 'bad shape'));
   await mount();
@@ -306,6 +362,12 @@ test('returning initialized account opens without waiting for uploads or cloud h
   expect(backupAccount).not.toHaveBeenCalled();
   expect(discovery.registerAccount).not.toHaveBeenCalled();
   jest.mocked(backupAccount).mockReset().mockResolvedValue({ state: 'saved', message: 'Saved' });
+});
+test('a confirmed account is remembered only once it is ready', async () => {
+  state = { state: 'active', incarnation };
+  mockRemember.mockClear();
+  await mount();
+  expect(mockRemember).not.toHaveBeenCalled();
 });
 test('first completed restore marks only the verified local incarnation ready', async () => {
   state = { state: 'active', incarnation };

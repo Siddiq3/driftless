@@ -297,11 +297,6 @@ function WarBoard({ api }: { api: ApiClient | null }) {
             </View>
           ))}
         {issue && <Notice title="Leaderboard not updated" body={issue} tone="warn" />}
-        {rows.some((row) => row.views !== null && row.experimental) && (
-          <T v="caption" muted style={{ paddingTop: 18 }}>
-            Counts are experimental and may not be exact.
-          </T>
-        )}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Open an invitation"

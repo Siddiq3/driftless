@@ -43,12 +43,13 @@ export default function ProgressScreen() {
         v="title"
         style={{
           fontFamily: fonts ? 'LilitaOne' : undefined,
-          color: '#FFE1A4',
-          fontSize: 25,
-          letterSpacing: 0.3,
+          fontWeight: fonts ? '400' : '900',
+          color: '#FFFFF8',
+          fontSize: 28,
+          lineHeight: 36,
         }}
       >
-        PROGRESS
+        Progress
       </T>
       <View accessibilityRole="tablist" style={styles.switcher}>
         {(['daily', 'weekly'] as const).map((value) => (

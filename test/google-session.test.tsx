@@ -276,6 +276,48 @@ it('a Google profile with no name gives no presentation name, not the email pref
   expect(signedIn().displayName).toBeNull();
 });
 
+const verifiedMarkers = () => {
+  mockMarkers.set('driftless.google.enabled.v1', 'true');
+  mockMarkers.set('driftless.google.cache-owner.v1', '100000000000000000001');
+  mockMarkers.set(
+    'scrollsnooze.account.verified.v1',
+    JSON.stringify({
+      owner: '100000000000000000001',
+      userId: '11111111-1111-4111-8111-111111111111',
+      incarnation: '22222222-2222-4222-8222-222222222222',
+    }),
+  );
+};
+
+it('a returning user opens before Google answers', async () => {
+  verifiedMarkers();
+  jest.mocked(GoogleSignin.signInSilently).mockImplementation(() => new Promise(() => {}));
+  await mount();
+  expect(latest.status).toBe('signedIn');
+  expect(GoogleSignin.signInSilently).not.toHaveBeenCalled();
+});
+
+it('a saved account for another Google user does not fast open', async () => {
+  verifiedMarkers();
+  mockMarkers.set('driftless.google.cache-owner.v1', 'someone-else');
+  jest.mocked(GoogleSignin.signInSilently).mockImplementation(() => new Promise(() => {}));
+  await mount();
+  expect(latest.status).toBe('loading');
+});
+
+it('an invalid Google session signs out and forgets the saved account', async () => {
+  verifiedMarkers();
+  jest
+    .mocked(GoogleSignin.signInSilently)
+    .mockResolvedValue({ type: 'noSavedCredentialFound' } as never);
+  await mount();
+  await act(async () => {
+    expect(await signedIn().getAccessToken()).toBeNull();
+  });
+  expect(latest.status).toBe('signedOut');
+  expect(mockMarkers.has('scrollsnooze.account.verified.v1')).toBe(false);
+});
+
 test('local scope initialization failure exposes Retry and resumes without erasing data', async () => {
   const { selectPersonalSession } = require('@/data/session');
   selectPersonalSession.mockRejectedValueOnce(new Error('disk unavailable'));

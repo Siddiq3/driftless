@@ -1,7 +1,7 @@
 import { openUsageAccess } from '@/permissions/usageAccess';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Linking, Platform, Share } from 'react-native';
+import { Alert, Linking, Platform, Pressable, Share, StyleSheet, View } from 'react-native';
 import { websiteLinks } from '@/config/website';
 import { Tracking } from 'tracking-android';
 import { ApiError } from '@/api/client';
@@ -10,6 +10,7 @@ import { useSession } from '@/auth/session';
 import { Button, Section, Notice, Screen, T, Details } from '@/ui/kit';
 import { wipePhone } from '@/data/reset';
 import { useOnboarding } from '@/onboarding/context';
+import { Icon } from '@/ui/Icon';
 import { VisualBanner } from '@/ui/Focus';
 import { useAccountBackup } from '@/sync/AccountBackupProvider';
 
@@ -95,22 +96,29 @@ export default function Privacy() {
       {links && (
         <Section>
           <T v="heading">Policies & support</T>
-          <Button
-            kind="secondary"
-            label="Read privacy policy"
-            onPress={() => openWebsite(links.privacy)}
-          />
-          <Button
-            kind="secondary"
-            label="Request deletion on the website"
-            onPress={() => openWebsite(links.deletion)}
-          />
-          <Button kind="secondary" label="Terms of use" onPress={() => openWebsite(links.terms)} />
-          <Button
-            kind="secondary"
-            label="Contact support"
-            onPress={() => openWebsite(links.support)}
-          />
+          <View style={styles.links}>
+            {[
+              { label: 'Read privacy policy', url: links.privacy },
+              { label: 'Request deletion on the website', url: links.deletion },
+              { label: 'Terms of use', url: links.terms },
+              { label: 'Contact support', url: links.support },
+            ].map(({ label, url }, i) => (
+              <Pressable
+                key={label}
+                accessibilityRole="button"
+                accessibilityLabel={label}
+                onPress={() => openWebsite(url)}
+                style={({ pressed }) => [
+                  styles.link,
+                  i > 0 && styles.linkDivider,
+                  { opacity: pressed ? 0.7 : 1 },
+                ]}
+              >
+                <T style={{ flex: 1, fontSize: 16 }}>{label}</T>
+                <Icon name="chevron" size={18} color="#B4B3AA" />
+              </Pressable>
+            ))}
+          </View>
         </Section>
       )}
       {note && <Notice tone={note.warn ? 'warn' : 'info'} title={note.title} body={note.body} />}
@@ -119,10 +127,10 @@ export default function Privacy() {
         <T muted>
           On this phone: counts, minutes, goals and first-launch answers. Uninstalling or switching
           phones loses unbacked-up local data. Setup answers are not uploaded. When you sign in, we
-          back up daily video and ad counts, minutes and goals to your account alongside your profile
-          and friends. Signed-in backup also includes per-app counts and minutes, the date, timezone and a random
-          device ID. Raw accessibility text, captions, interface trees and viewing events are not
-          included in account backup.
+          back up daily video and ad counts, minutes and goals to your account alongside your
+          profile and friends. Signed-in backup also includes per-app counts and minutes, the date,
+          timezone and a random device ID. Raw accessibility text, captions, interface trees and
+          viewing events are not included in account backup.
         </T>
       </Details>
 
@@ -130,11 +138,11 @@ export default function Privacy() {
         <T v="heading">Saving your progress</T>
         <T muted>
           Without an account, progress stays on this phone. Signing in backs up saved goals and
-          supported daily history automatically. Sign out to stop account backup. Signing in never shares
-          with friends. Sharing starts only when an invitation is accepted: your friend sees your
-          daily Reels and Shorts count from that day on, including experimental counts, and your
-          Google account name. Delete the friend to stop. Signing out stops new counts, but friends can
-          still see counts already backed up.
+          supported daily history automatically. Sign out to stop account backup. Signing in never
+          shares with friends. Sharing starts only when an invitation is accepted: your friend sees
+          your daily Reels and Shorts count from that day on, including experimental counts, and
+          your Google account name. Delete the friend to stop. Signing out stops new counts, but
+          friends can still see counts already backed up.
         </T>
       </Section>
 
@@ -161,11 +169,7 @@ export default function Privacy() {
             onPress={Tracking.openAccessibilitySettings}
           />
         )}
-        <Button
-          kind="secondary"
-          label="Usage Access settings"
-          onPress={openUsageAccess}
-        />
+        <Button kind="secondary" label="Usage Access settings" onPress={openUsageAccess} />
       </Section>
 
       {api && (
@@ -232,3 +236,15 @@ export default function Privacy() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  links: { borderRadius: 18, overflow: 'hidden', backgroundColor: '#17160F' },
+  link: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minHeight: 56,
+    paddingHorizontal: 16,
+  },
+  linkDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#29271F' },
+});

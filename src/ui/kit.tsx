@@ -1,3 +1,4 @@
+import { useFonts } from 'expo-font';
 import { ContentViewportContext, useResponsiveLayout, type ContentViewport } from './responsive';
 import { dark, MIN_TOUCH, radius, space, type as typeScale, type Theme } from '../design-tokens';
 import { useState, type ReactNode } from 'react';
@@ -102,17 +103,12 @@ export function Screen({
   hideTabs?: boolean;
   backgroundColor?: string;
 }) {
+  const [titleFont] = useFonts({ LilitaOne: require('../../assets/fonts/LilitaOne-Regular.ttf') });
   const t = useTheme();
   const path = usePathname();
   const layout = useResponsiveLayout();
   const [viewport, setViewport] = useState<ContentViewport | null>(null);
-  const primary = [
-    '/welcome',
-    '/home',
-    '/tracking',
-    '/progress',
-    '/friends',
-  ].includes(path);
+  const primary = ['/welcome', '/home', '/tracking', '/progress', '/friends'].includes(path);
   const details = PAGE_DETAILS[path];
   const tabs = [
     { label: 'Today', mark: '◉', href: '/welcome', active: ['/welcome', '/home', '/tracking'] },
@@ -156,18 +152,27 @@ export function Screen({
                     accessibilityRole="button"
                     accessibilityLabel="Go back"
                     onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-                    style={{ minWidth: 48, minHeight: 48, justifyContent: 'center' }}
+                    style={({ pressed }) => [
+                      styles.backButton,
+                      { backgroundColor: t.surface, opacity: pressed ? 0.7 : 1 },
+                    ]}
                   >
-                    <Icon name="back" />
+                    <Icon name="back" size={22} />
                   </Pressable>
                 )}
-                <T v="title" style={{ flex: 1, letterSpacing: -0.6 }}>
+                <T
+                  accessibilityRole="header"
+                  style={{
+                    flex: 1,
+                    color: t.text,
+                    fontSize: 28,
+                    lineHeight: 36,
+                    fontFamily: titleFont ? 'LilitaOne' : undefined,
+                    fontWeight: titleFont ? '400' : '900',
+                  }}
+                >
                   {details.title}
                 </T>
-                <Icon
-                  name={path === '/settings' ? 'settings' : iconForMark(details.mark)}
-                  color={t.textMuted}
-                />
               </View>
             )}
             {children ?? <LoadingState />}
@@ -544,6 +549,13 @@ export function MetricPanel({
 }
 
 const styles = StyleSheet.create({
+  backButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   screen: {
     padding: 20,
     gap: space.lg,
@@ -586,7 +598,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   notice: {
-    borderLeftWidth: 2,
     borderRadius: radius.sm,
     padding: space.lg,
     gap: space.xs,

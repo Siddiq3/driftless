@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { useFonts } from 'expo-font';
 import { router, useFocusEffect } from 'expo-router';
 import type { v1 } from '@siddiq3/driftless-contracts';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
@@ -8,6 +9,7 @@ import { Icon } from '@/ui/Icon';
 import { Avatar } from './battleVisuals';
 import { friendName } from './ranking';
 export function FriendsList({ api }: { api: ApiClient | null }) {
+  const [fonts] = useFonts({ LilitaOne: require('../../assets/fonts/LilitaOne-Regular.ttf') });
   const [friends, setFriends] = useState<v1.Friend[] | null>(null),
     [selected, setSelected] = useState<v1.Friend | null>(null);
   const [error, setError] = useState<string | null>(null),
@@ -70,8 +72,17 @@ export function FriendsList({ api }: { api: ApiClient | null }) {
         >
           <Icon name="back" />
         </Pressable>
-        <T v="title" style={{ color: '#FFE4AB', fontWeight: '900' }}>
-          FRIENDS
+        <T
+          v="title"
+          style={{
+            color: '#FFFFF8',
+            fontSize: 28,
+            lineHeight: 36,
+            fontFamily: fonts ? 'LilitaOne' : undefined,
+            fontWeight: fonts ? '400' : '900',
+          }}
+        >
+          Friends
         </T>
       </View>
       {!api && (
@@ -153,7 +164,8 @@ export function FriendsList({ api }: { api: ApiClient | null }) {
                 {name(selected)}
               </T>
               <T v="caption" muted style={{ textAlign: 'center' }}>
-                This stops sharing both ways. Counts already on their phone may show until it refreshes.
+                This stops sharing both ways. Counts already on their phone may show until it
+                refreshes.
               </T>
               {error && <Notice title="Could not remove friend" body={error} tone="warn" />}
               <Pressable

@@ -29,3 +29,7 @@ __pycache__/
 *.pfx
 /output/release/
 credentials.json
+
+# Local release builds
+*.apk
+*.aab

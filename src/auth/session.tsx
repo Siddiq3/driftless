@@ -1,3 +1,4 @@
+import { forgetVerifiedAccount, OWNER_KEY, readVerifiedAccount } from './verifiedAccount';
 import { Pressable, Text, View, TurboModuleRegistry, Platform } from 'react-native';
 import type { GoogleSignin as GoogleSDK } from '@react-native-google-signin/google-signin';
 import * as SecureStore from 'expo-secure-store';
@@ -10,6 +11,7 @@ import {
   useRef,
   useState,
   type ReactNode,
+  useReducer,
 } from 'react';
 import type { Env } from '../config/env';
 import { measureStartup } from '@/startup/timing';
@@ -20,7 +22,6 @@ import { selectPersonalSession } from '@/data/session';
 // Stores only the user's choice to stay signed in. Credentials are managed by Google's SDK.
 const ENABLED_KEY = 'driftless.google.enabled.v1';
 const LEGACY_KEY = 'driftless.tokens.v1';
-const OWNER_KEY = 'driftless.google.cache-owner.v1';
 type SessionState =
   | { status: 'loading' }
   | { status: 'unconfigured' }
@@ -105,6 +106,8 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
   const [attempt, setAttempt] = useState(0);
   const [initializationFailed, setInitializationFailed] = useState(false);
   const [signedIn, setSignedIn] = useState<boolean | undefined>(undefined);
+  // The Google profile arrives after a fast open; re-render so its name appears.
+  const [, identityLoaded] = useReducer((n: number) => n + 1, 0);
   const [error, setError] = useState<string | null>(null);
   const generation = useRef({ value: 0 });
   const enabled = useRef(false);
@@ -128,6 +131,18 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
         SecureStore.deleteItemAsync(LEGACY_KEY),
         SecureStore.getItemAsync(ENABLED_KEY),
       ]);
+      // A returning user opens on saved data. Google is checked on the first account request,
+      // and that path signs out if the session is no longer valid.
+      const verified = staySignedIn === 'true' ? await readVerifiedAccount() : null;
+      if (verified) {
+        if (!active) return;
+        invalidateEntitlement();
+        accountOwner.current = verified.owner;
+        enabled.current = true;
+        await selectPersonalSession(verified.owner);
+        if (active) setSignedIn(true);
+        return;
+      }
       const token =
         staySignedIn === 'true'
           ? await measureStartup('google-session', () => googleIdentity(GoogleSignin, false))
@@ -191,6 +206,7 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
     enabled.current = false;
     cachedToken.current = null;
     setSignedIn(undefined);
+    await forgetVerifiedAccount();
     try {
       await selectPersonalSession(null);
     } catch (error) {
@@ -244,6 +260,7 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
             if (generation.current.value === current) {
               invalidateEntitlement();
               enabled.current = false;
+              await forgetVerifiedAccount();
               await selectPersonalSession(null);
               if (generation.current.value === current) setSignedIn(false);
             }
@@ -252,11 +269,13 @@ function GoogleSession({ env, children }: { env: Env; children: ReactNode }) {
           if (!token && generation.current.value === current) {
             invalidateEntitlement();
             enabled.current = false;
+            await forgetVerifiedAccount();
             await selectPersonalSession(null);
             if (generation.current.value === current) setSignedIn(false);
           }
           if (token && enabled.current && generation.current.value === current)
             cachedToken.current = { value: token, until: Date.now() + 60_000 };
+          if (token && generation.current.value === current) identityLoaded();
           return token;
         });
         tokenRequest.current = request;

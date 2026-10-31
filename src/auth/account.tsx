@@ -15,6 +15,11 @@ import { backupAccount } from '@/sync/accountBackup';
 import { bootstrapFailure } from './bootstrapFailure';
 import { installAccountUsage } from '@/sync/accountUsage';
 import { useSession } from './session';
+import {
+  forgetVerifiedAccount,
+  readVerifiedAccount,
+  rememberVerifiedAccount,
+} from './verifiedAccount';
 import { ApiError, AccountState, createApiClient } from '@/api/client';
 import { APP_VERSION, readEnv } from '@/config/env';
 import { resolvePersonalAccount, selectPersonalSession } from '@/data/session';
@@ -74,8 +79,10 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
     api: typeof api;
     state: z.infer<typeof AccountState>;
     usageReady: boolean;
+    unconfirmed?: boolean;
   } | null>(null);
   const [stage, setStage] = useState('account');
+  const savedAccountRejected = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [retryable, setRetryable] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -103,6 +110,29 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
     };
     const load = async () => {
       progress('account');
+      // Open saved data at once for an account the server already confirmed on this phone.
+      // The check below confirms it again in the background and resets this on any change.
+      const verified = savedAccountRejected.current ? null : await readVerifiedAccount();
+      if (verified) {
+        try {
+          const saved = await measureStartup('account-saved', () =>
+            resolvePersonalAccount(verified.userId, verified.incarnation, allowed, true),
+          );
+          if (await accountReady(saved, allowed)) {
+            if (alive)
+              setResult({
+                api,
+                state: { state: 'active', incarnation: verified.incarnation },
+                usageReady: true,
+                unconfirmed: true,
+              });
+            return;
+          }
+        } catch {
+          await forgetVerifiedAccount();
+        }
+        if (!alive) return;
+      }
       const readStartedAt = Date.now();
       // /me accepts an unbound request, but the response is never trusted until lifecycle
       // discovery confirms the same active incarnation. Settle speculation to avoid an
@@ -196,6 +226,8 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
             );
           }
           usageReady = true;
+          if (await accountReady(db, allowed))
+            await rememberVerifiedAccount(me.userId, state.incarnation);
         }
       } else {
         // Remove a previously visible account dataset before rendering deletion recovery.
@@ -227,12 +259,17 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
           if (!alive) return;
           if (state.state !== 'active' || state.incarnation !== current.incarnation) {
             invalidateEntitlement();
-            setResult(null);
-            setRevision((r) => r + 1);
+            savedAccountRejected.current = true;
+            void forgetVerifiedAccount().finally(() => {
+              if (!alive) return;
+              setResult(null);
+              setRevision((r) => r + 1);
+            });
           }
         })
         .catch(() => undefined);
     };
+    if (result?.unconfirmed) check();
     const subscription = AppState.addEventListener('change', check);
     const timer = setInterval(check, 60_000);
     return () => {
