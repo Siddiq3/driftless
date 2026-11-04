@@ -4,7 +4,7 @@ import { T } from '@/ui/kit';
 import { BrainCharacter } from '@/ui/BrainCharacter';
 import { wickLabel } from '@/ui/Wick';
 import { useProgress } from './useProgress';
-import { streakSummary } from './streakCard';
+import { streakSummary } from './streakSummary';
 
 /** Surfaces the streak, Wick stage and achievements that progress() already computes. */
 export function StreakCard() {

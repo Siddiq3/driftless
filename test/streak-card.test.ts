@@ -1,4 +1,4 @@
-import { nextStage, streakSummary } from '../src/goals/streakCard';
+import { nextStage, streakSummary } from '../src/goals/streakSummary';
 import type { Progress } from '../src/goals/progress';
 
 function p(over: Partial<Progress> & { outcome?: Progress['today']['outcome'] } = {}): Progress {
