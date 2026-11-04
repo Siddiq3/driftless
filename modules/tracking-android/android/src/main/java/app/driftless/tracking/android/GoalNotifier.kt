@@ -8,6 +8,7 @@ import android.os.Build
 import app.driftless.tracking.core.Alert
 import app.driftless.tracking.core.LimitAlerts
 import app.driftless.tracking.core.Recorder
+import app.driftless.tracking.core.ReminderCopy
 import java.time.ZoneId
 
 /**
@@ -63,15 +64,8 @@ object GoalNotifier {
     }
 
     private fun build(context: Context, a: Alert): android.app.Notification {
-        val unit = if (a.metric == "minutes") "minutes" else "videos"
-        val title = when {
-            a.percent >= 100 -> "You've reached today's goal"
-            a.percent >= 90 -> "Almost at today's goal"
-            a.percent >= 80 -> "Nearly at today's goal"
-            else -> "Halfway to today's goal"
-        }
-        val text = "${a.used} of ${a.limit} $unit today." +
-            if (a.percent >= 100) " Maybe a good moment for a break." else ""
+        val unit = if (a.metric == "minutes") "minutes" else "reels"
+        val (title, text) = ReminderCopy.pick(a.percent, a.used, a.limit, unit, java.time.LocalDate.now().dayOfYear)
         val launch = context.packageManager.getLaunchIntentForPackage(context.packageName)
         val pi = launch?.let { PendingIntent.getActivity(context, 0, it, PendingIntent.FLAG_IMMUTABLE) }
         val b = if (Build.VERSION.SDK_INT >= 26) android.app.Notification.Builder(context, CHANNEL) else {
