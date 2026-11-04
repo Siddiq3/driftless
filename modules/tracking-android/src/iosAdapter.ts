@@ -117,6 +117,7 @@ export function createIOSTracking(store: Store, hooks: Hooks) {
     widgetSupported: () => false,
     requestCountWidget: () => false,
     refreshCountWidget: noop,
+    setWidgetStreak: noop,
     openSupportedApp: unsupported,
     health,
     setDisclosureAccepted: noop,

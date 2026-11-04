@@ -106,6 +106,12 @@ export function useProgress(
           };
           const p = progress(readDay, health, goals, today, window, personalDay);
           history.current = { key: currentKey, days: samples };
+          // Widget streak is a convenience: an older binary or a native error must not fail Progress.
+          try {
+            Tracking.setWidgetStreak(goals.some((g) => g.enabled) ? p.streak.current : 0);
+          } catch {
+            /* Widget keeps showing the count without a streak line. */
+          }
           if (currentKey !== snapshotKey(window, live) || revision !== storageGeneration())
             return null;
           const value: Loaded = {

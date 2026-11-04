@@ -30,6 +30,8 @@ type NativeTracking = {
   widgetSupported(): boolean;
   requestCountWidget(): boolean;
   refreshCountWidget(): void;
+  /** Today's goal streak for the widget; ignored by binaries without the function. */
+  setWidgetStreak?(current: number): void;
   openSupportedApp(pkg: string): void;
   getHealth(): TrackingHealth;
   setDisclosureAccepted(accepted: boolean): void;
@@ -112,6 +114,7 @@ export const Tracking = {
   widgetSupported: () => native.widgetSupported?.() ?? false,
   requestCountWidget: () => native.requestCountWidget?.() ?? false,
   refreshCountWidget: () => native.refreshCountWidget?.(),
+  setWidgetStreak: (current: number) => native.setWidgetStreak?.(current),
   openSupportedApp: (pkg: string) => native.openSupportedApp(pkg),
   health: () => native.getHealth(),
   setDisclosureAccepted: (v: boolean) => native.setDisclosureAccepted(v),

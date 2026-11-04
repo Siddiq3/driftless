@@ -32,9 +32,22 @@ class CountWidget : AppWidgetProvider() {
             val personal = store.personalMeasurement(date, RulesLoader.load(context).apps.keys)
             val known = personal["views"] != null
             val count = personal["views"]?.toString() ?: "—"
-            val active = TrackingPrefs(context).disclosureAccepted && Health.serviceEnabled(context) && DriftlessAccessibilityService.current?.isOperational == true
+            val prefs = TrackingPrefs(context)
+            val active = prefs.disclosureAccepted && Health.serviceEnabled(context) && DriftlessAccessibilityService.current?.isOperational == true
+            val goal = prefs.limits.filter { it.metric == "views" && it.dailyLimit > 0 }.minOfOrNull { it.dailyLimit }
+            val face = WidgetFace.of((personal["views"] as? Number)?.toInt(), goal, active, prefs.widgetStreak())
             val view = RemoteViews(context.packageName, R.layout.driftless_count_widget).apply {
                 setTextViewText(R.id.count_widget_value, count)
+                setImageViewResource(R.id.count_widget_mascot, when (face.pose) {
+                    WidgetFace.Pose.DRAINED -> R.drawable.widget_mascot_drained
+                    WidgetFace.Pose.FOCUSED -> R.drawable.widget_mascot_focused
+                    WidgetFace.Pose.RESTING -> R.drawable.widget_mascot_meditating
+                    WidgetFace.Pose.FRESH -> R.drawable.widget_mascot_fresh
+                })
+                setTextViewText(R.id.count_widget_goal, face.goalText ?: "")
+                setViewVisibility(R.id.count_widget_goal, if (face.goalText == null) android.view.View.GONE else android.view.View.VISIBLE)
+                setTextViewText(R.id.count_widget_streak, face.streakText ?: "")
+                setViewVisibility(R.id.count_widget_streak, if (face.streakText == null) android.view.View.GONE else android.view.View.VISIBLE)
                 setTextViewText(R.id.count_widget_status, if (!active) "Counting is off · tap to set up" else if (!known) "Count not confirmed · tap for details" else "Updated ${java.time.Instant.ofEpochMilli(store.account.now()).atZone(store.account.zone()).toLocalTime().withSecond(0).withNano(0)}")
                 context.packageManager.getLaunchIntentForPackage(context.packageName)?.let { launch ->
                     setOnClickPendingIntent(R.id.count_widget_root, PendingIntent.getActivity(context, 1701, launch, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))

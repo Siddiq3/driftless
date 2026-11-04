@@ -59,6 +59,10 @@ class TrackingModule : Module() {
         Function("widgetSupported") { CountWidget.supported(context) }
         Function("requestCountWidget") { CountWidget.request(context) }
         Function("refreshCountWidget") { CountWidget.update(context) }
+        Function("setWidgetStreak") { current: Int ->
+            TrackingPrefs(context).setWidgetStreak(current)
+            CountWidget.update(context)
+        }
         Function("openSupportedApp") { pkg: String ->
             if (pkg !in RulesLoader.load(context).apps.keys) throw CodedException("UNSUPPORTED_APP", "App is not supported", null)
             val launch = context.packageManager.getLaunchIntentForPackage(pkg)
