@@ -11,7 +11,9 @@ jest.mock('@/auth/session', () => ({ useSession: () => mockSession }));
 jest.mock('@/onboarding/context', () => ({ useOnboarding: () => mockSetup }));
 jest.mock('expo-font', () => ({ useFonts: () => [true] }));
 jest.mock('expo-router', () => ({ router: {}, useFocusEffect: () => undefined }));
-jest.mock('tracking-android', () => ({ Tracking: {} }));
+jest.mock('tracking-android', () => ({
+  Tracking: { memeCardsSupported: () => true, setMemeLanguage: jest.fn() },
+}));
 jest.mock('@/db', () => ({ getDb: jest.fn() }));
 jest.mock('@/goals/store', () => ({ loadGoals: jest.fn() }));
 jest.mock('@/ui/motion', () => ({ useDataMotion: () => ({}) }));

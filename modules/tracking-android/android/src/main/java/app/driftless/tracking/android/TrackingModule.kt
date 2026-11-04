@@ -49,11 +49,12 @@ class TrackingModule : Module() {
         }
         Function("memePreferences") {
             val p = TrackingPrefs(context)
-            mapOf("enabled" to p.memeCardsEnabled)
+            mapOf("enabled" to p.memeCardsEnabled, "language" to p.memeLanguage)
         }
-        Function("setMemePreferences") { enabled: Boolean, _: String ->
+        Function("setMemePreferences") { enabled: Boolean, language: String ->
             val p = TrackingPrefs(context)
             p.memeCardsEnabled = enabled
+            p.memeLanguage = language
             DriftlessAccessibilityService.current?.refreshFloatingCount()
         }
         Function("widgetSupported") { CountWidget.supported(context) }

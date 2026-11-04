@@ -14,7 +14,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Tracking, type TrackingHealth } from 'tracking-android';
+import { Tracking, type MemeLanguage, type TrackingHealth } from 'tracking-android';
+import { MEME_LANGUAGES } from '@/settings/memeLanguage';
 import { useSession } from '@/auth/session';
 import { getDb } from '@/db';
 import { loadGoals } from '@/goals/store';
@@ -125,6 +126,12 @@ const QUESTIONS: Question[] = [
       { value: 'over7', label: 'More than 7 hours a day' },
     ],
   },
+  {
+    key: 'language',
+    title: 'Which language makes you laugh?',
+    help: 'Meme breaks on Reels and Shorts will use it. You can change it anytime in Settings.',
+    options: MEME_LANGUAGES,
+  },
 ];
 
 export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
@@ -162,6 +169,9 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
     };
   }, []);
   const estimate = estimateTime(answers, plan);
+  // iPhone has no meme breaks, so the language question (step 7) is skipped there.
+  const askLanguage = Tracking.memeCardsSupported();
+  const questionCount = askLanguage ? 7 : 6;
   const question = QUESTIONS[step - 1];
   const size = Math.min(layout.width - 48, layout.compact ? 140 : 240);
   const priority = answers.priorities[0];
@@ -217,7 +227,7 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
       setError(null);
       let target = platformSetupStep(
         Platform.OS,
-        activeSetupStep(next, next < step ? 'back' : 'next'),
+        activeSetupStep(next, next < step ? 'back' : 'next', askLanguage),
       );
       if (target === 10 && session.status === 'signedIn') target = next < step ? 9 : 11;
       try {
@@ -234,7 +244,7 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
         if (mounted.current) setBusy(false);
       }
     },
-    [busy, step, session.status, setup, record],
+    [busy, step, session.status, setup, record, askLanguage],
   );
   useEffect(() => {
     if (step !== 10 || session.status !== 'signedIn' || busy || error) return;
@@ -339,6 +349,13 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
           [q.key]: values.includes(value) ? values.filter((v) => v !== value) : [...values, value],
         };
       }
+      if (q.key === 'language') {
+        try {
+          Tracking.setMemeLanguage(value as MemeLanguage);
+        } catch {
+          // The setting stays in the setup answers and can be picked again in Settings.
+        }
+      }
       return { ...current, [q.key]: current[q.key] === value ? undefined : value };
     });
   const title = (text: string) => (
@@ -383,7 +400,11 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
           <View style={{ width: 20 }} />
         )}
         <T v="caption" style={{ color: C.muted, flex: 1 }}>
-          {step > 0 && step <= 6 ? `${step} of 6` : step === 0 ? 'SCROLLSNOOZE' : ''}
+          {step > 0 && step <= questionCount
+            ? `${step} of ${questionCount}`
+            : step === 0
+              ? 'SCROLLSNOOZE'
+              : ''}
         </T>
         {step >= 10 ? (
           <PlainSetupButton
@@ -391,7 +412,7 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
             busy={busy}
             onPress={() => router.push('/privacy')}
           />
-        ) : step > 0 && step <= 6 ? (
+        ) : step > 0 && step <= questionCount ? (
           <PlainSetupButton label="Skip" busy={busy} onPress={() => void move(9)} />
         ) : null}
       </View>
@@ -402,7 +423,9 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
           styles.content,
           {
             justifyContent:
-              (step > 0 && step <= 6) || [11, 12, 13, 14].includes(step) ? 'flex-start' : 'center',
+              (step > 0 && step <= questionCount) || [11, 12, 13, 14].includes(step)
+                ? 'flex-start'
+                : 'center',
           },
         ]}
       >
@@ -416,7 +439,7 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
             question ? undefined : transition,
           ]}
         >
-          {step > 0 && step <= 6 && question && (
+          {step > 0 && step <= questionCount && question && (
             <QuestionContent
               ref={questionContent}
               questionKey={question.key}

@@ -39,6 +39,7 @@ jest.mock('tracking-android', () => ({
   Tracking: {
     health: jest.fn(),
     runtimeSupport: () => ({ counting: true, minutes: true, blocking: true }),
+    memeCardsSupported: () => true,
   },
 }));
 jest.mock('@/ui/kit', () => {

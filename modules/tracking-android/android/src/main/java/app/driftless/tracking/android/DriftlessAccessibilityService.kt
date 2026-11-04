@@ -417,7 +417,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
             if (milestone != null && prefs.memeCardsEnabled && !memeCard.isShowing) {
                 val locales = resources.configuration.locales
                 val language = app.driftless.tracking.core.MemeLanguages.resolve(
-                    (0 until locales.size()).map { locales[it].language })
+                    (0 until locales.size()).map { locales[it].language }, prefs.memeLanguage)
                 if (memeCard.show(badge,milestone,language, shorts = pkg == "com.google.android.youtube") {
                     packageManager.getLaunchIntentForPackage(packageName)?.let {
                         it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); startActivity(it)

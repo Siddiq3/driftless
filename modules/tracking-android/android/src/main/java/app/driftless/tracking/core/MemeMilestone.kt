@@ -15,6 +15,10 @@ object MemeLanguages {
         val languages = deviceLanguages.map { it.substringBefore('-').substringBefore('_').lowercase(java.util.Locale.ROOT) }
         return languages.firstOrNull { it in supported && it != "en" } ?: "en"
     }
+
+    /** A language the person picked wins; "auto" (or anything unknown) falls back to the phone. */
+    fun resolve(deviceLanguages: List<String>, chosen: String?): String =
+        chosen?.takeIf { it in supported } ?: resolve(deviceLanguages)
 }
 
 data class MemeCopy(val caption: String, val pause: String, val continueWatching: String, val close: String)

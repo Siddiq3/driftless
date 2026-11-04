@@ -4,6 +4,7 @@ import type {
   Daily,
   BlockingConfig,
   WrapDetails,
+  MemeLanguage,
   MemePreferences,
   PersonalMeasurement,
 } from './types';
@@ -18,8 +19,8 @@ type NativeTracking = {
   setSourceDevice?(id: string): void;
   mergeSyncedDays?(json: string, scope: string): void;
   getPersonalMeasurement?(date: string): PersonalMeasurement;
-  memePreferences(): MemePreferences;
-  setMemePreferences(enabled: boolean, legacyLanguage: string): void;
+  memePreferences(): Partial<MemePreferences>;
+  setMemePreferences(enabled: boolean, language: string): void;
   floatingCountPreferences(): { size: number; pausedUntil: number };
   setFloatingCountSize(size: number): void;
   resumeFloatingCount(): void;
@@ -94,8 +95,16 @@ export const Tracking = {
       typeof native.setBlocking === 'function' && typeof native.setEntitlement === 'function',
   }),
   memeCardsSupported: () => typeof native.setMemePreferences === 'function',
-  memePreferences: (): MemePreferences => native.memePreferences?.() ?? { enabled: true },
-  setMemePreferences: (enabled: boolean) => native.setMemePreferences?.(enabled, 'auto'),
+  memePreferences: (): MemePreferences => ({
+    enabled: true,
+    language: 'auto',
+    ...native.memePreferences?.(),
+  }),
+  // Each setter keeps the other value, so turning memes on or off never resets the language.
+  setMemePreferences: (enabled: boolean) =>
+    native.setMemePreferences?.(enabled, Tracking.memePreferences().language),
+  setMemeLanguage: (language: MemeLanguage) =>
+    native.setMemePreferences?.(Tracking.memePreferences().enabled, language),
   floatingCountSupported: () => typeof native.setFloatingCountEnabled === 'function',
   floatingCountCustomizationSupported: () => typeof native.setFloatingCountSize === 'function',
   floatingCountPreferences: () =>

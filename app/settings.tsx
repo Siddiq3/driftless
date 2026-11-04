@@ -9,6 +9,7 @@ import { APP_VERSION, readEnv } from '@/config/env';
 import { cacheEntitlement, entitlementGeneration } from '@/billing/cache';
 import { Notice, Screen } from '@/ui/kit';
 import { Icon } from '@/ui/Icon';
+import { Tracking } from 'tracking-android';
 import {
   SettingsCanvas,
   SettingsText,
@@ -165,6 +166,17 @@ export default function Settings() {
             icon="shield"
             onPress={() => router.push('/blocking')}
           />
+          {Tracking.memeCardsSupported() && (
+            <>
+              <SettingsDivider />
+              <SettingsRow
+                title="Meme language"
+                subtitle="The language of your meme breaks"
+                icon="chat"
+                onPress={() => router.push('/meme-language')}
+              />
+            </>
+          )}
           <SettingsDivider />
           <SettingsRow
             title="Your data & account"

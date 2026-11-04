@@ -132,10 +132,12 @@ describe('first-launch local setup', () => {
       possibleMinutesPerDay: 90,
     });
   });
-  it('skips the retired income question on next, back and resume', () => {
-    expect(activeSetupStep(7)).toBe(8);
-    expect(activeSetupStep(7, 'back')).toBe(6);
-    expect(activeSetupStep(8)).toBe(8);
+  it('asks the meme language at step 7 only where meme breaks exist', () => {
+    expect(activeSetupStep(7)).toBe(7);
+    expect(activeSetupStep(7, 'back')).toBe(7);
+    expect(activeSetupStep(7, 'next', false)).toBe(8);
+    expect(activeSetupStep(7, 'back', false)).toBe(6);
+    expect(activeSetupStep(8, 'next', false)).toBe(8);
   });
   it('drops legacy income answers when reading a saved setup', () => {
     const record = SetupRecordSchema.parse({
