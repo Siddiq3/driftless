@@ -8,13 +8,12 @@ import android.os.Build
 import app.driftless.tracking.core.Alert
 import app.driftless.tracking.core.LimitAlerts
 import app.driftless.tracking.core.Recorder
-import app.driftless.tracking.core.isValidatedVersion
 import java.time.ZoneId
 
 /**
  * Sends goal notifications from the native side, so they work while the app is closed.
- * Minutes come from Usage Access when granted, otherwise from the counter. Video counts are used
- * only for accuracy-validated app versions.
+ * Minutes come from Usage Access when granted, otherwise from the counter. Video counts are the
+ * same experimental counts shown on the badge.
  */
 object GoalNotifier {
     private const val CHANNEL = "goal_alerts"
@@ -42,8 +41,8 @@ object GoalNotifier {
         } else {
             null
         }
-        val validated = rules.apps.values.filter { isValidatedVersion(it, Health.appVersion(context, it.pkg)) }.map { it.pkg }.toSet()
-        val views = if(accounting) store.account.effectiveUsage("views")?.toInt() else if (validated.isEmpty()) null else rows.filter { it.pkg in validated }.sumOf { it.views }
+        // Same experimental count the badge and feed pause already use; no app version is validated yet.
+        val views = if(accounting) store.account.effectiveUsage("views")?.toInt() else rows.filter { it.pkg in rules.apps }.sumOf { it.views }
 
         val due = LimitAlerts.due(limits, minutes, views, prefs.sentAlerts(today), today)
         if (due.isEmpty()) return

@@ -7,7 +7,7 @@ data class Alert(val metric: String, val percent: Int, val used: Int, val limit:
 
 /**
  * Decides which goal notifications to send now. Each (date, metric, threshold) fires at most once.
- * `views` is only alerted when counting accuracy is validated (never nag on unconfirmed numbers).
+ * Unknown usage (null) never alerts.
  */
 object LimitAlerts {
     val THRESHOLDS = listOf(50, 80, 90, 100)
