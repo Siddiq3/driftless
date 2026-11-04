@@ -30,6 +30,7 @@ import { GetStartedScreen } from './GetStartedScreen';
 import { QuestionContent, type QuestionContentHandle } from './QuestionContent';
 import { useMotionPreferences } from '@/ui/onboarding-motion/useMotionPreferences';
 import { PermissionScreen } from '@/permissions/PermissionScreen';
+import { TypewriterText } from '@/ui/onboarding-motion/TypewriterText';
 import {
   SetupButton,
   WidgetPreview,
@@ -355,6 +356,21 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
     </T>
   );
 
+  const limitStep = (dir: 1 | -1) => {
+    const next = Math.min(ios ? 240 : 500, Math.max(5, plan.dailyLimit + dir * 5));
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${dir < 0 ? 'Lower' : 'Raise'} limit, now ${plan.dailyLimit}`}
+        disabled={next === plan.dailyLimit}
+        onPress={() => setPlan({ ...plan, dailyLimit: next })}
+        style={[styles.limitStep, { opacity: next === plan.dailyLimit ? 0.4 : 1 }]}
+      >
+        <Icon name={dir < 0 ? 'minus' : 'plus'} size={22} color={C.text} />
+      </Pressable>
+    );
+  };
+
   if (step === 0) {
     return (
       <GetStartedScreen
@@ -460,7 +476,18 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
           {step === 9 && (
             <>
               <BrainCharacter size={140} />
-              {title('Your limit\nfrom today.')}
+              <TypewriterText
+                text={'Your limit\nfrom today.'}
+                active
+                reducedMotion={reducedMotion !== false}
+                onDone={() => undefined}
+                mutedColor={C.muted}
+                style={{
+                  ...styles.title,
+                  fontFamily: fontsLoaded ? 'LilitaOne' : undefined,
+                  fontWeight: fontsLoaded ? '400' : '900',
+                }}
+              />
               <View
                 style={{
                   flexDirection: 'row',
@@ -469,32 +496,37 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
                   flexWrap: 'wrap',
                 }}
               >
-                {Array.from(new Set([...(ios ? MINUTE_LIMITS : REEL_LIMITS), plan.dailyLimit])).map(
-                  (n) => (
-                    <Pressable
-                      key={n}
-                      accessibilityRole="radio"
-                      accessibilityLabel={`${n} ${ios ? 'minutes' : 'reels'} a day`}
-                      accessibilityState={{ checked: plan.dailyLimit === n }}
-                      onPress={() => setPlan({ ...plan, dailyLimit: n })}
-                      style={{
-                        borderRadius: 32,
-                        borderWidth: 2,
-                        borderColor: plan.dailyLimit === n ? C.accent : C.surface,
-                        minHeight: 64,
-                        minWidth: 56,
-                        padding: 12,
-                        backgroundColor: C.surface,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <T v="heading" style={{ color: plan.dailyLimit === n ? C.accent : C.text }}>
-                        {n}
-                      </T>
-                    </Pressable>
-                  ),
-                )}
+                {(ios ? MINUTE_LIMITS : REEL_LIMITS).map((n) => (
+                  <Pressable
+                    key={n}
+                    accessibilityRole="radio"
+                    accessibilityLabel={`${n} ${ios ? 'minutes' : 'reels'} a day`}
+                    accessibilityState={{ checked: plan.dailyLimit === n }}
+                    onPress={() => setPlan({ ...plan, dailyLimit: n })}
+                    style={{
+                      borderRadius: 32,
+                      borderWidth: 2,
+                      borderColor: plan.dailyLimit === n ? C.accent : C.surface,
+                      minHeight: 64,
+                      minWidth: 56,
+                      padding: 12,
+                      backgroundColor: C.surface,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <T v="heading" style={{ color: plan.dailyLimit === n ? C.accent : C.text }}>
+                      {n}
+                    </T>
+                  </Pressable>
+                ))}
+              </View>
+              <View style={styles.limitRow}>
+                {limitStep(-1)}
+                <T v="display" style={{ ...styles.bigNumber, minWidth: 110, textAlign: 'center' }}>
+                  {plan.dailyLimit}
+                </T>
+                {limitStep(1)}
               </View>
               <T style={styles.small}>{ios ? 'minutes a day' : 'reels a day'}</T>
               {ios && (
@@ -734,6 +766,15 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   footer: { width: '100%', maxWidth: 560, alignSelf: 'center', padding: 20, gap: 12 },
+  limitRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16 },
+  limitStep: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: C.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   title: {
     fontSize: 30,
     lineHeight: 39,
