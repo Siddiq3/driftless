@@ -7,6 +7,7 @@ import { addDays } from '@siddiq3/driftless-contracts/domain';
 import { Screen, T, Notice, Button } from '@/ui/kit';
 import { AppIcon, Icon } from '@/ui/Icon';
 import { WrapEntry } from '@/wrapped/Entry';
+import { StreakCard } from '@/goals/StreakCard';
 import { useActivity } from '@/activity/useActivity';
 import { ActivityChart } from '@/activity/ActivityChart';
 import type { ActivityPeriod } from '@/activity/model';
@@ -139,6 +140,7 @@ export default function ProgressScreen() {
                 )}
               </View>
             </View>
+            {offset === 0 && <StreakCard />}
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Focus and app pauses"
