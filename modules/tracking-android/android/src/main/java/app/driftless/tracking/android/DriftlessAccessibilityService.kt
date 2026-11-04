@@ -413,6 +413,8 @@ class DriftlessAccessibilityService : AccessibilityService() {
         if (badgeIdentity && measurement!=null) {
             val milestone = app.driftless.tracking.core.nextMemeMilestone(
                 memeDate, memeCount, today, value, prefs.shownMemeMilestone(today))
+            // A new video can cross a reminder threshold; check now rather than on the next minute.
+            if (memeCount != value) lastGoalCheckMs = 0L
             memeDate = today; memeCount = value
             if (milestone != null && prefs.memeCardsEnabled && !memeCard.isShowing) {
                 val locales = resources.configuration.locales
