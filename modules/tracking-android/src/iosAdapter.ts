@@ -106,6 +106,7 @@ export function createIOSTracking(store: Store, hooks: Hooks) {
     memePreferences: () => ({ enabled: false, language: 'auto' }),
     setMemePreferences: noop,
     setMemeLanguage: noop,
+    showTestMeme: () => false,
     floatingCountSupported: () => false,
     floatingCountCustomizationSupported: () => false,
     floatingCountPreferences: () => ({ size: 54, pausedUntil: 0 }),

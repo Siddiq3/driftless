@@ -374,6 +374,20 @@ class DriftlessAccessibilityService : AccessibilityService() {
     }
 
     /** Bridge calls may arrive on another thread; all WindowManager access stays on main. */
+    /** Debug builds only: shows a meme card now, so captions can be checked without watching 50 reels. */
+    fun showTestMeme(): Boolean {
+        if (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE == 0) return false
+        if (!::memeCard.isInitialized || !::prefs.isInitialized) return false
+        main.post {
+            if (memeCard.isShowing) return@post
+            val locales = resources.configuration.locales
+            val language = app.driftless.tracking.core.MemeLanguages.resolve(
+                (0 until locales.size()).map { locales[it].language }, prefs.memeLanguage)
+            memeCard.show(app.driftless.tracking.core.CountBadgeValue("50", "Test"), 50, language) {}
+        }
+        return true
+    }
+
     fun refreshFloatingCount() { main.post { if (::engine.isInitialized) updateFloatingCount(SqliteStore.get(this@DriftlessAccessibilityService).account.now()) } }
 
     private fun hideFloatingCount() {

@@ -21,6 +21,7 @@ type NativeTracking = {
   getPersonalMeasurement?(date: string): PersonalMeasurement;
   memePreferences(): Partial<MemePreferences>;
   setMemePreferences(enabled: boolean, language: string): void;
+  showTestMeme?(): boolean;
   floatingCountPreferences(): { size: number; pausedUntil: number };
   setFloatingCountSize(size: number): void;
   resumeFloatingCount(): void;
@@ -103,6 +104,8 @@ export const Tracking = {
   // Each setter keeps the other value, so turning memes on or off never resets the language.
   setMemePreferences: (enabled: boolean) =>
     native.setMemePreferences?.(enabled, Tracking.memePreferences().language),
+  /** Debug builds only; false when counting is off or in a store build. */
+  showTestMeme: (): boolean => native.showTestMeme?.() ?? false,
   setMemeLanguage: (language: MemeLanguage) =>
     native.setMemePreferences?.(Tracking.memePreferences().enabled, language),
   floatingCountSupported: () => typeof native.setFloatingCountEnabled === 'function',

@@ -57,6 +57,7 @@ class TrackingModule : Module() {
             p.memeLanguage = language
             DriftlessAccessibilityService.current?.refreshFloatingCount()
         }
+        Function("showTestMeme") { DriftlessAccessibilityService.current?.showTestMeme() ?: false }
         Function("widgetSupported") { CountWidget.supported(context) }
         Function("requestCountWidget") { CountWidget.request(context) }
         Function("refreshCountWidget") { CountWidget.update(context) }

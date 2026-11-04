@@ -227,6 +227,15 @@ function AndroidTrackingScreen() {
             <Icon name="chevron" size={18} color={C.muted} />
           </Pressable>
         )}
+        {__DEV__ && Tracking.memeCardsSupported() && (
+          <Button
+            label="Show test meme"
+            kind="secondary"
+            onPress={() => {
+              if (!Tracking.showTestMeme()) setError('Turn on counting to show a test meme.');
+            }}
+          />
+        )}
         {!badgeEnabled && (
           <T style={styles.caption}>Turn on the floating counter to see meme breaks.</T>
         )}
