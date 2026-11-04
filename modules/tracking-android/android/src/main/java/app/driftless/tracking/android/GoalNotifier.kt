@@ -48,7 +48,8 @@ object GoalNotifier {
         val due = LimitAlerts.due(limits, minutes, views, prefs.sentAlerts(today), today)
         if (due.isEmpty()) return
         ensureChannel(nm)
-        for ((_, a) in due) nm.notify(a.metric.hashCode() + a.percent, build(context, a))
+        // One notification per metric: each new threshold replaces the last instead of stacking.
+        for ((_, a) in due) nm.notify(a.metric.hashCode(), build(context, a))
         prefs.markSent(today, due.map { it.first })
     }
 
@@ -64,8 +65,14 @@ object GoalNotifier {
 
     private fun build(context: Context, a: Alert): android.app.Notification {
         val unit = if (a.metric == "minutes") "minutes" else "videos"
-        val title = if (a.percent >= 100) "You've reached today's goal" else "Nearly at today's goal"
-        val text = "${a.used} of ${a.limit} $unit. Wick is still glowing — maybe a good moment for a break."
+        val title = when {
+            a.percent >= 100 -> "You've reached today's goal"
+            a.percent >= 90 -> "Almost at today's goal"
+            a.percent >= 80 -> "Nearly at today's goal"
+            else -> "Halfway to today's goal"
+        }
+        val text = "${a.used} of ${a.limit} $unit today." +
+            if (a.percent >= 100) " Maybe a good moment for a break." else ""
         val launch = context.packageManager.getLaunchIntentForPackage(context.packageName)
         val pi = launch?.let { PendingIntent.getActivity(context, 0, it, PendingIntent.FLAG_IMMUTABLE) }
         val b = if (Build.VERSION.SDK_INT >= 26) android.app.Notification.Builder(context, CHANNEL) else {

@@ -18,6 +18,7 @@ import { Tracking, type TrackingHealth } from 'tracking-android';
 import { useSession } from '@/auth/session';
 import { getDb } from '@/db';
 import { loadGoals } from '@/goals/store';
+import { ensureNotificationPermission } from '@/goals/reminders';
 import { Details, Notice, T } from '@/ui/kit';
 import { BrainCharacter } from '@/ui/BrainCharacter';
 import { AppIcon, Icon } from '@/ui/Icon';
@@ -360,7 +361,12 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
         fontsLoaded={!!fontsLoaded}
         busy={busy}
         error={error}
-        onStart={() => void move(1)}
+        onStart={() =>
+          // Goal reminders are the main way limits reach people, so ask before setup; a "no" still continues.
+          void ensureNotificationPermission()
+            .catch(() => false)
+            .then(() => move(1))
+        }
       />
     );
   }

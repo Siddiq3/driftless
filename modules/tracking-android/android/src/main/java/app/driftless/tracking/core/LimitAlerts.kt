@@ -10,7 +10,7 @@ data class Alert(val metric: String, val percent: Int, val used: Int, val limit:
  * `views` is only alerted when counting accuracy is validated (never nag on unconfirmed numbers).
  */
 object LimitAlerts {
-    val THRESHOLDS = listOf(80, 100)
+    val THRESHOLDS = listOf(50, 80, 90, 100)
 
     fun due(
         limits: List<Limit>,
@@ -27,7 +27,7 @@ object LimitAlerts {
                 "views" -> viewsUsed
                 else -> null
             } ?: continue
-            // Highest threshold reached only, so the user isn't sent 80% and 100% at the same moment.
+            // Highest threshold reached only, so a jump past several thresholds sends one alert, not a burst.
             val reached = THRESHOLDS.filter { used * 100 >= it * l.dailyLimit }.maxOrNull() ?: continue
             val key = "$localDate|${l.metric}|$reached"
             if (key in alreadySent) continue

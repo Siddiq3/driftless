@@ -281,7 +281,7 @@ export default function Goals() {
           </T>
           <T style={{ color: C.muted, fontSize: 15, lineHeight: 22 }}>
             {android
-              ? 'Set a daily limit. You’ll get a heads-up at 80% and when you reach it.'
+              ? 'Set a daily limit. You’ll get a heads-up at 50%, 80%, 90% and when you reach it.'
               : 'Set a daily intention for your screen time.'}
           </T>
         </View>
