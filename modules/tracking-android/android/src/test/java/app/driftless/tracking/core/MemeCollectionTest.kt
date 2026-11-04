@@ -76,23 +76,24 @@ class MemeCollectionTest {
         assertEquals(1,single.size)
         assertEquals(single.single(),MemeCollection.choose(single,setOf(single.single().id),single.single().id))
     }
-    @Test fun composedCaptionsHaveFortyEightVariantsAndKeepCountAndPlatformInAllLanguages() {
+    @Test fun everyCaptionIsAWholeLineThatKeepsCountAndPlatformInAllLanguages() {
         val scripts=mapOf("te" to '\u0C00'..'\u0C7F',"hi" to '\u0900'..'\u097F',
             "ta" to '\u0B80'..'\u0BFF',"kn" to '\u0C80'..'\u0CFF',"ml" to '\u0D00'..'\u0D7F')
         val kannada=MemeReaction("fixture","kn","fixture",listOf("{count} {feed} ಆಯ್ತು!","{count} {feed} ನೋಡಿದೆ!","{count} {feed} ದಾಟಿದೆ!"))
         for(meme in MemeCollection.all+kannada) {
-            assertEquals(48,meme.captionVariantCount)
-            val captions=(0 until 48).map {meme.caption(it,100,true)}
-            assertEquals(48,captions.toSet().size)
+            val n=meme.captionVariantCount
+            assertEquals(meme.captions.size,n);assertTrue(n>=3)
+            val captions=(0 until n).map {meme.caption(it,100,true)}
+            assertEquals(n,captions.toSet().size)
             captions.forEach { text ->
                 assertTrue(text.contains("100"));assertFalse(text.contains("{"))
                 scripts[meme.language]?.let {script ->assertTrue(text.any{it in script})}
             }
-            assertEquals(48,(0 until 48).map{meme.caption(it,1,false)}.toSet().size)
+            assertEquals(3,(0 until n).map{meme.caption(it,1,false)}.toSet().size)
             var previous=-1
             repeat(100) {
                 val index=MemeCollection.captionIndex(meme,previous,Random(it))
-                assertNotEquals(previous,index);assertTrue(index in 0 until 48);previous=index
+                assertNotEquals(previous,index);assertTrue(index in 0 until n);previous=index
             }
         }
         assertTrue(kannada.caption(0,50,true).contains("ಶಾರ್ಟ್ಸ್"))
