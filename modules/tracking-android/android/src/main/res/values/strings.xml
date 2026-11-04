@@ -2,5 +2,5 @@
 <resources>
   <string name="driftless_a11y_label">ScrollSnooze short-video counter</string>
   <string name="driftless_a11y_description">ScrollSnooze uses this service only in Instagram and YouTube, to count the Reels and Shorts you watch, measure the time you spend on them, show your count, goal alerts and meme breaks, and apply pauses you set. It reads window and scroll events and interface structure in those two apps, and visible text and content descriptions on Reels and Shorts screens. Text is processed in memory and is not saved. Counts, times and dates are stored on this phone. After you sign in, daily and per-app video counts, ad counts, minutes and goals are backed up automatically. It does not take screenshots. You can turn it off here at any time.</string>
-  <string name="driftless_widget_description">Today’s confirmed short-video count on your home screen.</string>
+  <string name="driftless_widget_description">Today’s short-video count, daily allowance and streak with your companion.</string>
 </resources>

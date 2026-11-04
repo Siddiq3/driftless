@@ -180,6 +180,17 @@ class TrackingPrefs(private val context: Context) {
             return b
         }
 
+    /** Streak computed by the app for the widget; only trusted on the day it was computed. */
+    fun widgetStreak(): Int? {
+        if (p.getString(scoped("widget_streak_date"), null) != today()) return null
+        return p.getInt(scoped("widget_streak"), 0)
+    }
+
+    fun setWidgetStreak(current: Int) {
+        p.edit().putString(scoped("widget_streak_date"), today())
+            .putInt(scoped("widget_streak"), current.coerceAtLeast(0)).apply()
+    }
+
     /** Goals mirrored from the app so the service can alert without JS running. */
     var limits: List<app.driftless.tracking.core.Limit>
         get() {

@@ -11,6 +11,8 @@ import { useReducedMotion } from '@/ui/motion';
 import { OnboardingProvider } from '@/onboarding/context';
 import { FirstLaunchRedirect } from '@/onboarding/FirstLaunchRedirect';
 import { useTheme } from '@/ui/kit';
+import { retireEveningReminder } from '@/goals/reminders';
+import { useEffect } from 'react';
 
 const env = readEnv();
 
@@ -27,6 +29,9 @@ export default function RootLayout() {
 function AppRoot() {
   const t = useTheme();
   const reduced = useReducedMotion();
+  useEffect(() => {
+    void retireEveningReminder();
+  }, []);
   return (
     <StartupBoundary env={env}>
       <AccountBoundary>
