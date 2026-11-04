@@ -44,7 +44,8 @@ class MemeMilestoneCard(private val service: AccessibilityService) {
         val reaction = MemeCollection.choose(pool, prefs.usedMemeReactions(display), prefs.lastMemeReaction())
             ?: return false
         val captionIndex = MemeCollection.captionIndex(reaction, prefs.previousMemeCaption(reaction.id), lang = display)
-        val copy = memeCopy(display, milestone)
+        // Only the caption follows the meme language; buttons stay English everywhere.
+        val copy = memeCopy("en", milestone)
         val backdrop = FrameLayout(service).apply {
             setBackgroundColor(Color.parseColor("#B5000000"))
             setOnClickListener { hide() }

@@ -146,7 +146,7 @@ class MemeCardTest {
                 assertTrue(chosen.linesFor(display)!=null)
                 val root=MemeMilestoneCard::class.java.getDeclaredField("root").apply {isAccessible=true}.get(card) as android.view.View
                 val nodes=descendants(root)
-                val copy=app.driftless.tracking.core.memeCopy(display,50)
+                val copy=app.driftless.tracking.core.memeCopy("en",50)
                 val buttons=nodes.filterIsInstance<android.widget.Button>().map {it.text.toString()}
                 assertTrue(copy.pause in buttons);assertTrue(copy.continueWatching in buttons)
                 assertTrue(nodes.any{it.contentDescription==copy.close})
