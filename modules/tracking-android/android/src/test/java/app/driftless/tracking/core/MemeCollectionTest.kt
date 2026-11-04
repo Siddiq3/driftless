@@ -61,17 +61,21 @@ class MemeCollectionTest {
         val meme = MemeCollection.all.first()
         assertEquals(meme, MemeCollection.choose(listOf(meme), setOf(meme.id), meme.id, random))
     }
-    @Test fun languagePoolCyclesWithinTheRequestedLanguageAndFallsBackWhenAssetsAreMissing() {
+    @Test fun poolHoldsEveryMemeCaptionedInTheLanguageAndFallsBackToEnglish() {
         val telugu=MemeCollection.poolForLanguage(MemeCollection.all,"te")
-        assertTrue(telugu.all {it.language=="te"})
+        assertEquals(MemeCollection.all,telugu)
+        assertTrue(telugu.any {it.language!="te"})
         val used=mutableSetOf<String>();var last:String?=null
         repeat(telugu.size) {
             val next=MemeCollection.choose(telugu,used,last,Random(it))!!
             assertTrue(used.add(next.id));last=next.id
         }
         assertNotEquals(last,MemeCollection.choose(telugu,used,last,Random(2))!!.id)
+        assertEquals(MemeCollection.all,MemeCollection.poolForLanguage(MemeCollection.all,"en"))
+        assertEquals("en",MemeCollection.displayLanguage(MemeCollection.all,"kn"))
         assertEquals(MemeCollection.all,MemeCollection.poolForLanguage(MemeCollection.all,"kn"))
         assertTrue(MemeCollection.poolForLanguage(emptyList(),"te").isEmpty())
+        assertTrue(MemeCollection.poolForLanguage(MemeCollection.all,"hi").all {it.language=="hi"})
         val single=MemeCollection.poolForLanguage(MemeCollection.all,"ml")
         assertEquals(1,single.size)
         assertEquals(single.single(),MemeCollection.choose(single,setOf(single.single().id),single.single().id))
@@ -80,19 +84,19 @@ class MemeCollectionTest {
         val scripts=mapOf("te" to '\u0C00'..'\u0C7F',"hi" to '\u0900'..'\u097F',
             "ta" to '\u0B80'..'\u0BFF',"kn" to '\u0C80'..'\u0CFF',"ml" to '\u0D00'..'\u0D7F')
         val kannada=MemeReaction("fixture","kn","fixture",listOf("{count} {feed} ಆಯ್ತು!","{count} {feed} ನೋಡಿದೆ!","{count} {feed} ದಾಟಿದೆ!"))
-        for(meme in MemeCollection.all+kannada) {
-            val n=meme.captionVariantCount
-            assertEquals(meme.captions.size,n);assertTrue(n>=3)
-            val captions=(0 until n).map {meme.caption(it,100,true)}
+        for(meme in MemeCollection.all+kannada) for(lang in listOf(meme.language)+meme.translations.keys) {
+            val n=meme.captionVariantCount(lang)
+            assertTrue("${meme.description} $lang",n>=3)
+            val captions=(0 until n).map {meme.caption(it,100,true,lang)}
             assertEquals(n,captions.toSet().size)
             captions.forEach { text ->
                 assertTrue(text.contains("100"));assertFalse(text.contains("{"))
-                scripts[meme.language]?.let {script ->assertTrue(text.any{it in script})}
+                scripts[lang]?.let {script ->assertTrue(text,text.any{it in script})}
             }
-            assertEquals(3,(0 until n).map{meme.caption(it,1,false)}.toSet().size)
+            assertEquals(3,(0 until n).map{meme.caption(it,1,false,lang)}.toSet().size)
             var previous=-1
             repeat(100) {
-                val index=MemeCollection.captionIndex(meme,previous,Random(it))
+                val index=MemeCollection.captionIndex(meme,previous,Random(it),lang)
                 assertNotEquals(previous,index);assertTrue(index in 0 until n);previous=index
             }
         }
