@@ -24,6 +24,7 @@ jest.mock('tracking-android', () => ({
     health: jest.fn(),
     refreshUsage: jest.fn(),
     refreshCountWidget: jest.fn(),
+    setWidgetStreak: jest.fn(),
     setLimits: jest.fn(),
   },
 }));

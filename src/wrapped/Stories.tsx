@@ -22,6 +22,7 @@ import { AppIcon, Icon } from '@/ui/Icon';
 import { useReducedMotion, useDataMotion } from '@/ui/motion';
 import { SetupButton } from '@/onboarding/Visuals';
 import { clock, peakWindow, personality, type Recap } from './model';
+import { playStoreUrl } from '@/config/website';
 
 const cream = '#FFE9AD';
 type Story = { id: string; colors: [string, string]; label: string; content: ReactNode };
@@ -430,7 +431,7 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
     try {
       if (!TurboModuleRegistry.get('RNViewShot') || !(await Sharing.isAvailableAsync())) {
         await Share.share({
-          message: `ScrollSnooze · ${recap.period === 'daily' ? 'Daily' : 'Weekly'} Wrapped\n${recap.from} – ${recap.to}\n${hasViews ? `${recap.views.value} short videos counted (${recap.views.trackedDays}/${recap.expectedDays} tracked days)` : recap.minutes.value !== null ? `${recap.minutes.value} minutes in supported apps` : 'No confirmed counts yet'}`,
+          message: `ScrollSnooze · ${recap.period === 'daily' ? 'Daily' : 'Weekly'} Wrapped\n${recap.from} – ${recap.to}\n${hasViews ? `${recap.views.value} short videos counted (${recap.views.trackedDays}/${recap.expectedDays} tracked days)` : recap.minutes.value !== null ? `${recap.minutes.value} minutes in supported apps` : 'No confirmed counts yet'}\n\nScroll less with ScrollSnooze: ${playStoreUrl('wrapped_share')}`,
         });
         return;
       }
@@ -598,7 +599,15 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
         <View
           ref={capture}
           collapsable={false}
-          style={{ padding: 28, gap: 24, backgroundColor: story.colors[1], alignItems: 'center' }}
+          style={{
+            padding: 28,
+            gap: 24,
+            backgroundColor: story.colors[1],
+            alignItems: 'center',
+            // Story-sized (9:16) so the card fills an Instagram or WhatsApp story without cropping.
+            minHeight: Math.round((width * 16) / 9),
+            justifyContent: 'space-between',
+          }}
         >
           <Text style={styles.brand}>
             ScrollSnooze · {recap.period === 'daily' ? 'Daily' : 'Weekly'} Wrapped
@@ -616,6 +625,13 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
               ? ` · ${trackedDays}/${recap.expectedDays} days tracked`
               : ''}
           </Text>
+          <View style={styles.shareCta}>
+            <BrainCharacter pose="fresh" size={56} still />
+            <View style={{ flexShrink: 1 }}>
+              <Text style={styles.brand}>Scroll less with ScrollSnooze</Text>
+              <Text style={styles.caption}>Free on Google Play</Text>
+            </View>
+          </View>
         </View>
       </View>
       {!!note && (
@@ -634,6 +650,15 @@ const styles = StyleSheet.create({
   track: { height: 3, flex: 1, backgroundColor: '#FFFFFF40', borderRadius: 4, overflow: 'hidden' },
   header: { padding: 20, flexDirection: 'row', gap: 8, alignItems: 'center' },
   brand: { fontSize: 17, fontWeight: '600', color: '#FFFFFF' },
+  shareCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#00000033',
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
   caption: { fontSize: 12, color: '#FFFFFFBD', lineHeight: 18 },
   circle: {
     minWidth: 48,

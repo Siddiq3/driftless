@@ -134,6 +134,9 @@ test('older binaries share an honest text summary without requiring login', asyn
     message: expect.stringContaining('No confirmed counts yet'),
   });
   expect(Sharing.shareAsync).not.toHaveBeenCalled();
+  expect(share.mock.calls[0]![0].message).toContain(
+    'https://play.google.com/store/apps/details?id=com.siddiqkolimi.scrollsnooze',
+  );
   await act(async () => tree.unmount());
 });
 test('image sharing releases temporary captures even if the share sheet fails', async () => {

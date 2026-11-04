@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import type { v1 } from '@siddiq3/driftless-contracts';
 import { randomUUID } from 'expo-crypto';
@@ -9,11 +9,7 @@ import { Tracking } from 'tracking-android';
 import { getDb } from '@/db';
 import { storageScope } from '@/db/scope';
 import { ProtectionNotice } from '@/billing/ProtectionNotice';
-import {
-  ensureNotificationPermission,
-  eveningReminderEnabled,
-  setEveningReminder,
-} from '@/goals/reminders';
+import { ensureNotificationPermission } from '@/goals/reminders';
 import { loadGoals, saveGoal } from '@/goals/store';
 import { useProgress } from '@/goals/useProgress';
 import { candidateCount } from '@/tracking/candidateCount';
@@ -205,45 +201,6 @@ function GoalCard({
   );
 }
 
-function EveningReminder() {
-  const [on, setOn] = useState<boolean | null>(null);
-  const [note, setNote] = useState<string | null>(null);
-  useEffect(() => {
-    getDb()
-      .then(eveningReminderEnabled)
-      .then(setOn)
-      .catch(() => setOn(false));
-  }, []);
-  if (on === null) return null;
-  return (
-    <View style={styles.card}>
-      <View style={styles.cardHead}>
-        <Icon name="clock" size={22} color={C.muted} />
-        <View style={{ flex: 1, gap: 2 }}>
-          <T style={styles.cardTitle}>Evening check-in</T>
-          <T style={{ color: C.muted, fontSize: 14 }}>A reminder at 9 pm</T>
-        </View>
-        <Toggle
-          accessibilityLabel="Evening check-in reminder"
-          value={on}
-          onValueChange={(v) => {
-            getDb()
-              .then((db) => setEveningReminder(db, v))
-              .then((result) => {
-                setOn(result);
-                setNote(
-                  v && !result ? 'Turn on notifications for ScrollSnooze in Settings.' : null,
-                );
-              })
-              .catch(() => setNote('Could not change the reminder. Please try again.'));
-          }}
-        />
-      </View>
-      {note && <T style={{ color: '#FF8A65', fontSize: 13 }}>{note}</T>}
-    </View>
-  );
-}
-
 export default function Goals() {
   const [fontsLoaded] = useFonts({
     LilitaOne: require('../assets/fonts/LilitaOne-Regular.ttf'),
@@ -281,7 +238,7 @@ export default function Goals() {
           </T>
           <T style={{ color: C.muted, fontSize: 15, lineHeight: 22 }}>
             {android
-              ? 'Set a daily limit. You’ll get a heads-up at 80% and when you reach it.'
+              ? 'Set a daily limit. You’ll get a heads-up at 50%, 80%, 90% and when you reach it.'
               : 'Set a daily intention for your screen time.'}
           </T>
         </View>
@@ -306,7 +263,6 @@ export default function Goals() {
               used={minutes}
               fontsLoaded={!!fontsLoaded}
             />
-            <EveningReminder />
           </>
         )}
       </ScrollView>

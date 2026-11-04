@@ -8,13 +8,13 @@ import android.os.Build
 import app.driftless.tracking.core.Alert
 import app.driftless.tracking.core.LimitAlerts
 import app.driftless.tracking.core.Recorder
-import app.driftless.tracking.core.isValidatedVersion
+import app.driftless.tracking.core.ReminderCopy
 import java.time.ZoneId
 
 /**
  * Sends goal notifications from the native side, so they work while the app is closed.
- * Minutes come from Usage Access when granted, otherwise from the counter. Video counts are used
- * only for accuracy-validated app versions.
+ * Minutes come from Usage Access when granted, otherwise from the counter. Video counts are the
+ * same experimental counts shown on the badge.
  */
 object GoalNotifier {
     private const val CHANNEL = "goal_alerts"
@@ -42,13 +42,14 @@ object GoalNotifier {
         } else {
             null
         }
-        val validated = rules.apps.values.filter { isValidatedVersion(it, Health.appVersion(context, it.pkg)) }.map { it.pkg }.toSet()
-        val views = if(accounting) store.account.effectiveUsage("views")?.toInt() else if (validated.isEmpty()) null else rows.filter { it.pkg in validated }.sumOf { it.views }
+        // Same experimental count the badge and feed pause already use; no app version is validated yet.
+        val views = if(accounting) store.account.effectiveUsage("views")?.toInt() else rows.filter { it.pkg in rules.apps }.sumOf { it.views }
 
         val due = LimitAlerts.due(limits, minutes, views, prefs.sentAlerts(today), today)
         if (due.isEmpty()) return
         ensureChannel(nm)
-        for ((_, a) in due) nm.notify(a.metric.hashCode() + a.percent, build(context, a))
+        // One notification per metric: each new threshold replaces the last instead of stacking.
+        for ((_, a) in due) nm.notify(a.metric.hashCode(), build(context, a))
         prefs.markSent(today, due.map { it.first })
     }
 
@@ -63,9 +64,8 @@ object GoalNotifier {
     }
 
     private fun build(context: Context, a: Alert): android.app.Notification {
-        val unit = if (a.metric == "minutes") "minutes" else "videos"
-        val title = if (a.percent >= 100) "You've reached today's goal" else "Nearly at today's goal"
-        val text = "${a.used} of ${a.limit} $unit. Wick is still glowing — maybe a good moment for a break."
+        val unit = if (a.metric == "minutes") "minutes" else "reels"
+        val (title, text) = ReminderCopy.pick(a.percent, a.used, a.limit, unit, java.time.LocalDate.now().dayOfYear)
         val launch = context.packageManager.getLaunchIntentForPackage(context.packageName)
         val pi = launch?.let { PendingIntent.getActivity(context, 0, it, PendingIntent.FLAG_IMMUTABLE) }
         val b = if (Build.VERSION.SDK_INT >= 26) android.app.Notification.Builder(context, CHANNEL) else {

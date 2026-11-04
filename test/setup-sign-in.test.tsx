@@ -14,6 +14,8 @@ jest.mock('expo-router', () => ({ router: {}, useFocusEffect: () => undefined })
 jest.mock('tracking-android', () => ({ Tracking: {} }));
 jest.mock('@/db', () => ({ getDb: jest.fn() }));
 jest.mock('@/goals/store', () => ({ loadGoals: jest.fn() }));
+jest.mock('@/goals/reminders', () => ({ ensureNotificationPermission: jest.fn(async () => true) }));
+jest.mock('@/ui/onboarding-motion/TypewriterText', () => ({ TypewriterText: () => null }));
 jest.mock('@/ui/motion', () => ({ useDataMotion: () => ({}) }));
 jest.mock('@/ui/BrainCharacter', () => ({ BrainCharacter: () => null }));
 jest.mock('@/ui/Icon', () => ({ AppIcon: () => null, Icon: () => null }));
