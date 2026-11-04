@@ -20,8 +20,6 @@ jest.mock('tracking-android', () => ({ Tracking: { setLimits: jest.fn() } }));
 jest.mock('@/billing/ProtectionNotice', () => ({ ProtectionNotice: () => null }));
 jest.mock('@/goals/reminders', () => ({
   ensureNotificationPermission: async () => true,
-  eveningReminderEnabled: async () => false,
-  setEveningReminder: async () => true,
 }));
 jest.mock('@/tracking/candidateCount', () => ({ candidateCount: () => null }));
 jest.mock('@/goals/useProgress', () => ({
@@ -66,7 +64,7 @@ it('shows only the two goals, today against the limit and the reminder', () => {
   expect(text()).toContain('Reels & Shorts');
   expect(text()).toContain('Time in Instagram & YouTube');
   expect(text()).toContain('Today: 60 of 50 · Limit reached');
-  expect(text()).toContain('Evening check-in');
+  expect(text()).not.toContain('Evening check-in');
   expect(text()).not.toMatch(/allowance|About video goals|Done/);
 });
 
