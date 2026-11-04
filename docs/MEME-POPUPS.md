@@ -55,8 +55,9 @@ The milestone card now appears at count **1**, then **50, 100, 150…**, and use
 
 ## Selection and copy
 
-- Nineteen of the twenty supplied Tenor links are bundled as small animated GIFs (6,048,550 bytes total). Source/media URLs and SHA-256 hashes are in `MEME-ASSETS.json`.
-- `https://tenor.com/view/lol-gif-2220434` returned HTTP 404. Its catalog entry is retained for a future replacement, but missing assets are excluded from the available pool. No substitute was silently invented.
+- Twenty-three memes are bundled as small animated GIFs (7,697,351 bytes total). Source/media URLs and SHA-256 hashes are in `MEME-ASSETS.json`; `MemeCollectionTest` checks every meme has a matching GIF. The gentlemen slow clap and Mr. Bean clips are marked rights clearance pending.
+- `https://tenor.com/view/lol-gif-2220434` returned HTTP 404 and was removed from the collection; its manifest entry stays marked unavailable.
+- Captions follow the person's meme language. Telugu and English have captions for every meme; Hindi, Tamil and Malayalam only show memes captioned in that language, and a language with none (Kannada) shows English.
 - Memes are sampled without replacement. After every available meme has appeared, a new random cycle begins; the previous cycle's final meme cannot immediately repeat. This history survives service recreation and is scoped to the current native dataset/incarnation.
 - Selection is independent of milestone number: 50 is not tied to one particular meme. A finite collection will eventually repeat, but not before its pool is exhausted.
 - Every reaction has three original caption variants. When that reaction returns, its previous caption variant is excluded. Count and Reels/Shorts wording are inserted at display time.

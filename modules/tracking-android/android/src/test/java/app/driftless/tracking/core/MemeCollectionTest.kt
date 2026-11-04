@@ -15,9 +15,25 @@ class MemeCollectionTest {
             }
         }
     }
-    @Test fun collectionHasTwentyDistinctReactionsAndNativeScriptCopy() {
-        assertEquals(20, MemeCollection.all.size)
-        assertEquals(20, MemeCollection.all.map { it.id }.toSet().size)
+    @Test fun everyMemeHasABundledGifThatMatchesTheManifest() {
+        val dir = java.io.File("src/main/assets/memes")
+        val manifest = java.io.File("../../../docs/MEME-ASSETS.json").readText()
+        // org.json is stubbed in JVM tests; each downloaded entry lists id, …, status, sha256 in order.
+        val hashes = Regex(""""id": "(\d+)"[^}]*?"status": "downloaded"[^}]*?"sha256": "([0-9a-f]{64})"""")
+            .findAll(manifest).associate { it.groupValues[1] to it.groupValues[2] }
+        val bundled = dir.list().orEmpty().filter { it.endsWith(".gif") }.map { it.removeSuffix(".gif") }.toSet()
+        assertEquals(MemeCollection.all.map { it.id }.toSet(), bundled)
+        MemeCollection.all.forEach { meme ->
+            val bytes = java.io.File(dir, "${meme.id}.gif").readBytes()
+            assertEquals(meme.description, "GIF8", String(bytes.copyOf(4)))
+            val sha = java.security.MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+            assertEquals(meme.description, hashes[meme.id], sha)
+        }
+    }
+    @Test fun collectionHasDistinctReactionsAndNativeScriptCopy() {
+        assertEquals(23, MemeCollection.all.size)
+        assertEquals(23, MemeCollection.all.map { it.id }.toSet().size)
+        assertFalse(MemeCollection.all.any { it.id == "2220434" })
         val scripts = mapOf("te" to '\u0C00'..'\u0C7F', "hi" to '\u0900'..'\u097F',
             "ta" to '\u0B80'..'\u0BFF', "ml" to '\u0D00'..'\u0D7F')
         MemeCollection.all.forEach { meme ->
