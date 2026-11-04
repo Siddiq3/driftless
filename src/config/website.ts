@@ -1,5 +1,16 @@
 import Constants from 'expo-constants';
 
+/** Google Play listing; matches android.package in app.config.ts. */
+export const PLAY_STORE_ID = 'com.siddiqkolimi.scrollsnooze';
+
+/** Play listing link; `source` lands in the install referrer so shared links can be measured. */
+export function playStoreUrl(source?: string) {
+  const base = `https://play.google.com/store/apps/details?id=${PLAY_STORE_ID}`;
+  return source
+    ? `${base}&referrer=${encodeURIComponent(`utm_source=${source}&utm_medium=share`)}`
+    : base;
+}
+
 /** Same address as the website's support page. */
 export const SUPPORT_EMAIL = 'siddiqkolimi.dev@gmail.com';
 
