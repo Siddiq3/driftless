@@ -191,5 +191,14 @@
     "status": "downloaded",
     "sha256": "d89c346fa20fde5fca87ea098104b7f806967869e7a807c8bea7bf4b79e55f26",
     "rights": "Mr. Bean clip; rights clearance pending before release"
+  },
+  {
+    "id": "20569493",
+    "source": "https://tenor.com/view/nuvvu-maravaa-gif-20569493",
+    "media": "https://media.tenor.com/Q0QkdghPFRkAAAAM/nuvvu-maravaa.gif",
+    "bytes": 251639,
+    "status": "downloaded",
+    "sha256": "80dccab1c68c9c9b8d24d60d191d0ddf66e7d37a3e4c52635f22403c76fad918",
+    "rights": "Telugu film clip; rights clearance pending before release"
   }
 ]
