@@ -83,7 +83,9 @@ export type WrapDetails = {
   days: { localDate: string; hourlyViews: number[]; sessions: WrapSession[] }[];
 };
 
-export type MemePreferences = { enabled: boolean };
+/** 'auto' follows the phone language. */
+export type MemeLanguage = 'auto' | 'en' | 'te' | 'hi' | 'ta' | 'kn' | 'ml';
+export type MemePreferences = { enabled: boolean; language: MemeLanguage };
 
 export type PersonalMeasurement = {
   appViews?: Record<string, number | null>;

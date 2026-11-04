@@ -138,6 +138,11 @@ class TrackingPrefs(private val context: Context) {
         get() = p.getBoolean("meme_cards_enabled", true)
         set(v) = p.edit().putBoolean("meme_cards_enabled", v).apply()
 
+    /** "auto" follows the phone language; otherwise one of [MemeLanguages.supported]. */
+    var memeLanguage: String
+        get() = p.getString("meme_language", null)?.takeIf { it in app.driftless.tracking.core.MemeLanguages.supported } ?: "auto"
+        set(v) = p.edit().putString("meme_language", if (v in app.driftless.tracking.core.MemeLanguages.supported) v else "auto").apply()
+
     fun shownMemeMilestone(date: String): Int =
         if (p.getString("meme_date", null) == date) p.getInt("meme_milestone", 0) else 0
 

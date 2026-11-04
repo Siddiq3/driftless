@@ -39,12 +39,12 @@ class MemeMilestoneCard(private val service: AccessibilityService) {
 
     fun show(value: CountBadgeValue, milestone: Int, language: String, shorts: Boolean = false, onBreak: () -> Unit): Boolean {
         if (isShowing) return false
-        val pool = MemeCollection.poolForLanguage(availableMemes, language)
-        val poolLanguage = if (pool.all { it.language == language }) language else "mixed"
-        val reaction = MemeCollection.choose(pool, prefs.usedMemeReactions(poolLanguage), prefs.lastMemeReaction())
+        val display = MemeCollection.displayLanguage(availableMemes, language)
+        val pool = MemeCollection.poolForLanguage(availableMemes, display)
+        val reaction = MemeCollection.choose(pool, prefs.usedMemeReactions(display), prefs.lastMemeReaction())
             ?: return false
-        val captionIndex = MemeCollection.captionIndex(reaction, prefs.previousMemeCaption(reaction.id))
-        val copy = memeCopy(reaction.language, milestone)
+        val captionIndex = MemeCollection.captionIndex(reaction, prefs.previousMemeCaption(reaction.id), lang = display)
+        val copy = memeCopy(display, milestone)
         val backdrop = FrameLayout(service).apply {
             setBackgroundColor(Color.parseColor("#B5000000"))
             setOnClickListener { hide() }
@@ -84,7 +84,7 @@ class MemeMilestoneCard(private val service: AccessibilityService) {
         val heightDp=service.resources.displayMetrics.heightPixels/service.resources.displayMetrics.density
         column.addView(artwork,LinearLayout.LayoutParams(-1,dp(if(heightDp < 650) 140 else 210)).apply {topMargin=dp(12)})
         column.addView(TextView(service).apply {
-            text=reaction.caption(captionIndex, milestone, shorts); textSize=20f; gravity=Gravity.CENTER; typeface=Typeface.DEFAULT_BOLD
+            text=reaction.caption(captionIndex, milestone, shorts, display); textSize=20f; gravity=Gravity.CENTER; typeface=Typeface.DEFAULT_BOLD
             setTextColor(Color.parseColor("#FFFAED")); setPadding(dp(4),dp(20),dp(4),dp(12))
         },LinearLayout.LayoutParams(-1,-2))
         column.addView(TextView(service).apply {
@@ -110,7 +110,7 @@ class MemeMilestoneCard(private val service: AccessibilityService) {
         }
         return try {
             wm.addView(backdrop,params); root=backdrop
-            prefs.rememberMemeReaction(reaction.id, captionIndex, pool.map { it.id }.toSet(), poolLanguage)
+            prefs.rememberMemeReaction(reaction.id, captionIndex, pool.map { it.id }.toSet(), display)
             if(Build.VERSION.SDK_INT < 26 || ValueAnimator.areAnimatorsEnabled()) {
                 column.alpha=0f; column.translationY=dp(20).toFloat(); column.scaleX=0.94f; column.scaleY=0.94f
                 column.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f).setDuration(280).start()

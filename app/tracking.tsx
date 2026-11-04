@@ -1,6 +1,6 @@
 import { Platform, Alert, AppState, Pressable, StyleSheet, View } from 'react-native';
 import { ScreenTimeScreen } from '@/ios/ScreenTimeScreen';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { useCallback, useEffect, useState } from 'react';
 import { Tracking, type Daily, type TrackingHealth, type MemePreferences } from 'tracking-android';
@@ -13,6 +13,7 @@ import { localDateOf } from '@siddiq3/driftless-contracts/domain';
 import { currentAccountTime, currentTimeZone } from '@/sync/run';
 import { homeAppCount } from '@/tracking/candidateCount';
 import { CountingPermissionBanner } from '@/permissions/CountingPermissionBanner';
+import { memeLanguageLabel } from '@/settings/memeLanguage';
 
 const minutes = (ms: number) => Math.round(ms / 60_000);
 
@@ -22,7 +23,7 @@ function AndroidTrackingScreen() {
   const [daily, setDaily] = useState<Daily | null>(null);
   const [badgePrefs, setBadgePrefs] = useState({ size: 54, pausedUntil: 0 });
   const [badgeEnabled, setBadgeEnabled] = useState(false);
-  const [memes, setMemes] = useState<MemePreferences>({ enabled: true });
+  const [memes, setMemes] = useState<MemePreferences>({ enabled: true, language: 'auto' });
   const [error, setError] = useState<string | null>(null);
 
   const read = useCallback(() => {
@@ -212,6 +213,29 @@ function AndroidTrackingScreen() {
             }}
           />
         </View>
+        {Tracking.memeCardsSupported() && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Meme language: ${memeLanguageLabel(memes.language)}`}
+            onPress={() => router.push('/meme-language')}
+            style={({ pressed }) => [styles.row, { opacity: pressed ? 0.7 : 1 }]}
+          >
+            <View style={styles.rowText}>
+              <T style={styles.title}>Language</T>
+              <T style={styles.caption}>{memeLanguageLabel(memes.language)}</T>
+            </View>
+            <Icon name="chevron" size={18} color={C.muted} />
+          </Pressable>
+        )}
+        {__DEV__ && Tracking.memeCardsSupported() && (
+          <Button
+            label="Show test meme"
+            kind="secondary"
+            onPress={() => {
+              if (!Tracking.showTestMeme()) setError('Turn on counting to show a test meme.');
+            }}
+          />
+        )}
         {!badgeEnabled && (
           <T style={styles.caption}>Turn on the floating counter to see meme breaks.</T>
         )}

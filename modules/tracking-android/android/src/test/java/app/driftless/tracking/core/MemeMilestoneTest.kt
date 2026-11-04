@@ -35,6 +35,13 @@ class MemeMilestoneTest {
         assertEquals(150,nextMemeMilestone(date,49,date,151,0))
         assertNull(nextMemeMilestone(date,151,date,152,150))
     }
+    @Test fun chosenLanguageOverridesThePhone() {
+        assertEquals("te",MemeLanguages.resolve(listOf("en-GB"), "te"))
+        assertEquals("en",MemeLanguages.resolve(listOf("te-IN"), "en"))
+        assertEquals("te",MemeLanguages.resolve(listOf("te-IN"), "auto"))
+        assertEquals("en",MemeLanguages.resolve(listOf("en-GB"), null))
+        assertEquals("en",MemeLanguages.resolve(listOf("en-GB"), "fr"))
+    }
     @Test fun automaticallyUsesConfiguredLanguageWithEnglishFallback() {
         assertEquals("te",MemeLanguages.resolve(listOf("te-IN")))
         assertEquals("te",MemeLanguages.resolve(listOf("en-IN", "te-IN")))

@@ -7,6 +7,7 @@ export const ANSWERS = {
   when: ['morning', 'breaks', 'evening', 'night'],
   feelings: ['tired', 'distracted', 'regretful', 'fine'],
   usage: ['under1', '1to3', '3to5', '5to7', 'over7'],
+  language: ['auto', 'en', 'te', 'hi', 'ta', 'kn', 'ml'],
 } as const;
 
 export const AnswersSchema = z.object({
@@ -16,6 +17,7 @@ export const AnswersSchema = z.object({
   when: z.enum(ANSWERS.when).optional(),
   feelings: z.array(z.enum(ANSWERS.feelings)).max(4).default([]),
   usage: z.enum(ANSWERS.usage).optional(),
+  language: z.enum(ANSWERS.language).optional(),
 });
 export type SetupAnswers = z.infer<typeof AnswersSchema>;
 export const EMPTY_ANSWERS: SetupAnswers = { apps: [], priorities: [], feelings: [] };
@@ -44,9 +46,13 @@ export function reelsSetupPlan(plan?: SetupPlan): SetupPlan {
   return plan?.metric === 'views' ? { ...plan } : { metric: 'views', dailyLimit: 50 };
 }
 
-/** Keep persisted step IDs stable while skipping the retired income question. */
-export function activeSetupStep(target: number, direction: 'next' | 'back' = 'next') {
-  return target === 7 ? (direction === 'back' ? 6 : 8) : target;
+/** Step 7 (once the retired income question) asks the meme language where meme breaks exist. */
+export function activeSetupStep(
+  target: number,
+  direction: 'next' | 'back' = 'next',
+  askLanguage = true,
+) {
+  return target === 7 && !askLanguage ? (direction === 'back' ? 6 : 8) : target;
 }
 
 export const LAST_STEP = 15;

@@ -157,5 +157,48 @@
     "bytes": 364928,
     "status": "downloaded",
     "sha256": "2edffbd123d571a34449928ef26619d41a28b6ede2b919afbd31aa0237aa6af6"
+  },
+  {
+    "id": "2877826391562086914",
+    "source": "https://tenor.com/view/wah-wah-wah-wah-anna-va-anna-venu-madhav-gif-2877826391562086914",
+    "media": "https://media.tenor.com/J_AX2xJNagIAAAAM/wah-wah-wah.gif",
+    "bytes": 489413,
+    "status": "downloaded",
+    "sha256": "e5a39684d46fce66f5007583c5497fb15ebcd72b302163a078bd629e7f3f8789"
+  },
+  {
+    "id": "65216278325964883",
+    "source": "https://tenor.com/view/jagyasini-singh-sabash-sabas-beta-sabas-slow-clap-gif-65216278325964883",
+    "media": "https://media.tenor.com/AOex3A8xMFMAAAAM/jagyasini-singh-sabash.gif",
+    "bytes": 236557,
+    "status": "downloaded",
+    "sha256": "49a9b91838a8c9e03bea5bfc64a85b5998eef0e528f33d03c5e95a77652abf84"
+  },
+  {
+    "id": "2952787956024904689",
+    "source": "https://tenor.com/view/applause-congratulations-gentleman-gif-2952787956024904689",
+    "media": "https://media.tenor.com/KPppAF_qi_EAAAAM/applause-congratulations.gif",
+    "bytes": 467154,
+    "status": "downloaded",
+    "sha256": "f5596dfb453ffba40a286c3742db16117fcde096d683bd5bd172f4d29ccf5ca3",
+    "rights": "Film clip; rights clearance pending before release"
+  },
+  {
+    "id": "12937415716748487140",
+    "source": "https://tenor.com/view/333%D0%B2%D1%84%D1%8B%D0%B2-gif-12937415716748487140",
+    "media": "https://media.tenor.com/s4rvDIxZaeQAAAAM/333%D0%B2%D1%84%D1%8B%D0%B2.gif",
+    "bytes": 455677,
+    "status": "downloaded",
+    "sha256": "d89c346fa20fde5fca87ea098104b7f806967869e7a807c8bea7bf4b79e55f26",
+    "rights": "Mr. Bean clip; rights clearance pending before release"
+  },
+  {
+    "id": "20569493",
+    "source": "https://tenor.com/view/nuvvu-maravaa-gif-20569493",
+    "media": "https://media.tenor.com/Q0QkdghPFRkAAAAM/nuvvu-maravaa.gif",
+    "bytes": 251639,
+    "status": "downloaded",
+    "sha256": "80dccab1c68c9c9b8d24d60d191d0ddf66e7d37a3e4c52635f22403c76fad918",
+    "rights": "Telugu film clip; rights clearance pending before release"
   }
 ]

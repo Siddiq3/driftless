@@ -139,17 +139,18 @@ class MemeCardTest {
         fun descendants(view: android.view.View): List<android.view.View> = listOf(view) +
             if(view is android.view.ViewGroup) (0 until view.childCount).flatMap {descendants(view.getChildAt(it))} else emptyList()
         try {
-            for(language in listOf("te","hi","kn")) {
+            // Kannada has no captions yet, so it shows English rather than another language.
+            for((language,display) in listOf("te" to "te","hi" to "hi","kn" to "en")) {
                 assertTrue(card.show(CountBadgeValue("50","On this phone"),50,language) {})
                 val chosen=app.driftless.tracking.core.MemeCollection.all.single{it.id==prefs.lastMemeReaction()}
-                if(language!="kn") assertEquals(language,chosen.language)
+                assertTrue(chosen.linesFor(display)!=null)
                 val root=MemeMilestoneCard::class.java.getDeclaredField("root").apply {isAccessible=true}.get(card) as android.view.View
                 val nodes=descendants(root)
-                val copy=app.driftless.tracking.core.memeCopy(chosen.language,50)
+                val copy=app.driftless.tracking.core.memeCopy(display,50)
                 val buttons=nodes.filterIsInstance<android.widget.Button>().map {it.text.toString()}
                 assertTrue(copy.pause in buttons);assertTrue(copy.continueWatching in buttons)
                 assertTrue(nodes.any{it.contentDescription==copy.close})
-                val expected=chosen.caption(prefs.previousMemeCaption(chosen.id),50,false)
+                val expected=chosen.caption(prefs.previousMemeCaption(chosen.id),50,false,display)
                 assertTrue(nodes.filterIsInstance<android.widget.TextView>().any{it.text.toString()==expected})
                 card.hide()
             }
