@@ -29,6 +29,18 @@ class PauseSurfaceTest {
         assertEquals(1, calls)
         assertTrue(action.minimumHeight >= (48 * context.resources.displayMetrics.density).toInt())
     }
+    @Test fun sideQuestsAreThreeLargeTilesThatEachLeaveOnce() {
+        val surface = PauseSurface(context)
+        var left = 0
+        surface.quests { left++ }
+        surface.quests { left += 100 } // A second call must not add more tiles.
+        val tiles = views(surface).filter { it.contentDescription?.startsWith("Side quest:") == true }
+        assertEquals(listOf("Side quest: Drink water. Leaves the feed.", "Side quest: Stretch. Leaves the feed.",
+            "Side quest: Text a friend. Leaves the feed."), tiles.map { it.contentDescription.toString() })
+        tiles.forEach { it.performClick() }
+        assertEquals(3, left)
+        tiles.forEach { assertTrue(it.minimumHeight >= (48 * context.resources.displayMetrics.density).toInt()) }
+    }
     @Test fun aPauseWithoutANumberHidesTheFigureAndKeepsTheFooter() {
         val surface = PauseSurface(context)
         surface.present("Focus time.", "The feed can wait.")

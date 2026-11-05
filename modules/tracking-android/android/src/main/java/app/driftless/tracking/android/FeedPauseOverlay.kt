@@ -15,10 +15,12 @@ class FeedPauseOverlay(private val service: AccessibilityService) {
     val isShowing get() = root != null
 
     fun show(reason: FeedReason, remainingMs: Long, bypassesLeft: Int, bypassMinutes: Int,
-             experimental: Boolean, count: Int = 0, onBypass: () -> Unit) {
+             count: Int = 0, onBypass: () -> Unit) {
         bypassAction = onBypass
         if (root == null) {
             val view = PauseSurface(service)
+            // A side quest leaves the feed exactly like Leave feed does.
+            view.quests { service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK) }
             view.action("Leave feed", primary = true) {
                 service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
                 // Keep interception until classification confirms that the feed was left.
@@ -42,7 +44,8 @@ class FeedPauseOverlay(private val service: AccessibilityService) {
         }
         val time = (remainingMs.coerceAtLeast(0) + 999) / 1000
         val clock = "${time / 60}:${(time % 60).toString().padStart(2, '0')}"
-        val note = if (experimental) "Detection is experimental. ${PauseSurface.FOOTER}" else PauseSurface.FOOTER
+        // The experimental-detection caveat lives in Focus settings and the disclosure, not on every pause.
+        val note = PauseSurface.FOOTER
         when (reason) {
             FeedReason.BREAK -> root?.present("Take a breath.", "The feed will still be here after your break.", clock, "left in this break", note)
             FeedReason.DAILY_VIDEOS -> root?.present("That’s your goal.", "The rest of your day is yours. Your count resets tomorrow.", count.toString(), "videos today", note)

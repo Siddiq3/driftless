@@ -273,8 +273,6 @@ class DriftlessAccessibilityService : AccessibilityService() {
             val rows = if(accounting) store.daily(date) else store.backupDaily(date)
             val row = rows.firstOrNull { it.pkg == pkg }
             val count = rows.filter { it.pkg in rules.apps }.sumOf { it.views }
-            val validated = rules.apps[pkg]?.let { isValidatedVersion(it, versionOf(pkg)) } == true &&
-                rows.filter { it.views > 0 }.all { r -> rules.apps[r.pkg]?.let { isValidatedVersion(it, versionOf(r.pkg)) } == true }
             val goal = prefs.limits.filter { it.metric == "views" && it.dailyLimit > 0 }.minOfOrNull { it.dailyLimit }
             val feedDecision = app.driftless.tracking.core.FeedLimitPolicy.evaluate(cfg.feed, prefs.feedState,
                 date, now, count, goal, badgeSurface, true)
@@ -297,7 +295,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
                 val pauseDate=date
                 feedPause.show(reason, feedDecision.state.breakUntilMs - now,
                     (cfg.feed.maxBypasses - feedDecision.state.bypasses).coerceAtLeast(0), cfg.feed.bypassMinutes,
-                    !validated, count) {
+                    count) {
                     val currentNow = SqliteStore.get(this@DriftlessAccessibilityService).account.now()
                     val currentDate = Recorder.localDate(currentNow, SqliteStore.get(this@DriftlessAccessibilityService).account.zone())
                     val currentCfg = prefs.blockConfig

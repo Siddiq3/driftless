@@ -91,6 +91,7 @@ class PauseActivity : Activity() {
                 else if (scheduled) "You set this time aside. $label can wait."
                 else "You reached your daily limit for $label. It resets tomorrow.",
         )
+        if (!account) surface.quests { goHome() }
         surface.action("Leave feed", primary = true) { goHome() }
         if (snoozesLeft > 0 && !account) {
             surface.action("5 more minutes · $snoozesLeft left today") {

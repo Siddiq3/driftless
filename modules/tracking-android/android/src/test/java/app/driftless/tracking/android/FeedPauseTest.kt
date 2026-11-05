@@ -47,19 +47,19 @@ class FeedPauseTest {
     @Test fun overlayUpdatesDismissesAndCanBeShownAgain() {
         val controller = Robolectric.buildService(MemeTestService::class.java).create()
         val overlay = FeedPauseOverlay(controller.get())
-        overlay.show(FeedReason.BREAK, 60000, 0, 5, true) {}
+        overlay.show(FeedReason.BREAK, 60000, 0, 5) {}
         assertTrue(overlay.isShowing)
-        overlay.show(FeedReason.BREAK, 59000, 0, 5, true) {}
+        overlay.show(FeedReason.BREAK, 59000, 0, 5) {}
         assertTrue(overlay.isShowing)
         overlay.hide(); assertFalse(overlay.isShowing)
-        overlay.show(FeedReason.DAILY_VIDEOS, 0, 1, 1, false) {}
+        overlay.show(FeedReason.DAILY_VIDEOS, 0, 1, 1) {}
         assertTrue(overlay.isShowing)
         overlay.hide(); controller.destroy()
     }
     @Test fun videoGoalPauseShowsTodaysCount() {
         val controller = Robolectric.buildService(MemeTestService::class.java).create()
         val overlay = FeedPauseOverlay(controller.get())
-        overlay.show(FeedReason.DAILY_VIDEOS, 0, 1, 5, false, 25) {}
+        overlay.show(FeedReason.DAILY_VIDEOS, 0, 1, 5, 25) {}
         val surface = FeedPauseOverlay::class.java.getDeclaredField("root").apply { isAccessible = true }.get(overlay) as PauseSurface
         assertEquals("25", surface.figure.text.toString())
         overlay.hide(); controller.destroy()
@@ -70,15 +70,14 @@ class FeedPauseTest {
         var oldCalls = 0
         var newCalls = 0
         fun field(name: String) = FeedPauseOverlay::class.java.getDeclaredField(name).apply { isAccessible = true }.get(overlay)
-        overlay.show(FeedReason.BREAK, 60000, 0, 5, true) { oldCalls++ }
+        overlay.show(FeedReason.BREAK, 60000, 0, 5) { oldCalls++ }
         val bypass = field("bypass") as android.widget.Button
         assertFalse(bypass.isEnabled)
         val surface = field("root") as PauseSurface
         assertEquals("1:00", surface.figure.text.toString())
-        assertTrue(surface.detection.text.contains("experimental"))
-        overlay.show(FeedReason.BREAK, 59000, 2, 5, false) { newCalls++ }
+        assertEquals(PauseSurface.FOOTER, surface.detection.text.toString())
+        overlay.show(FeedReason.BREAK, 59000, 2, 5) { newCalls++ }
         assertEquals("0:59", surface.figure.text.toString())
-        assertFalse(surface.detection.text.contains("experimental"))
         assertTrue(bypass.isEnabled)
         bypass.performClick()
         assertEquals(0, oldCalls)
