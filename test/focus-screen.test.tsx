@@ -174,6 +174,39 @@ it('toggles focus-time presets while preserving custom schedules', async () => {
   expect(jest.mocked(saveBlocking).mock.calls.at(-1)![1].schedules).toEqual(config.schedules);
 });
 
+it('adds a custom overnight focus time once, only with at least one day', async () => {
+  const press = async (label: string, times = 1) => {
+    for (let i = 0; i < times; i++) await act(async () => control(label).props.onPress());
+  };
+  const time = (label: string) =>
+    tree.root.findAll(
+      (n) =>
+        typeof n.props.accessibilityLabel === 'string' &&
+        n.props.accessibilityLabel.startsWith(label),
+    )[0]!.props.accessibilityLabel as string;
+  await press('Add your own time');
+  // 6:00 PM → 11:00 PM, and 9:00 PM → 6:00 AM, wrapping past midnight.
+  for (let i = 0; i < 10; i++) await act(async () => control(time('Starts later')).props.onPress());
+  for (let i = 0; i < 18; i++) await act(async () => control(time('Ends later')).props.onPress());
+  await press('Sat');
+  await press('Sun');
+  await press('Save focus time');
+  const added = { days: [1, 2, 3, 4, 5], startMinute: 23 * 60, endMinute: 6 * 60 };
+  expect(jest.mocked(saveBlocking).mock.calls.at(-1)![1].schedules).toEqual([
+    ...config.schedules,
+    added,
+  ]);
+  expect(text()).toContain('Mon–Fri · 11:00 PM – 6:00 AM (next day)');
+
+  const saves = jest.mocked(saveBlocking).mock.calls.length;
+  await press('Add your own time');
+  // The form keeps the last choice (Mon–Fri); clearing those leaves no day.
+  for (const day of ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']) await press(day);
+  expect(text()).toContain('Pick at least one day.');
+  await press('Save focus time');
+  expect(jest.mocked(saveBlocking).mock.calls.length).toBe(saves);
+});
+
 it('keeps feed scope, breaks, skips and the goal link connected', async () => {
   await act(async () => control('Whole app').props.onPress());
   await act(async () => control('Short break after a run of videos').props.onValueChange(true));

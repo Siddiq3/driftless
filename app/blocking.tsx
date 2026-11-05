@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Reanimated, {
   FadeIn,
@@ -19,7 +19,7 @@ import type { BlockingConfig, FocusSchedule } from 'tracking-android';
 import { ScreenTimeScreen } from '@/ios/ScreenTimeScreen';
 import { PRESETS } from '@/billing/blocking';
 import { protectionStatus } from '@/billing/protectionStatus';
-import { matchesSchedule, scheduleLabel, SCHEDULE_NAMES } from '@/focus/schedules';
+import { matchesSchedule, scheduleLabel, SCHEDULE_NAMES, timeLabel } from '@/focus/schedules';
 import { useFocusSettings, type FocusSettings } from '@/focus/useFocusSettings';
 import { AppIcon, Icon, type IconName } from '@/ui/Icon';
 import { LoadingState, Notice, T, Toggle } from '@/ui/kit';
@@ -71,6 +71,125 @@ function ToggleRow({
       </View>
       <Toggle accessibilityLabel={label} value={value} onValueChange={onChange} />
     </View>
+  );
+}
+
+const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const DAY = 24 * 60;
+
+function TimeStep({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  const step = (dir: 1 | -1) => (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${label} ${dir < 0 ? 'earlier' : 'later'}, now ${timeLabel(value)}`}
+      onPress={() => onChange((value + dir * 30 + DAY) % DAY)}
+      hitSlop={6}
+      style={({ pressed }) => [styles.chip, { opacity: pressed ? 0.7 : 1 }]}
+    >
+      <Icon name={dir < 0 ? 'minus' : 'plus'} size={16} color={C.text} />
+    </Pressable>
+  );
+  return (
+    <View style={styles.row}>
+      <T style={styles.rowText}>{label}</T>
+      {step(-1)}
+      <T
+        style={{
+          color: C.text,
+          fontWeight: '700',
+          fontSize: 16,
+          minWidth: 82,
+          textAlign: 'center',
+        }}
+      >
+        {timeLabel(value)}
+      </T>
+      {step(1)}
+    </View>
+  );
+}
+
+/** A focus time of the person's own choosing; overnight ranges (e.g. 11 PM – 6 AM) are fine. */
+function AddFocusTime({ onAdd }: { onAdd: (schedule: FocusSchedule) => void }) {
+  const [open, setOpen] = useState(false);
+  const [start, setStart] = useState(18 * 60);
+  const [end, setEnd] = useState(21 * 60);
+  const [days, setDays] = useState([1, 2, 3, 4, 5, 6, 7]);
+  if (!open)
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Add your own time"
+        onPress={() => setOpen(true)}
+        style={styles.textButton}
+      >
+        <T style={{ color: C.accent, fontWeight: '700' }}>+ Add your own time</T>
+      </Pressable>
+    );
+  const valid = start !== end && days.length > 0;
+  return (
+    <Reanimated.View entering={reveal} style={{ gap: 12 }}>
+      <TimeStep label="Starts" value={start} onChange={setStart} />
+      <TimeStep label="Ends" value={end} onChange={setEnd} />
+      <View accessibilityLabel="Days" style={styles.chips}>
+        {DAY_NAMES.map((name, i) => {
+          const day = i + 1;
+          const on = days.includes(day);
+          return (
+            <Pressable
+              key={day}
+              accessibilityRole="checkbox"
+              accessibilityLabel={name}
+              accessibilityState={{ checked: on }}
+              onPress={() => setDays(on ? days.filter((d) => d !== day) : [...days, day].sort())}
+              style={({ pressed }) => [
+                styles.chip,
+                on && styles.chipOn,
+                { opacity: pressed ? 0.7 : 1 },
+              ]}
+            >
+              <T style={{ color: on ? C.brown : C.text, fontWeight: '700', fontSize: 14 }}>
+                {name}
+              </T>
+            </Pressable>
+          );
+        })}
+      </View>
+      {start === end && <T style={styles.hint}>Start and end can’t be the same time.</T>}
+      {days.length === 0 && <T style={styles.hint}>Pick at least one day.</T>}
+      <View style={[styles.row, { justifyContent: 'flex-end' }]}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Cancel focus time"
+          onPress={() => setOpen(false)}
+          style={styles.textButton}
+        >
+          <T style={{ color: C.muted, fontWeight: '700' }}>Cancel</T>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Save focus time"
+          accessibilityState={{ disabled: !valid }}
+          disabled={!valid}
+          onPress={() => {
+            if (!valid) return;
+            onAdd({ days, startMinute: start, endMinute: end });
+            setOpen(false);
+          }}
+          style={[styles.textButton, { opacity: valid ? 1 : 0.4 }]}
+        >
+          <T style={{ color: C.accent, fontWeight: '700' }}>Save</T>
+        </Pressable>
+      </View>
+    </Reanimated.View>
   );
 }
 
@@ -383,6 +502,15 @@ function AndroidFocus() {
               </Pressable>
             </View>
           ))}
+          <AddFocusTime
+            onAdd={(schedule) =>
+              update((saved) =>
+                saved.schedules.some((s) => matchesSchedule(s, schedule))
+                  ? saved
+                  : { ...saved, schedules: [...saved.schedules, schedule] },
+              )
+            }
+          />
         </Card>
 
         {feed && (
