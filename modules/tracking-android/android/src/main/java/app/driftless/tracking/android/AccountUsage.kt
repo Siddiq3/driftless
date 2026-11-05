@@ -295,17 +295,34 @@ class AccountUsage(private val store: SqliteStore, private val context: Context)
     }
     fun blocked(pkg: String, shortVideo: Boolean = true): Boolean = active() && status(pkg,shortVideo) !in listOf("reserved", "reserved_stale", "unlimited")
     /** Accounting remains active for backup even when the user turns pauses off. */
+    /**
+     * Pauses only when the shared allowance is known to be used up. Unknown states (no snapshot for
+     * today yet, offline, clock or Usage Access unavailable) must not pause: they can last all day or
+     * forever, so [decides] hands them to the local daily rules instead.
+     */
     fun shouldPause(pkg: String, config: app.driftless.tracking.core.BlockConfig,
                     entitlement: app.driftless.tracking.core.CachedEntitlement,
-                    shortVideo: Boolean): Boolean {
+                    shortVideo: Boolean): Boolean =
+        pauseStatus(pkg, config, entitlement, shortVideo) == "credit_exhausted"
+
+    /** True when the account allowance (or no account rule at all) governs, so local minute and goal rules step aside. */
+    fun decides(pkg: String, config: app.driftless.tracking.core.BlockConfig,
+                entitlement: app.driftless.tracking.core.CachedEntitlement,
+                shortVideo: Boolean): Boolean =
+        pauseStatus(pkg, config, entitlement, shortVideo).let { it == null || it in KNOWN_STATUSES }
+
+    private fun pauseStatus(pkg: String, config: app.driftless.tracking.core.BlockConfig,
+                            entitlement: app.driftless.tracking.core.CachedEntitlement,
+                            shortVideo: Boolean): String? {
         if (!active() || !config.enabled || pkg !in config.apps ||
             (config.feedOnly && !shortVideo) ||
             ((!config.feed.enforceGoal || !shortVideo) && config.dailyMinutes == null) ||
-            !app.driftless.tracking.core.FeatureAccess.focusAllowed(entitlement, now())) return false
+            !app.driftless.tracking.core.FeatureAccess.focusAllowed(entitlement, now())) return null
         return status(pkg, shortVideo, enforceViews = config.feed.enforceGoal,
-            enforceMinutes = config.dailyMinutes != null) !in listOf("reserved", "reserved_stale", "unlimited")
+            enforceMinutes = config.dailyMinutes != null)
     }
     companion object {
+        private val KNOWN_STATUSES = setOf("reserved", "reserved_stale", "unlimited", "credit_exhausted")
         fun create(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE account_intervals(scope TEXT NOT NULL,start_ms INTEGER NOT NULL,end_ms INTEGER)")
             db.execSQL("CREATE TABLE account_meta(scope TEXT NOT NULL,name TEXT NOT NULL,value TEXT NOT NULL,PRIMARY KEY(scope,name))")

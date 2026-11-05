@@ -263,6 +263,22 @@ class AccountUsageTest {
         assertFalse(store.account.shouldPause(pkg,config,entitlement,false))
         assertTrue(store.account.blocked(pkg)) // Accounting is still exhausted, not erased.
     }
+    @Test fun anUnknownAllowanceNeverPausesAndHandsBackToLocalDailyRules() {
+        install(response(1,0,0,3)); store.account.observeViews(date,setOf(pkg))
+        val entitlement=app.driftless.tracking.core.CachedEntitlement(true,null)
+        val goal=app.driftless.tracking.core.BlockConfig(true,setOf(pkg),null,emptyList(),true,
+            app.driftless.tracking.core.FeedSettings(enforceGoal=true))
+        // Allowance known and not used up: the account decides and does not pause.
+        assertFalse(store.account.shouldPause(pkg,goal,entitlement,true))
+        assertTrue(store.account.decides(pkg,goal,entitlement,true))
+        // Past the snapshot's end (a new day with no sync yet) the allowance is unknown.
+        ShadowSystemClock.advanceBy(Duration.ofMillis(bounds.second-store.account.now()))
+        assertFalse(store.account.shouldPause(pkg,goal,entitlement,true))
+        assertFalse(store.account.decides(pkg,goal,entitlement,true))
+        // A minute limit without Usage Access is unknown too, so it must not pause all day.
+        val minutes=goal.copy(dailyMinutes=30,feed=app.driftless.tracking.core.FeedSettings())
+        assertFalse(store.account.shouldPause(pkg,minutes,entitlement,true))
+    }
     @Test fun unlimitedMetricsDoNotRequireFreshCreditAfterMidnightOrReboot() {
         install(); store.account.observeViews(date,setOf(pkg))
         val entitlement=app.driftless.tracking.core.CachedEntitlement(true,null)

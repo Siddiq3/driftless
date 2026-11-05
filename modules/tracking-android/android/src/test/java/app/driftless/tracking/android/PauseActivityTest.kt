@@ -121,7 +121,19 @@ class PauseActivityTest {
         val store=SqliteStore.get(context)
         val scope="account:phase3-credit"
         store.selectScope(scope)
-        store.account.install("""{"policy":{"incarnation":"phase3-credit","tz":"UTC","activeFromMs":0,"rev":1,"policies":[{"effectiveDate":"2020-01-01","limits":{"minutes":60000}}]}}""",scope)
+        // A genuinely used-up allowance: today's snapshot grants this phone no videos and views are measured.
+        // (An unknown allowance, such as a missing snapshot, no longer pauses.)
+        android.provider.Settings.Global.putInt(context.contentResolver,android.provider.Settings.Global.BOOT_COUNT,1)
+        val now=System.currentTimeMillis()
+        val day=java.time.Instant.ofEpochMilli(now).atZone(java.time.ZoneOffset.UTC).toLocalDate().toString()
+        val bounds=app.driftless.tracking.core.UsageMath.dayBounds(day,java.time.ZoneId.of("UTC"))
+        store.account.install("""{"serverTimeMs":$now,"policy":{"incarnation":"phase3-credit","tz":"UTC","activeFromMs":0,"rev":1,"policies":[{"effectiveDate":"2020-01-01","limits":{"views":10}}]},
+            "snapshot":{"incarnation":"phase3-credit","periodId":"phase3-credit:$day","localDate":"$day","tz":"UTC","startMs":${bounds.first},"endMs":${bounds.second},"rev":1,
+            "limits":{"views":10},"used":{"views":0},"devices":{},"unavailable":[],"serverTimeMs":$now}}""",scope)
+        store.account.observeViews(day,setOf(pkg))
+        TrackingPrefs(context).blockConfig=app.driftless.tracking.core.BlockConfig(true,setOf(pkg),null,emptyList(),true,
+            app.driftless.tracking.core.FeedSettings(enforceGoal=true))
+        assertTrue(store.account.shouldPause(pkg,TrackingPrefs(context).blockConfig,TrackingPrefs(context).entitlement,true))
         controller.newIntent(Intent(context,PauseActivity::class.java).putExtra(PauseActivity.EXTRA_PKG,pkg).putExtra(PauseActivity.EXTRA_REASON,"ACCOUNT_CREDIT"))
         find(controller.get(),"Your account allowance is used")
         assertFalse(controller.get().isFinishing)

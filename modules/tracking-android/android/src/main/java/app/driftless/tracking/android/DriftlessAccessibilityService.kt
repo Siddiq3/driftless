@@ -260,7 +260,10 @@ class DriftlessAccessibilityService : AccessibilityService() {
                 showPause(pkg,"ACCOUNT_CREDIT",now)
                 feedPause.hide(); return
             }
-            val cfg = if(accounting) saved.copy(dailyMinutes=null,feed=saved.feed.copy(enforceGoal=false)) else saved
+            // Local daily rules apply whenever the account allowance isn't known (offline, no snapshot yet).
+            val shortVideo=badgeSurface==Surface.SHORT_VIDEO
+            val cfg = if(accounting && store.account.decides(pkg,saved,prefs.entitlement,shortVideo))
+                saved.copy(dailyMinutes=null,feed=saved.feed.copy(enforceGoal=false)) else saved
             if (!cfg.enabled || pkg !in cfg.apps || !app.driftless.tracking.core.FeatureAccess.focusAllowed(prefs.entitlement, now)) {
                 feedPause.hide(); return
             }

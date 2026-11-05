@@ -27,7 +27,8 @@ class PauseActivity : Activity() {
             } else {
                 val prefs=TrackingPrefs(this@PauseActivity)
                 val saved=prefs.blockConfig
-                val cfg=if(store.account.active()) saved.copy(dailyMinutes=null) else saved
+                val cfg=if(store.account.active() && store.account.decides(pkg,saved,prefs.entitlement,
+                    intent.getBooleanExtra(EXTRA_SHORT_VIDEO,true))) saved.copy(dailyMinutes=null) else saved
                 val at=java.time.Instant.ofEpochMilli(store.account.now()).atZone(store.account.zone())
                 val row=store.backupDaily(ownerDate).firstOrNull {it.pkg==pkg}
                 val minutes=row?.let {(maxOf(it.usageMs,it.surfaceMs+it.unknownMs)/60000).toInt()}
