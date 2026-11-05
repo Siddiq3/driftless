@@ -29,7 +29,8 @@ export function dayResult(
     status?: PersonalMeasurement['status'];
   },
 ): DayResult {
-  // Same honesty rules as sync: unvalidated video counts are null, never trusted for goals.
+  // Personal goals use the same experimental count as the home screen, badge, pause and reminders;
+  // competitive uploads keep their own stricter rules.
   const a = measurement ?? recordedMeasurement(daily, health);
   const usage = {
     localDate: daily.localDate,
@@ -39,16 +40,7 @@ export function dayResult(
   const active = goals.filter((g) => g.enabled);
   let outcome: DayOutcome = active.length === 0 ? 'unknown' : 'kept';
   for (const g of active) {
-    const o = evaluateDay(
-      {
-        ...usage,
-        views:
-          g.metric === 'views' && !health.apps.some((app) => app.installed && app.validated)
-            ? null
-            : usage.views,
-      },
-      { metric: g.metric, dailyLimit: g.dailyLimit },
-    );
+    const o = evaluateDay(usage, { metric: g.metric, dailyLimit: g.dailyLimit });
     if (RANK[o] > RANK[outcome]) outcome = o;
   }
   return {
@@ -89,9 +81,4 @@ export function progress(
     streak: computeStreaks(outcomes, today),
     wick: wickState(settled),
   };
-}
-
-/** Whether video-goal results have an installed accuracy-validated counting source. */
-export function canUseViewGoals(health: TrackingHealth): boolean {
-  return health.apps.some((a) => a.installed && a.validated);
 }

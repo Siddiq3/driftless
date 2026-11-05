@@ -1,7 +1,7 @@
 import type { v1 } from '@siddiq3/driftless-contracts';
 import type { Daily, TrackingHealth } from 'tracking-android';
 import { achievements } from '../src/goals/achievements';
-import { canUseViewGoals, dayResult, progress } from '../src/goals/progress';
+import { dayResult, progress } from '../src/goals/progress';
 
 const IG = 'com.instagram.android';
 const health = (validated = false): TrackingHealth => ({
@@ -38,9 +38,12 @@ describe('dayResult', () => {
       'breached',
     );
   });
-  it('a video goal is unknown while accuracy is unconfirmed — never "kept" on untrusted numbers', () => {
+  it('a video goal uses the experimental count, so streaks work before any app version is confirmed', () => {
     expect(dayResult(daily('2026-10-18', 10, 5), health(false), [goal('views', 50)]).outcome).toBe(
-      'unknown',
+      'kept',
+    );
+    expect(dayResult(daily('2026-10-18', 10, 60), health(false), [goal('views', 50)]).outcome).toBe(
+      'breached',
     );
     expect(dayResult(daily('2026-10-18', 10, 5), health(true), [goal('views', 50)]).outcome).toBe(
       'kept',
@@ -102,9 +105,4 @@ describe('progress', () => {
     expect(earned).toContain('first_day');
     expect(earned).not.toContain('streak_7');
   });
-});
-
-it('view goals unlock only with a validated app version', () => {
-  expect(canUseViewGoals(health(false))).toBe(false);
-  expect(canUseViewGoals(health(true))).toBe(true);
 });
