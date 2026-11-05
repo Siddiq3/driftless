@@ -77,13 +77,14 @@ test('whole-app minute rules do not require approved feed detection', () => {
       null,
     ).title,
   ).toBe('Protection active');
+  // The minute limit counts Reels/Shorts feed time, so Usage Access is never needed for it.
   expect(
     protectionStatus(
       { ...config, enforceVideoGoal: false, feedOnly: false, dailyMinutes: 30 },
       { ...h, usageAccessGranted: false },
       null,
-    ).body,
-  ).toContain('not complete app minutes');
+    ).title,
+  ).toBe('Protection active');
 });
 
 test('included protection works without a verified purchase', () => {

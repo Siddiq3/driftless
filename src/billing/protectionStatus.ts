@@ -33,10 +33,6 @@ export function protectionStatus(
   const issues: string[] = [];
   if (config.enforceVideoGoal && videoGoal === null)
     issues.push('Save and enable a daily video goal.');
-  if (appRule && config.dailyMinutes !== null && !health.usageAccessGranted)
-    issues.push(
-      'Usage Access is off; minute limits use observed feed time, not complete app minutes.',
-    );
   const feedRule = videoRule || (appRule && config.feedOnly);
   if (feedRule) {
     if (!health.feedLimitsImplemented)

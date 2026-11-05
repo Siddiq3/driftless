@@ -279,7 +279,8 @@ class DriftlessAccessibilityService : AccessibilityService() {
             val feedDecision = app.driftless.tracking.core.FeedLimitPolicy.evaluate(cfg.feed, prefs.feedState,
                 date, now, count, goal, badgeSurface, true)
             if (feedDecision.state != prefs.feedState) prefs.feedState = feedDecision.state
-            val minutes = row?.let { (maxOf(it.usageMs, it.surfaceMs + it.unknownMs) / 60_000L).toInt() }
+            // The daily minute limit counts Reels/Shorts feed time only, in both pause modes.
+            val minutes = row?.let { ((it.surfaceMs + it.unknownMs) / 60_000L).toInt() }
             val d = app.driftless.tracking.core.BlockPolicy.decide(
                 pkg, cfg, prefs.entitlement, minutes, at.dayOfWeek.value, at.hour * 60 + at.minute,
                 prefs.snoozedUntil(pkg), now,

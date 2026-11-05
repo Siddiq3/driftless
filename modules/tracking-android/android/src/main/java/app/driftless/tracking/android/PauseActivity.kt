@@ -31,7 +31,7 @@ class PauseActivity : Activity() {
                     intent.getBooleanExtra(EXTRA_SHORT_VIDEO,true))) saved.copy(dailyMinutes=null) else saved
                 val at=java.time.Instant.ofEpochMilli(store.account.now()).atZone(store.account.zone())
                 val row=store.backupDaily(ownerDate).firstOrNull {it.pkg==pkg}
-                val minutes=row?.let {(maxOf(it.usageMs,it.surfaceMs+it.unknownMs)/60000).toInt()}
+                val minutes=row?.let {((it.surfaceMs+it.unknownMs)/60000).toInt()} // Reels/Shorts feed time only
                 if(!BlockPolicy.decide(pkg,cfg,prefs.entitlement,minutes,at.dayOfWeek.value,at.hour*60+at.minute,prefs.snoozedUntil(pkg),store.account.now()).block) {finish();return}
             }
             main.postDelayed(this,DriftlessAccessibilityService.TICK_MS)
