@@ -26,7 +26,7 @@ class PauseActivityTest {
     @Before fun reset() {
         context.getSharedPreferences("driftless_tracking", Context.MODE_PRIVATE).edit().clear().commit()
         val store=SqliteStore.get(context);store.selectScope("guest:phase3-pause")
-        store.setUsage(store.account.date(),pkg,60000)
+        store.addTime(store.account.date(),pkg,60000,0)
         TrackingPrefs(context).blockConfig=app.driftless.tracking.core.BlockConfig(true,setOf(pkg),1,emptyList())
     }
     @After fun cleanup() { context.getSharedPreferences("driftless_tracking", Context.MODE_PRIVATE).edit().clear().commit() }
@@ -90,7 +90,7 @@ class PauseActivityTest {
     @Test fun changingASelectedRuleToDisabledDismissesTheOldPauseOnTheNextCheck() {
         val prefs=TrackingPrefs(context)
         prefs.blockConfig=app.driftless.tracking.core.BlockConfig(true,setOf(pkg),0,emptyList())
-        val store=SqliteStore.get(context);store.setUsage(store.account.date(),pkg,60000)
+        val store=SqliteStore.get(context);store.addTime(store.account.date(),pkg,60000,0)
         val controller=launch()
         prefs.blockConfig=prefs.blockConfig.copy(enabled=false)
         shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(2))
@@ -99,7 +99,7 @@ class PauseActivityTest {
     }
     @Test fun staleBypassButtonCannotChangeAnotherIncarnationOrConsumeTwoUses() {
         val store=SqliteStore.get(context);store.selectScope("account:phase3-original")
-        store.setUsage(store.account.date(),pkg,60000)
+        store.addTime(store.account.date(),pkg,60000,0)
         val controller=launch();val button=find(controller.get(),"5 more minutes")
         store.selectScope("account:phase3-fresh");button.performClick()
         assertEquals(0,TrackingPrefs(context).snoozesToday())

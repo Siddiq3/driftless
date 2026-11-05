@@ -18,7 +18,6 @@ import {
   timeLabel,
 } from '@/focus/schedules';
 import { useFocusSettings, type FocusSettings } from '@/focus/useFocusSettings';
-import { openUsageAccess } from '@/permissions/usageAccess';
 import { AppIcon, Icon, type IconName } from '@/ui/Icon';
 import { BrainCharacter } from '@/ui/BrainCharacter';
 import { LoadingState, Notice, T, Toggle } from '@/ui/kit';
@@ -42,7 +41,7 @@ export function focusSummary(cfg: BlockingConfig, apps: string[] = []): string {
   const names = cfg.feedOnly ? apps : apps.map((label) => label.replace(/ (Reels|Shorts)$/, ''));
   const what = names.join(' and ');
   const when = [
-    cfg.dailyMinutes !== null && `after ${cfg.dailyMinutes} min a day`,
+    cfg.dailyMinutes !== null && `after ${cfg.dailyMinutes} min of scrolling a day`,
     cfg.schedules.length === 1 && `during ${focusName(cfg.schedules[0]!)}`,
     cfg.schedules.length > 1 && `during ${cfg.schedules.length} focus times`,
   ].filter(Boolean);
@@ -72,8 +71,10 @@ function nextFocusLine(cfg: BlockingConfig): string | null {
   const next = nextSchedule(cfg.schedules, now);
   if (!next) return null;
   const today = next.start.toDateString() === now.toDateString();
-  const day = today ? '' : ` ${next.start.toLocaleDateString('en', { weekday: 'short' })}`;
-  return `Next: ${focusName(next.schedule)} at ${timeLabel(next.schedule.startMinute)}${day}.`;
+  const day = today ? '' : next.start.toLocaleDateString('en', { weekday: 'short' });
+  if (scheduleName(next.schedule) === 'Saved focus time')
+    return `Next focus time: ${[day, focusName(next.schedule)].filter(Boolean).join(' ')}.`;
+  return `Next: ${focusName(next.schedule)} at ${timeLabel(next.schedule.startMinute)}${day ? ` ${day}` : ''}.`;
 }
 
 /** One expandable line of the summary list: its title, current value, and its editor below. */
@@ -334,20 +335,8 @@ function StatusPanel({ settings, fontsLoaded }: { settings: FocusSettings; fonts
         : status?.title === 'Protection inactive' && cfg.apps.length
           ? status.body
           : null;
-  // One call to action at a time: picking an app comes before Usage Access.
-  const usageNote =
-    on &&
-    !blocked &&
-    !!cfg.apps.length &&
-    cfg.dailyMinutes !== null &&
-    health?.usageAccessGranted === false;
-  const note = blocked
-    ? null
-    : usageNote
-      ? 'Turn on Usage Access so your daily limit counts your full app time.'
-      : on && status?.title === 'Protection needs attention'
-        ? status.body
-        : null;
+  const note =
+    !blocked && on && status?.title === 'Protection needs attention' ? status.body : null;
   const message = blocked ?? note;
   const state = !on ? 'off' : blocked || !cfg.apps.length ? 'attention' : 'on';
   const tone = TONES[state];
@@ -384,11 +373,11 @@ function StatusPanel({ settings, fontsLoaded }: { settings: FocusSettings; fonts
       {message && (
         <Reanimated.View entering={reveal} exiting={hide} style={styles.panelNote}>
           <T style={{ color: C.text, fontSize: 14, lineHeight: 20, flex: 1 }}>{message}</T>
-          {(needsCounting || usageNote) && (
+          {needsCounting && (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={needsCounting ? 'Turn on counting' : 'Turn on Usage Access'}
-              onPress={() => (needsCounting ? router.push('/disclosure') : openUsageAccess())}
+              accessibilityLabel="Turn on counting"
+              onPress={() => router.push('/disclosure')}
               style={({ pressed }) => [styles.warnAction, { opacity: pressed ? 0.7 : 1 }]}
             >
               <T style={{ color: C.brown, fontWeight: '800', fontSize: 14 }}>Turn on</T>
@@ -568,12 +557,15 @@ function AndroidFocus() {
           <Section
             icon="target"
             title="Daily limit"
-            value={cfg.dailyMinutes !== null ? `${cfg.dailyMinutes} min a day` : 'Off'}
+            value={
+              cfg.dailyMinutes !== null ? `${cfg.dailyMinutes} min of Reels & Shorts a day` : 'Off'
+            }
             open={openSet.has('limit')}
             onToggle={() => toggle('limit')}
           >
             <ToggleRow
               label="Pause after a daily limit"
+              hint="Counts your time on Reels & Shorts"
               value={cfg.dailyMinutes !== null}
               onChange={(on) => update({ dailyMinutes: on ? 30 : null })}
             />
@@ -680,7 +672,7 @@ function AndroidFocus() {
                 <T style={styles.hint}>
                   {cfg.feedOnly
                     ? 'Only the Reels and Shorts feed is paused. Detection is experimental and may sometimes miss a video.'
-                    : 'The whole app is paused at your limit or focus time.'}
+                    : 'The whole app is paused once you reach your Reels & Shorts limit, or during a focus time.'}
                 </T>
               </Section>
 

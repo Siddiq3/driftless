@@ -311,11 +311,11 @@ it('can retry after failing to load settings', async () => {
 it('writes the status sentence from the picked apps and live settings', () => {
   const on = { ...config, enabled: true, feedOnly: true, dailyMinutes: 30 };
   expect(focusSummary(on, ['Instagram Reels'])).toBe(
-    'Instagram Reels pauses after 30 min a day and during 10:00 AM – 11:00 AM.',
+    'Instagram Reels pauses after 30 min of scrolling a day and during 10:00 AM – 11:00 AM.',
   );
   expect(
     focusSummary({ ...on, feedOnly: false, schedules: [] }, ['Instagram Reels', 'YouTube Shorts']),
-  ).toBe('Instagram and YouTube pause after 30 min a day.');
+  ).toBe('Instagram and YouTube pause after 30 min of scrolling a day.');
   expect(focusSummary({ ...on, dailyMinutes: null, schedules: [] }, ['YouTube Shorts'])).toBe(
     'Pick a daily limit or a focus time below.',
   );
@@ -325,7 +325,7 @@ it('writes the status sentence from the picked apps and live settings', () => {
   );
 });
 
-it('keeps pauses on with a quiet note and a fix when only Usage Access is off', async () => {
+it('never asks for Usage Access: the minute limit counts Reels & Shorts time', async () => {
   jest
     .mocked(loadBlocking)
     .mockResolvedValue({ ...config, enabled: true, apps: ['youtube'], dailyMinutes: 30 });
@@ -344,12 +344,9 @@ it('keeps pauses on with a quiet note and a fix when only Usage Access is off', 
   } as ReturnType<typeof Tracking.health>);
   await mount();
   expect(text()).toContain('Pauses are on');
-  expect(text()).toContain('Turn on Usage Access so your daily limit counts your full app time.');
-  expect(control('Turn on Usage Access')).toBeDefined();
-  jest
-    .mocked(loadBlocking)
-    .mockResolvedValue({ ...config, enabled: true, apps: [], dailyMinutes: 30 });
-  await mount();
-  expect(text()).toContain('Pick an app below to get started.');
-  expect(text()).not.toContain('Turn on Usage Access');
+  expect(text()).not.toContain('Usage Access');
+  expect(text()).toContain('YouTube Shorts pauses after 30 min of scrolling a day');
+  // A custom focus time names its range once, not the start time twice.
+  expect(text()).toMatch(/Next focus time: (Sat )?10:00 AM – 11:00 AM\./);
+  expect(text()).not.toContain(' at 10:00 AM');
 });
