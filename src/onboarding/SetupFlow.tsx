@@ -130,8 +130,8 @@ const QUESTIONS: Question[] = [
   },
   {
     key: 'language',
-    title: 'Which language makes you laugh?',
-    help: 'Meme breaks on Reels and Shorts will use it. You can change it anytime in Settings.',
+    title: 'Which language do you watch Reels in?',
+    help: 'Your meme breaks will use this language. You can change it anytime in Settings.',
     options: MEME_LANGUAGES,
   },
 ];
@@ -435,7 +435,12 @@ export function SetupFlow({ initial }: { initial: SetupRecord | null }) {
             onPress={() => router.push('/privacy')}
           />
         ) : step > 0 && step <= questionCount ? (
-          <PlainSetupButton label="Skip" busy={busy} onPress={() => void move(9)} />
+          <PlainSetupButton
+            label="Skip"
+            busy={busy}
+            // Skipping the questions still lands on the language one, so memes match the person.
+            onPress={() => void move(askLanguage && step < 7 ? 7 : 9)}
+          />
         ) : null}
       </View>
       <ScrollView

@@ -91,3 +91,20 @@ it.each(['android', 'ios'])(
     });
   },
 );
+
+it.each([
+  [1, 7],
+  [4, 7],
+  [7, 9],
+])(
+  'Skip on question %s goes to step %s, so the Reels language is always asked',
+  async (from, to) => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });
+    await act(async () => {
+      tree = create(<SetupFlow initial={{ ...initial, step: from }} />);
+    });
+    const skip = tree.root.findAll((n) => n.props.label === 'Skip' && n.props.onPress)[0]!;
+    await act(async () => skip.props.onPress());
+    expect(mockSave).toHaveBeenLastCalledWith(expect.objectContaining({ step: to }));
+  },
+);
