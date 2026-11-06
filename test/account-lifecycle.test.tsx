@@ -25,9 +25,15 @@ import { resolvePersonalAccount, selectPersonalSession } from '@/data/session';
 
 const mockToken = jest.fn(async () => 'fixture-token');
 const mockSignOut = jest.fn();
+const mockConfirm = jest.fn(async () => true);
 let mockStatus = 'signedIn';
 jest.mock('@/auth/session', () => ({
-  useSession: () => ({ status: mockStatus, getAccessToken: mockToken, signOut: mockSignOut }),
+  useSession: () => ({
+    status: mockStatus,
+    getAccessToken: mockToken,
+    signOut: mockSignOut,
+    confirmIdentity: mockConfirm,
+  }),
 }));
 jest.mock('@/config/env', () => ({
   APP_VERSION: '0.1.0',
@@ -426,6 +432,23 @@ test('previously deleted accounts require explicit creation and retain the incar
   await press('Create a new account');
   expect(discovery.registerAccount).toHaveBeenCalledWith(expect.any(String), incarnation);
   expect(visible()).toContain('private screens');
+});
+
+test('an old Google sign-in refused at registration asks for a fresh one and retries once', async () => {
+  discovery.registerAccount.mockRejectedValueOnce(new ApiError(403, 'forbidden', 'not allowed'));
+  await mount();
+  expect(mockConfirm).toHaveBeenCalledTimes(1);
+  expect(discovery.registerAccount).toHaveBeenCalledTimes(2);
+  expect(visible()).toContain('private screens');
+});
+
+test('a cancelled fresh sign-in keeps the refusal instead of looping', async () => {
+  discovery.registerAccount.mockRejectedValueOnce(new ApiError(403, 'forbidden', 'not allowed'));
+  mockConfirm.mockResolvedValueOnce(false);
+  await mount();
+  expect(discovery.registerAccount).toHaveBeenCalledTimes(1);
+  expect(visible()).not.toContain('private screens');
+  expect(visible()).toContain('forbidden');
 });
 
 test('concurrent registration discovers the winning account without creating another dataset', async () => {

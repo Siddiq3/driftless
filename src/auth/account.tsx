@@ -59,6 +59,7 @@ export async function firstRestoreSettled(restore: Promise<void>, waitMs = 10_00
 export function AccountBoundary({ children }: { children: ReactNode }) {
   const session = useSession();
   const token = session.status === 'signedIn' ? session.getAccessToken : null;
+  const confirmIdentity = session.status === 'signedIn' ? session.confirmIdentity : null;
   const apiUrl = readEnv()?.apiUrl;
   const [timezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
   const [revision, setRevision] = useState(0);
@@ -152,10 +153,28 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
       }
       if (state.state === 'deleted' || state.state === 'legacy_quarantined') {
         progress('registration');
-        try {
-          state = await measureStartup('account-registration', () =>
-            api.registerAccount(registrationId.current, state.incarnation),
+        const expected = state.incarnation;
+        const register = () =>
+          measureStartup('account-registration', () =>
+            api.registerAccount(registrationId.current, expected),
           );
+        try {
+          try {
+            state = await register();
+          } catch (e) {
+            // Registering needs a Google sign-in from the last few minutes, but a silently restored
+            // one can be up to an hour old (e.g. an existing account meeting a new server). Ask for
+            // a fresh sign-in once and retry; a cancelled prompt keeps the original refusal.
+            if (
+              !(e instanceof ApiError) ||
+              e.code !== 'forbidden' ||
+              !confirmIdentity ||
+              !(await confirmIdentity())
+            )
+              throw e;
+            if (!alive) return;
+            state = await register();
+          }
         } catch (e) {
           // Another device may have finished registration. Discover its account; never reset it.
           if (!(e instanceof ApiError) || e.code !== 'registration_conflict') throw e;
@@ -248,7 +267,7 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
     return () => {
       alive = false;
     };
-  }, [api, token, apiUrl, timezone]);
+  }, [api, token, apiUrl, timezone, confirmIdentity]);
   useEffect(() => {
     if (!api || current?.state !== 'active') return;
     let alive = true;
