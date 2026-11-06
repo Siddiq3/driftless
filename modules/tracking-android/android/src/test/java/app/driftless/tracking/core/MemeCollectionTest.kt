@@ -31,8 +31,8 @@ class MemeCollectionTest {
         }
     }
     @Test fun collectionHasDistinctReactionsAndNativeScriptCopy() {
-        assertEquals(24, MemeCollection.all.size)
-        assertEquals(24, MemeCollection.all.map { it.id }.toSet().size)
+        assertEquals(21, MemeCollection.all.size)
+        assertEquals(21, MemeCollection.all.map { it.id }.toSet().size)
         assertFalse(MemeCollection.all.any { it.id == "2220434" })
         val scripts = mapOf("te" to '\u0C00'..'\u0C7F', "hi" to '\u0900'..'\u097F',
             "ta" to '\u0B80'..'\u0BFF', "ml" to '\u0D00'..'\u0D7F')

@@ -93,13 +93,7 @@ object MemeCollection {
         MemeReaction("2877826391562086914", "te", "Venu Madhav — వా అన్నా వా", listOf("వా అన్నా వా! {count} {feed}… ఏం టాలెంట్!", "{count} {feed}? వా అన్నా వా, ఆపడమే రాదా?", "వా అన్నా వా! చదువు పక్కన పెట్టి {count} {feed}!"),
             translations = mapOf("en" to listOf("Wah anna wah! {count} {feed}… what talent!", "{count} {feed}? Wah anna wah, stopping isn't an option?", "Wah anna wah! Books aside, {count} {feed} done!"))),
         MemeReaction("65216278325964883", "en", "Jagyasini Singh — Sabash (Hindi TV; Hindi captions pending)", listOf("Shabash! {count} {feed} done!", "{count} {feed}? Shabash… now open a book too!", "Shabash! A {count} {feed} record!"),
-            translations = mapOf("te" to listOf("శభాష్! {count} {feed} పూర్తి!", "{count} {feed}? శభాష్… ఇక పుస్తకం కూడా తెరువు!", "శభాష్! {count} {feed}తో రికార్డ్ కొట్టేశావ్!"))),
-        MemeReaction("2952787956024904689", "en", "Gentlemen slow clap (rights clearance pending)", listOf("{count} {feed}. A round of applause 👏", "Gentlemen, {count} {feed}. Truly historic.", "{count} {feed}! The committee is… impressed 👏"),
-            translations = mapOf("te" to listOf("{count} {feed}! అందరూ చప్పట్లు కొట్టండి 👏", "{count} {feed}… చరిత్రలో నిలిచిపోతుంది!", "{count} {feed}! కమిటీ ఇంప్రెస్ అయింది 👏"))),
-        MemeReaction("12937415716748487140", "en", "Mr. Bean clapping (rights clearance pending)", listOf("{count} {feed}! Mr. Bean is proud 👏", "{count} {feed}… clap clap, now put it down.", "Congratulations on {count} {feed}. Nobody asked, but 👏"),
-            translations = mapOf("te" to listOf("{count} {feed}! మిస్టర్ బీన్ కూడా చప్పట్లు కొడుతున్నాడు 👏", "{count} {feed}… చప్పట్లు, ఇక ఫోన్ కింద పెట్టు.", "{count} {feed}కి కంగ్రాట్స్! ఎవరూ అడగలేదు కానీ 👏"))),
-        MemeReaction("20569493", "te", "నువ్వు మారవా (rights clearance pending)", listOf("{count} {feed}… నువ్వు మారవా?", "నిన్న కూడా “ఇంకొక్కటే” అన్నావ్… ఈరోజు {count} {feed}. నువ్వు మారవా?", "{count} {feed}! ఎన్నిసార్లు చెప్పాలి… నువ్వు మారవా?"),
-            translations = mapOf("en" to listOf("{count} {feed}… will you never change?", "Yesterday “just one more”… today {count} {feed}. Will you ever change?", "{count} {feed}! How many times do I have to say it… will you never change?")))
+            translations = mapOf("te" to listOf("శభాష్! {count} {feed} పూర్తి!", "{count} {feed}? శభాష్… ఇక పుస్తకం కూడా తెరువు!", "శభాష్! {count} {feed}తో రికార్డ్ కొట్టేశావ్!")))
     )
 
     /** Language the card is shown in: the person's language when any meme has captions in it, else English. */

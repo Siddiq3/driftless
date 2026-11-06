@@ -55,7 +55,7 @@ The milestone card now appears at count **1**, then **50, 100, 150…**, and use
 
 ## Selection and copy
 
-- Twenty-four memes are bundled as small animated GIFs (7,948,990 bytes total). Source/media URLs and SHA-256 hashes are in `MEME-ASSETS.json`; `MemeCollectionTest` checks every meme has a matching GIF. The gentlemen slow clap, Mr. Bean and నువ్వు మారవా clips are marked rights clearance pending.
+- Twenty-one memes are bundled as small animated GIFs (6,774,520 bytes total). Source/media URLs and SHA-256 hashes are in `MEME-ASSETS.json`; `MemeCollectionTest` checks every meme has a matching GIF. The gentlemen slow clap, Mr. Bean and నువ్వు మారవా clips were removed from 1.0.3 until their rights are cleared; their manifest entries are marked withheld.
 - `https://tenor.com/view/lol-gif-2220434` returned HTTP 404 and was removed from the collection; its manifest entry stays marked unavailable.
 - Captions follow the person's meme language. Telugu and English have captions for every meme; Hindi, Tamil and Malayalam only show memes captioned in that language, and a language with none (Kannada) shows English.
 - Memes are sampled without replacement. After every available meme has appeared, a new random cycle begins; the previous cycle's final meme cannot immediately repeat. This history survives service recreation and is scoped to the current native dataset/incarnation.
