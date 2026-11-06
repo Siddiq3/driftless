@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.driftless.tracking.android.WidgetFaceTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-06T16:03:31.914Z" hostname="runnervm7aw5e" time="0.002">
+  <properties/>
+  <testcase name="noGoalStillShowsCountMoodAndStreak" classname="app.driftless.tracking.android.WidgetFaceTest" time="0.001"/>
+  <testcase name="unknownOrInactiveCountsClaimNoMoodOrAllowance" classname="app.driftless.tracking.android.WidgetFaceTest" time="0.0"/>
+  <testcase name="limitReachedMakesTheCompanionDrained" classname="app.driftless.tracking.android.WidgetFaceTest" time="0.0"/>
+  <testcase name="showsRemainingAllowanceAgainstTheSmallestVideoGoal" classname="app.driftless.tracking.android.WidgetFaceTest" time="0.001"/>
+  <testcase name="longStreakWellUnderTheLimitLooksFocused" classname="app.driftless.tracking.android.WidgetFaceTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

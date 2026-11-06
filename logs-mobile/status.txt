@@ -1,0 +1,11 @@
+install exit=0 secs=7
+format exit=1 secs=5
+expo-check exit=1 secs=2
+expo-doctor exit=1 secs=5
+typecheck exit=0 secs=6
+lint exit=0 secs=10
+test exit=1 secs=15
+scorer-test exit=0 secs=1
+prebuild exit=0 secs=5
+gradle exit=0 secs=624
+kotlin-test exit=0 secs=73

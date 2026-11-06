@@ -1,0 +1,10 @@
+The following packages should be updated for best compatibility with the installed expo version:
+  expo@57.0.31 - expected version: ~57.0.32
+  expo-build-properties@57.0.22 - expected version: ~57.0.23
+  expo-constants@57.0.22 - expected version: ~57.0.23
+  expo-dev-client@57.0.20 - expected version: ~57.0.21
+  expo-notifications@57.0.24 - expected version: ~57.0.25
+  expo-router@57.0.29 - expected version: ~57.0.30
+  expo-sharing@57.0.24 - expected version: ~57.0.25
+Your project may not work correctly until you install the expected versions of the packages.
+Found outdated dependencies

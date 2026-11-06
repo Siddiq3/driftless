@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.driftless.tracking.android.PauseActivityTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-06T16:03:29.006Z" hostname="runnervm7aw5e" time="2.048">
+  <properties/>
+  <testcase name="leaveFeedReturnsHomeWithoutConsumingBypass" classname="app.driftless.tracking.android.PauseActivityTest" time="0.441"/>
+  <testcase name="staleBypassButtonCannotChangeAnotherIncarnationOrConsumeTwoUses" classname="app.driftless.tracking.android.PauseActivityTest" time="0.298"/>
+  <testcase name="singleTaskIntentReplacesOldBypassUiWithAccountCreditRecovery" classname="app.driftless.tracking.android.PauseActivityTest" time="0.333"/>
+  <testcase name="bypassStillGrantsExactlyFiveMinutesAndConsumesOneDailyUse" classname="app.driftless.tracking.android.PauseActivityTest" time="0.188"/>
+  <testcase name="detachedButtonFromAnOlderIntentCannotSnoozeTheNewAccount" classname="app.driftless.tracking.android.PauseActivityTest" time="0.2"/>
+  <testcase name="changingASelectedRuleToDisabledDismissesTheOldPauseOnTheNextCheck" classname="app.driftless.tracking.android.PauseActivityTest" time="0.17"/>
+  <testcase name="scheduleUsesScheduleExplanationAndExhaustedBypassesStayUnavailable" classname="app.driftless.tracking.android.PauseActivityTest" time="0.208"/>
+  <testcase name="systemInsetsAreReplacedOnWindowChangesWithoutAccumulatingPadding" classname="app.driftless.tracking.android.PauseActivityTest" time="0.204"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

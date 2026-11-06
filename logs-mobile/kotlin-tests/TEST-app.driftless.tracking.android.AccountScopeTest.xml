@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.driftless.tracking.android.AccountScopeTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-06T16:03:24.093Z" hostname="runnervm7aw5e" time="0.367">
+  <properties/>
+  <testcase name="restoredRowsUseRevisionUpsertsWithoutDuplicatingCurrentDeviceMeasurements" classname="app.driftless.tracking.android.AccountScopeTest" time="0.043"/>
+  <testcase name="scopesSeparateRecordedDataAndOldRecorderCallbacks" classname="app.driftless.tracking.android.AccountScopeTest" time="0.047"/>
+  <testcase name="reopenKeepsTheScopeAndItsPendingOfflineMeasurements" classname="app.driftless.tracking.android.AccountScopeTest" time="0.053"/>
+  <testcase name="fiftyGuestEventsRetainStableRecoveryRecordsAndImportOnce" classname="app.driftless.tracking.android.AccountScopeTest" time="0.092"/>
+  <testcase name="freshInstallationRestoresPersonalCountAndAddsOnlyNewLocalObservations" classname="app.driftless.tracking.android.AccountScopeTest" time="0.042"/>
+  <testcase name="guestImportIsIdempotentAndCannotBeReassigned" classname="app.driftless.tracking.android.AccountScopeTest" time="0.04"/>
+  <testcase name="freshIncarnationDoesNotAdoptLegacyBindingsOrDelayedRecorderWrites" classname="app.driftless.tracking.android.AccountScopeTest" time="0.045"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
