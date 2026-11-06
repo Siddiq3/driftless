@@ -33,3 +33,7 @@ credentials.json
 # Local release builds
 *.apk
 *.aab
+
+# Design-tool scratch files (decision pages, review screenshots)
+.impeccable/review/
+.impeccable/*-round.json
