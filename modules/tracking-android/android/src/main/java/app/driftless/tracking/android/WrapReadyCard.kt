@@ -43,7 +43,7 @@ class WrapReadyCard(private val service: AccessibilityService) {
     private fun dp(n: Int) = (n * service.resources.displayMetrics.density).toInt()
     private fun c(hex: String) = Color.parseColor(hex)
     private fun round(fill: String, radius: Int) = GradientDrawable().apply { setColor(c(fill)); cornerRadius = dp(radius).toFloat() }
-    private val display: Typeface by lazy {
+    private val displayTypeface: Typeface by lazy {
         if (Build.VERSION.SDK_INT >= 26) runCatching { service.resources.getFont(R.font.lilita_one) }.getOrNull() ?: Typeface.DEFAULT_BOLD
         else Typeface.DEFAULT_BOLD
     }
@@ -77,7 +77,7 @@ class WrapReadyCard(private val service: AccessibilityService) {
             setTextColor(c(LAVENDER)); setPadding(dp(12), dp(5), dp(12), dp(5)); background = round(PLUM_LIGHT, 12)
         }, LinearLayout.LayoutParams(-2, -2))
         card.addView(TextView(service).apply {
-            text = "I wrapped up\nyour $noun day"; textSize = if (compact) 25f else 29f; typeface = display
+            text = "I wrapped up\nyour $noun day"; textSize = if (compact) 25f else 29f; typeface = displayTypeface
             gravity = Gravity.CENTER; setTextColor(c(SOFT_WHITE)); setLineSpacing(0f, 0.95f)
         }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
         card.addView(TextView(service).apply {
@@ -92,7 +92,7 @@ class WrapReadyCard(private val service: AccessibilityService) {
             contentDescription = "$noun watched yesterday, hidden until you open your wrap"
         }
         val mystery = TextView(service).apply {
-            text = "??"; textSize = 36f; typeface = display; letterSpacing = 0.06f; setTextColor(c(MOON))
+            text = "??"; textSize = 36f; typeface = displayTypeface; letterSpacing = 0.06f; setTextColor(c(MOON))
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }
         secret.addView(mystery)
@@ -104,7 +104,7 @@ class WrapReadyCard(private val service: AccessibilityService) {
 
         // Chunky lavender button with a darker "lip" underneath
         val open = TextView(service).apply {
-            text = "Open my wrap ✨"; textSize = 21f; typeface = display; gravity = Gravity.CENTER
+            text = "Open my wrap ✨"; textSize = 21f; typeface = displayTypeface; gravity = Gravity.CENTER
             setTextColor(c(INDIGO)); minHeight = dp(56); isClickable = true; isFocusable = true
             contentDescription = "Open my wrap"
             background = LayerDrawable(arrayOf<android.graphics.drawable.Drawable>(round(LAVENDER_DARK, 28), round(LAVENDER, 28))).apply {
@@ -174,7 +174,7 @@ class WrapReadyCard(private val service: AccessibilityService) {
         }
         stage.addView(mascot, FrameLayout.LayoutParams(dp(mascotSize), dp(mascotSize), Gravity.TOP or Gravity.CENTER_HORIZONTAL))
         val bubble = TextView(service).apply {
-            text = "psst… 👀"; textSize = 16f; typeface = display; setTextColor(c(INDIGO))
+            text = "psst… 👀"; textSize = 16f; typeface = displayTypeface; setTextColor(c(INDIGO))
             setPadding(dp(14), dp(7), dp(14), dp(8)); rotation = -6f
             background = GradientDrawable().apply {
                 setColor(c(SOFT_WHITE))
