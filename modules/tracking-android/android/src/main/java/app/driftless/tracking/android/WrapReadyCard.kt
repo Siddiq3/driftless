@@ -167,7 +167,8 @@ class WrapReadyCard(private val service: AccessibilityService) {
                 })
             }
         }
-        val mascot = ImageView(service).apply {
+        val mascot = BlinkingBrainView(service).apply {
+            wrappedPose = true; scaleType = ImageView.ScaleType.FIT_CENTER
             setImageResource(R.drawable.scrollsnooze_wrapped)
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }
@@ -204,8 +205,18 @@ class WrapReadyCard(private val service: AccessibilityService) {
                 mascot.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f).setStartDelay(160)
                     .setInterpolator(OvershootInterpolator(1.8f)).setDuration(520)
                     .withEndAction { if (isShowing) {
-                        loop(ObjectAnimator.ofFloat(mascot, View.TRANSLATION_Y, 0f, -dp(6).toFloat()), 1500)
-                        loop(ObjectAnimator.ofFloat(mascot, View.ROTATION, -2.5f, 2.5f), 2200)
+                        // Squash on landing, stretch back, then settle into a gentle idle bob and sway.
+                        mascot.pivotY = mascot.height.toFloat()
+                        mascot.animate().scaleX(1.08f).scaleY(0.9f).setDuration(110).withEndAction {
+                            mascot.animate().scaleX(0.97f).scaleY(1.04f).setDuration(140).withEndAction {
+                                mascot.animate().scaleX(1f).scaleY(1f).setDuration(160).withEndAction {
+                                    if (!isShowing) return@withEndAction
+                                    mascot.setMood(app.driftless.tracking.core.CountBadgeMood.HAPPY)
+                                    loop(ObjectAnimator.ofFloat(mascot, View.TRANSLATION_Y, 0f, -dp(6).toFloat()), 1500)
+                                    loop(ObjectAnimator.ofFloat(mascot, View.ROTATION, -2.5f, 2.5f), 2200)
+                                }.start()
+                            }.start()
+                        }.start()
                     } }.start()
                 bubble.alpha = 0f; bubble.scaleX = 0.4f; bubble.scaleY = 0.4f
                 bubble.pivotX = dp(70).toFloat(); bubble.pivotY = dp(30).toFloat()

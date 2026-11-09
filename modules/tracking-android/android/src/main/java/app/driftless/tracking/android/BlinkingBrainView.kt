@@ -20,6 +20,8 @@ class BlinkingBrainView(context: Context) : ImageView(context) {
     private var interval = 0
     internal var blinkProgress = 0f
         private set
+    /** Set when showing the "wrapped" pose (mascot holding its recap), whose eyes sit lower. */
+    var wrappedPose = false
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val eyePath = Path()
     private val lidPath = Path()
@@ -93,6 +95,10 @@ class BlinkingBrainView(context: Context) : ImageView(context) {
             lidPath.quadTo(203f, 208f - 3f * blinkProgress, 211f, 220f)
             canvas.drawPath(lidPath, paint)
             paint.alpha = 255
+        } else if (wrappedPose) {
+            // Wrapped master eye bounds (1254px) scaled to the 384-unit canvas.
+            eyelid(canvas, 129f, 181f, 179f, 211f, -7f)
+            eyelid(canvas, 220f, 167f, 272f, 202f, -6f)
         } else {
             eyelid(canvas, 132f, 168f, 181f, 213f, -8f)
             eyelid(canvas, 223f, 156f, 270f, 199f, -7f)
