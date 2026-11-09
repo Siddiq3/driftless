@@ -171,6 +171,13 @@ class TrackingPrefs(private val context: Context) {
         }.apply()
     }
 
+    /** One "wrap is ready" popup per wrapped day, per data scope. */
+    fun wrapPopupShown(date: String): Boolean = p.getBoolean(scoped("wrapped_ready_$date"), false)
+
+    fun markWrapPopupShown(date: String) {
+        p.edit().putBoolean(scoped("wrapped_ready_$date"), true).apply()
+    }
+
     fun clearWrapHistory() {
         p.edit().also { editor ->
             p.all.keys.filter { it.startsWith("wrapped_ready_") }.forEach { editor.remove(it) }

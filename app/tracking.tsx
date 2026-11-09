@@ -236,6 +236,15 @@ function AndroidTrackingScreen() {
             }}
           />
         )}
+        {__DEV__ && Tracking.memeCardsSupported() && (
+          <Button
+            label="Show test wrap popup"
+            kind="secondary"
+            onPress={() => {
+              if (!Tracking.showTestWrap()) setError('Turn on counting to show a test wrap popup.');
+            }}
+          />
+        )}
         {!badgeEnabled && (
           <T style={styles.caption}>Turn on the floating counter to see meme breaks.</T>
         )}

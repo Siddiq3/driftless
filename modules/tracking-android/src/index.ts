@@ -22,6 +22,7 @@ type NativeTracking = {
   memePreferences(): Partial<MemePreferences>;
   setMemePreferences(enabled: boolean, language: string): void;
   showTestMeme?(): boolean;
+  showTestWrap?(): boolean;
   floatingCountPreferences(): { size: number; pausedUntil: number };
   setFloatingCountSize(size: number): void;
   resumeFloatingCount(): void;
@@ -108,6 +109,7 @@ export const Tracking = {
     native.setMemePreferences?.(enabled, Tracking.memePreferences().language),
   /** Debug builds only; false when counting is off or in a store build. */
   showTestMeme: (): boolean => native.showTestMeme?.() ?? false,
+  showTestWrap: (): boolean => native.showTestWrap?.() ?? false,
   setMemeLanguage: (language: MemeLanguage) =>
     native.setMemePreferences?.(Tracking.memePreferences().enabled, language),
   floatingCountSupported: () => typeof native.setFloatingCountEnabled === 'function',

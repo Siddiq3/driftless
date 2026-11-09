@@ -58,6 +58,7 @@ class TrackingModule : Module() {
             DriftlessAccessibilityService.current?.refreshFloatingCount()
         }
         Function("showTestMeme") { DriftlessAccessibilityService.current?.showTestMeme() ?: false }
+        Function("showTestWrap") { DriftlessAccessibilityService.current?.showTestWrap() ?: false }
         Function("widgetSupported") { CountWidget.supported(context) }
         Function("requestCountWidget") { CountWidget.request(context) }
         Function("refreshCountWidget") { CountWidget.update(context) }

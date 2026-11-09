@@ -43,6 +43,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
 
     private lateinit var memeCard: MemeMilestoneCard
     private lateinit var feedPause: FeedPauseOverlay
+    private lateinit var wrapCard: WrapReadyCard
     private var memeDate: String? = null
     private var memeCount: Int? = null
     private lateinit var floatingBadge: FloatingCountBadge
@@ -122,6 +123,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
         floatingBadge = FloatingCountBadge(this)
         memeCard = MemeMilestoneCard(this)
         feedPause = FeedPauseOverlay(this)
+        wrapCard = WrapReadyCard(this)
         rules = RulesLoader.load(this)
         val store = SqliteStore.get(this)
         val now = SqliteStore.get(this@DriftlessAccessibilityService).account.now()
@@ -207,7 +209,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
             pendingScroll = false
             return
         }
-        if (::memeCard.isInitialized && memeCard.isShowing) {
+        if ((::memeCard.isInitialized && memeCard.isShowing) || (::wrapCard.isInitialized && wrapCard.isShowing)) {
             leaveOrDiscard(now)
             if (c.surface != Surface.SHORT_VIDEO) hideFloatingCount()
             pendingScroll = false
@@ -390,6 +392,19 @@ class DriftlessAccessibilityService : AccessibilityService() {
         return true
     }
 
+    /** Debug builds only: shows the "wrap is ready" popup now, without waiting for a new day. */
+    fun showTestWrap(): Boolean {
+        if (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE == 0) return false
+        if (!::wrapCard.isInitialized) return false
+        main.post {
+            if (wrapCard.isShowing) return@post
+            val today = SqliteStore.get(this).account.date()
+            val yesterday = java.time.LocalDate.parse(today).minusDays(1).toString()
+            wrapCard.show(shorts = false) { openWrap(yesterday) }
+        }
+        return true
+    }
+
     fun refreshFloatingCount() { main.post { if (::engine.isInitialized) updateFloatingCount(SqliteStore.get(this@DriftlessAccessibilityService).account.now()) } }
 
     private fun hideFloatingCount() {
@@ -397,6 +412,7 @@ class DriftlessAccessibilityService : AccessibilityService() {
         if (::floatingBadge.isInitialized) floatingBadge.hide()
         if (::memeCard.isInitialized) memeCard.hide()
         if (::feedPause.isInitialized) feedPause.hide()
+        if (::wrapCard.isInitialized) wrapCard.hide()
     }
 
     private fun updateFloatingCount(now: Long) {
@@ -446,7 +462,36 @@ class DriftlessAccessibilityService : AccessibilityService() {
                 }
             }
         }
-        if (memeCard.isShowing) floatingBadge.hide() else floatingBadge.show(badge)
+        if (!memeCard.isShowing) maybeShowWrapReady(pkg, today, now)
+        if (memeCard.isShowing || wrapCard.isShowing) floatingBadge.hide() else floatingBadge.show(badge)
+    }
+
+    /**
+     * Once per day, on a recognized Reels/Shorts player, tease yesterday's Daily Wrap when it has
+     * recorded videos. Tapping opens the Wrapped screen in ScrollSnooze.
+     */
+    private fun maybeShowWrapReady(pkg: String, today: String, now: Long) {
+        if (!::wrapCard.isInitialized || wrapCard.isShowing || badgeSurface != Surface.SHORT_VIDEO) return
+        if (::feedPause.isInitialized && feedPause.isShowing) return
+        val yesterday = runCatching { java.time.LocalDate.parse(today).minusDays(1).toString() }.getOrNull() ?: return
+        if (prefs.wrapPopupShown(yesterday)) return
+        val views = runCatching {
+            (SqliteStore.get(this).personalMeasurement(yesterday, rules.apps.keys)["views"] as? Number)?.toInt()
+        }.getOrNull() ?: return
+        if (views <= 0) return
+        if (wrapCard.show(shorts = pkg == "com.google.android.youtube") { openWrap(yesterday) }) {
+            prefs.markWrapPopupShown(yesterday)
+            leaveOrDiscard(now)
+        }
+    }
+
+    private fun openWrap(end: String) {
+        val deepLink = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("scrollsnooze://wrapped?end=$end"))
+            .setPackage(packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        val opened = runCatching { startActivity(deepLink) }.isSuccess
+        if (!opened) packageManager.getLaunchIntentForPackage(packageName)?.let {
+            it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); startActivity(it)
+        }
     }
 
     private var lastGoalCheckMs = 0L
