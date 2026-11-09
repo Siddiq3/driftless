@@ -7,13 +7,14 @@ import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
 import android.os.Build
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.OvershootInterpolator
-import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -22,8 +23,9 @@ import app.driftless.tracking.R
 
 /**
  * "Your wrap is ready" teaser shown once per day over a recognized Reels/Shorts player.
- * It reveals nothing from the wrap itself (the number stays hidden as "???") so the only way
- * to find out is to open ScrollSnooze. Tapping outside or "Later" dismisses it.
+ * The mascot stands on top of the card holding its recap; the count stays hidden ("??") so the
+ * only way to find out is to open ScrollSnooze. Tapping outside, ×, or "Maybe later" dismisses it.
+ * Colors follow the ScrollSnooze purple identity (midnight, plum, lavender, moon yellow).
  */
 class WrapReadyCard(private val service: AccessibilityService) {
     private val wm = service.getSystemService(WindowManager::class.java)
@@ -31,99 +33,161 @@ class WrapReadyCard(private val service: AccessibilityService) {
     private val animators = mutableListOf<ValueAnimator>()
     val isShowing get() = root != null
 
+    private companion object {
+        const val MIDNIGHT = "#10102B"; const val PLUM = "#211C3D"; const val PLUM_LIGHT = "#2E2752"
+        const val LINE = "#3A3260"; const val LAVENDER = "#C4A0FF"; const val LAVENDER_DARK = "#9566DF"
+        const val LAVENDER_HI = "#E4C5FF"; const val SOFT_WHITE = "#F7F2FF"; const val MUTED = "#B9AFCB"
+        const val FAINT = "#8E85A8"; const val INDIGO = "#241642"; const val MOON = "#FFE08A"
+    }
+
     private fun dp(n: Int) = (n * service.resources.displayMetrics.density).toInt()
-    private fun gradient(vararg colors: String, radius: Int, orientation: GradientDrawable.Orientation =
-        GradientDrawable.Orientation.TL_BR) = GradientDrawable(orientation, colors.map { Color.parseColor(it) }.toIntArray())
-        .apply { cornerRadius = dp(radius).toFloat() }
+    private fun c(hex: String) = Color.parseColor(hex)
+    private fun round(fill: String, radius: Int) = GradientDrawable().apply { setColor(c(fill)); cornerRadius = dp(radius).toFloat() }
+    private val display: Typeface by lazy {
+        if (Build.VERSION.SDK_INT >= 26) runCatching { service.resources.getFont(R.font.lilita_one) }.getOrNull() ?: Typeface.DEFAULT_BOLD
+        else Typeface.DEFAULT_BOLD
+    }
     private val animate get() = Build.VERSION.SDK_INT < 26 || ValueAnimator.areAnimatorsEnabled()
 
-    /** [shorts] only changes the wording ("Shorts" vs "reels"). Returns true when the card is on screen. */
+    /** [shorts] only changes the wording. Returns true when the popup is on screen. */
     fun show(shorts: Boolean, onOpen: () -> Unit): Boolean {
         if (isShowing) return false
         val noun = if (shorts) "Shorts" else "reels"
+        val one = if (shorts) "Short" else "reel"
+        val metrics = service.resources.displayMetrics
+        val compact = metrics.heightPixels / metrics.density < 680
+        val mascotSize = if (compact) 150 else 190
+
         val backdrop = FrameLayout(service).apply {
-            setBackgroundColor(Color.parseColor("#C0000000"))
+            setBackgroundColor(Color.argb(200, 16, 16, 43))
             setOnClickListener { hide() }
         }
+        val width = minOf(dp(330), metrics.widthPixels - dp(32))
+        val stage = FrameLayout(service).apply { clipChildren = false; clipToPadding = false }
+
+        // ---- Card ----
         val card = LinearLayout(service).apply {
             orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL
-            setPadding(dp(20), dp(18), dp(20), dp(20))
-            background = gradient("#2A1450", "#140A2A", "#3A0F33", radius = 32).apply {
-                setStroke(dp(1), Color.parseColor("#7A55C8"))
-            }
-            setOnClickListener { } // card taps never dismiss
+            setPadding(dp(22), dp(if (compact) 44 else 58), dp(22), dp(10))
+            background = round(PLUM, 30).apply { setStroke(dp(1), c(LINE)) }
+            setOnClickListener { } // taps on the card never dismiss
         }
-
-        // Top row: "YESTERDAY'S WRAP" pill + close
-        val header = LinearLayout(service).apply { gravity = Gravity.CENTER_VERTICAL }
-        header.addView(TextView(service).apply {
-            text = "🎁  YESTERDAY'S WRAP"; textSize = 12f; letterSpacing = 0.12f; typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.parseColor("#FFD9F2")); setPadding(dp(12), dp(6), dp(12), dp(6))
-            background = gradient("#5B2A8C", "#8C2A6E", radius = 20, orientation = GradientDrawable.Orientation.LEFT_RIGHT)
+        card.addView(TextView(service).apply {
+            text = "YESTERDAY · DAILY WRAP"; textSize = 11f; letterSpacing = 0.14f; typeface = Typeface.DEFAULT_BOLD
+            setTextColor(c(LAVENDER)); setPadding(dp(12), dp(5), dp(12), dp(5)); background = round(PLUM_LIGHT, 12)
         }, LinearLayout.LayoutParams(-2, -2))
-        header.addView(View(service), LinearLayout.LayoutParams(0, 1, 1f))
-        header.addView(Button(service).apply {
-            text = "×"; textSize = 22f; isAllCaps = false; contentDescription = "Close"
-            setTextColor(Color.parseColor("#E9DCFF")); background = gradient("#33204F", "#33204F", radius = 24)
-            setOnClickListener { hide() }
-        }, LinearLayout.LayoutParams(dp(44), dp(44)))
-        card.addView(header, LinearLayout.LayoutParams(-1, -2))
-
-        // Mascot holding its wrap, with a soft glow behind it
-        val art = FrameLayout(service)
-        val glow = View(service).apply {
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                gradientType = GradientDrawable.RADIAL_GRADIENT
-                gradientRadius = dp(90).toFloat()
-                colors = intArrayOf(Color.parseColor("#99B67CFF"), Color.parseColor("#00B67CFF"))
-            }
-        }
-        art.addView(glow, FrameLayout.LayoutParams(dp(190), dp(190), Gravity.CENTER))
-        val heightDp = service.resources.displayMetrics.heightPixels / service.resources.displayMetrics.density
-        val brainSize = if (heightDp < 650) 120 else 150
-        val brain = ImageView(service).apply {
-            setImageResource(R.drawable.scrollsnooze_wrapped)
-            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-        }
-        art.addView(brain, FrameLayout.LayoutParams(dp(brainSize), dp(brainSize), Gravity.CENTER))
-        card.addView(art, LinearLayout.LayoutParams(-1, dp(brainSize + 30)).apply { topMargin = dp(4) })
-
         card.addView(TextView(service).apply {
-            text = "Your $noun day is wrapped 👀"; textSize = 23f; gravity = Gravity.CENTER
-            typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.parseColor("#FFFFFF"))
-        }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(4) })
+            text = "I wrapped up\nyour $noun day"; textSize = if (compact) 25f else 29f; typeface = display
+            gravity = Gravity.CENTER; setTextColor(c(SOFT_WHITE)); setLineSpacing(0f, 0.95f)
+        }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
         card.addView(TextView(service).apply {
-            text = "Guess how many $noun you scrolled yesterday…\nYour wrap knows. 🤫"
-            textSize = 15f; gravity = Gravity.CENTER; setLineSpacing(0f, 1.15f)
-            setTextColor(Color.parseColor("#D9CCF2"))
+            text = "Every $one from yesterday, counted\nand turned into 6 little stories."
+            textSize = 15f; gravity = Gravity.CENTER; setTextColor(c(MUTED)); setLineSpacing(0f, 1.15f)
         }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
 
         // The hidden number — the hook
-        val mystery = TextView(service).apply {
-            text = "? ? ?"; textSize = 30f; gravity = Gravity.CENTER; typeface = Typeface.DEFAULT_BOLD
-            letterSpacing = 0.1f; setTextColor(Color.parseColor("#FFE38A"))
-            setPadding(dp(24), dp(6), dp(24), dp(6))
-            background = gradient("#3D2266", "#2A1748", radius = 18).apply { setStroke(dp(1), Color.parseColor("#FFE38A")) }
-            contentDescription = "Hidden number"
+        val secret = LinearLayout(service).apply {
+            gravity = Gravity.CENTER_VERTICAL; setPadding(dp(16), dp(10), dp(18), dp(10))
+            background = round(MIDNIGHT, 20).apply { setStroke(dp(1), c("#5B4F8F"), dp(5).toFloat(), dp(4).toFloat()) }
+            contentDescription = "$noun watched yesterday, hidden until you open your wrap"
         }
-        card.addView(mystery, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(14); gravity = Gravity.CENTER_HORIZONTAL })
+        val mystery = TextView(service).apply {
+            text = "??"; textSize = 36f; typeface = display; letterSpacing = 0.06f; setTextColor(c(MOON))
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
+        secret.addView(mystery)
+        secret.addView(TextView(service).apply {
+            text = "$noun watched\ncan you guess?"; textSize = 13f; setTextColor(c(MUTED)); setLineSpacing(0f, 1.1f)
+            setPadding(dp(12), 0, 0, 0); importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        })
+        card.addView(secret, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(16) })
 
-        val open = Button(service).apply {
-            text = "Unwrap it ✨"; textSize = 17f; isAllCaps = false; typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.parseColor("#2B0A3D")); minHeight = dp(54)
-            background = gradient("#FFE38A", "#FF9BD2", "#B98CFF", radius = 27, orientation = GradientDrawable.Orientation.LEFT_RIGHT)
+        // Chunky lavender button with a darker "lip" underneath
+        val open = TextView(service).apply {
+            text = "Open my wrap ✨"; textSize = 21f; typeface = display; gravity = Gravity.CENTER
+            setTextColor(c(INDIGO)); minHeight = dp(56); isClickable = true; isFocusable = true
+            contentDescription = "Open my wrap"
+            background = LayerDrawable(arrayOf<android.graphics.drawable.Drawable>(round(LAVENDER_DARK, 28), round(LAVENDER, 28))).apply {
+                setLayerInset(1, 0, 0, 0, dp(5))
+            }
+            setPadding(0, 0, 0, dp(5))
+            setOnTouchListener { v, e ->
+                when (e.action) {
+                    MotionEvent.ACTION_DOWN -> v.animate().scaleX(0.96f).scaleY(0.96f).setDuration(90).start()
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> v.animate().scaleX(1f).scaleY(1f).setDuration(120).start()
+                }
+                false
+            }
             setOnClickListener { hide(); onOpen() }
         }
-        card.addView(open, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(18) })
-        card.addView(Button(service).apply {
-            text = "Later"; textSize = 15f; isAllCaps = false
-            setTextColor(Color.parseColor("#BFAEE0")); background = null; minHeight = dp(48)
-            setOnClickListener { hide() }
+        card.addView(open, LinearLayout.LayoutParams(-1, dp(61)).apply { topMargin = dp(18) })
+        card.addView(TextView(service).apply {
+            text = "Maybe later"; textSize = 14f; gravity = Gravity.CENTER; setTextColor(c(FAINT))
+            minHeight = dp(44); isClickable = true; setOnClickListener { hide() }
         }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(4) })
 
-        val width = minOf(dp(340), service.resources.displayMetrics.widthPixels - dp(32))
-        backdrop.addView(card, FrameLayout.LayoutParams(width, -2, Gravity.CENTER))
+        stage.addView(card, FrameLayout.LayoutParams(width, -2, Gravity.TOP).apply { topMargin = dp(mascotSize - 40) })
+
+        // Close button in the card's corner
+        val close = TextView(service).apply {
+            text = "×"; textSize = 20f; gravity = Gravity.CENTER; setTextColor(c(MUTED))
+            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(c(PLUM_LIGHT)) }
+            contentDescription = "Close"; isClickable = true; setOnClickListener { hide() }
+        }
+        stage.addView(close, FrameLayout.LayoutParams(dp(40), dp(40), Gravity.TOP or Gravity.END).apply {
+            topMargin = dp(mascotSize - 40 + 12); rightMargin = dp(12)
+        })
+
+        // ---- Mascot scene (on top of the card) ----
+        val glow = View(service).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL; gradientType = GradientDrawable.RADIAL_GRADIENT
+                gradientRadius = dp(mascotSize * 6 / 10).toFloat()
+                colors = intArrayOf(Color.argb(115, 196, 160, 255), Color.argb(0, 196, 160, 255))
+            }
+        }
+        stage.addView(glow, FrameLayout.LayoutParams(dp(mascotSize + 40), dp(mascotSize + 40), Gravity.TOP or Gravity.CENTER_HORIZONTAL)
+            .apply { topMargin = -dp(10) })
+        val moon = TextView(service).apply {
+            text = "☾"; textSize = if (compact) 26f else 32f; setTextColor(c(MOON))
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
+        stage.addView(moon, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.END).apply {
+            topMargin = dp(if (compact) 10 else 18); rightMargin = width / 2 - dp(mascotSize / 2) - dp(4)
+        })
+        val sparkles = listOf(
+            Triple(Gravity.END, dp(36), 18f), Triple(Gravity.END, dp(mascotSize / 2 + 10), 12f), Triple(Gravity.START, dp(mascotSize / 2), 14f),
+        ).mapIndexed { i, (side, top, size) ->
+            TextView(service).apply {
+                text = "✦"; textSize = size; setTextColor(c(LAVENDER_HI)); importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }.also {
+                stage.addView(it, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or side).apply {
+                    topMargin = top
+                    if (side == Gravity.END) rightMargin = dp(if (i == 0) 26 else 52) else leftMargin = dp(40)
+                })
+            }
+        }
+        val mascot = ImageView(service).apply {
+            setImageResource(R.drawable.scrollsnooze_wrapped)
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
+        stage.addView(mascot, FrameLayout.LayoutParams(dp(mascotSize), dp(mascotSize), Gravity.TOP or Gravity.CENTER_HORIZONTAL))
+        val bubble = TextView(service).apply {
+            text = "psst… 👀"; textSize = 16f; typeface = display; setTextColor(c(INDIGO))
+            setPadding(dp(14), dp(7), dp(14), dp(8)); rotation = -6f
+            background = GradientDrawable().apply {
+                setColor(c(SOFT_WHITE))
+                val r = dp(18).toFloat(); val tail = dp(4).toFloat()
+                cornerRadii = floatArrayOf(r, r, r, r, r, r, tail, tail) // TL, TR, BR, BL — pointy toward the mascot
+            }
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
+        stage.addView(bubble, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.START).apply {
+            topMargin = dp(if (compact) 18 else 30); leftMargin = dp(4)
+        })
+
+        backdrop.addView(stage, FrameLayout.LayoutParams(width, -2, Gravity.CENTER))
+        backdrop.contentDescription = "Your daily wrap from yesterday is ready"
         val params = WindowManager.LayoutParams(-1, -1, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, PixelFormat.TRANSLUCENT).apply {
             gravity = Gravity.CENTER; title = "ScrollSnooze wrap ready"
@@ -131,15 +195,28 @@ class WrapReadyCard(private val service: AccessibilityService) {
         return try {
             wm.addView(backdrop, params); root = backdrop
             if (animate) {
-                card.alpha = 0f; card.scaleX = 0.85f; card.scaleY = 0.85f; card.translationY = dp(30).toFloat()
+                // Card pops in, then the mascot hops up onto it and the bubble says hi.
+                card.alpha = 0f; card.scaleX = 0.9f; card.scaleY = 0.9f; card.translationY = dp(24).toFloat()
                 card.animate().alpha(1f).scaleX(1f).scaleY(1f).translationY(0f)
-                    .setInterpolator(OvershootInterpolator(1.2f)).setDuration(420).start()
-                loop(ObjectAnimator.ofFloat(brain, View.TRANSLATION_Y, 0f, -dp(8).toFloat()), 1400)
-                loop(ObjectAnimator.ofFloat(brain, View.ROTATION, -4f, 4f), 1800)
-                loop(ObjectAnimator.ofFloat(glow, View.ALPHA, 0.55f, 1f), 1600)
-                loop(ObjectAnimator.ofFloat(mystery, View.ALPHA, 0.6f, 1f), 900)
-                loop(ObjectAnimator.ofFloat(open, View.SCALE_X, 1f, 1.035f), 1100)
-                loop(ObjectAnimator.ofFloat(open, View.SCALE_Y, 1f, 1.035f), 1100)
+                    .setInterpolator(OvershootInterpolator(1.1f)).setDuration(380).start()
+                close.alpha = 0f; close.animate().alpha(1f).setStartDelay(250).setDuration(200).start()
+                mascot.alpha = 0f; mascot.translationY = dp(70).toFloat(); mascot.scaleX = 0.8f; mascot.scaleY = 0.8f
+                mascot.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f).setStartDelay(160)
+                    .setInterpolator(OvershootInterpolator(1.8f)).setDuration(520)
+                    .withEndAction { if (isShowing) {
+                        loop(ObjectAnimator.ofFloat(mascot, View.TRANSLATION_Y, 0f, -dp(6).toFloat()), 1500)
+                        loop(ObjectAnimator.ofFloat(mascot, View.ROTATION, -2.5f, 2.5f), 2200)
+                    } }.start()
+                bubble.alpha = 0f; bubble.scaleX = 0.4f; bubble.scaleY = 0.4f
+                bubble.pivotX = dp(70).toFloat(); bubble.pivotY = dp(30).toFloat()
+                bubble.animate().alpha(1f).scaleX(1f).scaleY(1f).setStartDelay(620)
+                    .setInterpolator(OvershootInterpolator(2.2f)).setDuration(360).start()
+                listOf(glow, moon).forEach { it.alpha = 0f; it.animate().alpha(1f).setStartDelay(300).setDuration(400).start() }
+                loop(ObjectAnimator.ofFloat(glow, View.SCALE_X, 0.92f, 1.06f), 1800)
+                loop(ObjectAnimator.ofFloat(glow, View.SCALE_Y, 0.92f, 1.06f), 1800)
+                sparkles.forEachIndexed { i, s -> loop(ObjectAnimator.ofFloat(s, View.ALPHA, 0.25f, 1f).apply { startDelay = i * 300L }, 900L + i * 250) }
+                loop(ObjectAnimator.ofFloat(mystery, View.SCALE_X, 1f, 1.12f), 800)
+                loop(ObjectAnimator.ofFloat(mystery, View.SCALE_Y, 1f, 1.12f), 800)
             }
             true
         } catch (_: RuntimeException) { root = null; false }
@@ -149,10 +226,11 @@ class WrapReadyCard(private val service: AccessibilityService) {
         a.duration = ms; a.repeatCount = ValueAnimator.INFINITE; a.repeatMode = ValueAnimator.REVERSE
         a.interpolator = AccelerateDecelerateInterpolator(); a.start(); animators += a
     }
+    private fun loop(a: ObjectAnimator, ms: Int) = loop(a, ms.toLong())
 
     fun hide() {
         animators.forEach { it.cancel() }; animators.clear()
-        root?.let { runCatching { wm.removeViewImmediate(it) } }
+        root?.let { v -> runCatching { wm.removeViewImmediate(v) } }
         root = null
     }
 }
