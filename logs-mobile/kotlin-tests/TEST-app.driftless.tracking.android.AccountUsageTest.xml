@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.driftless.tracking.android.AccountUsageTest" tests="22" skipped="0" failures="0" errors="0" timestamp="2026-11-10T07:05:29.725Z" hostname="runnervm7aw5e" time="1.045">
+  <properties/>
+  <testcase name="switchAndFreshIncarnationDoNotAdoptOldLedgerOrGrants" classname="app.driftless.tracking.android.AccountUsageTest" time="0.056"/>
+  <testcase name="historicalSummaryFloorsOnlyAfterAddingDeviceMilliseconds" classname="app.driftless.tracking.android.AccountUsageTest" time="0.073"/>
+  <testcase name="staleSnapshotCannotReduceAcceptedUsageOrRestoreCredit" classname="app.driftless.tracking.android.AccountUsageTest" time="0.046"/>
+  <testcase name="measuredZeroIsDifferentFromUnavailableOsHistoryAndViewsOnlyAffectVideoSurface" classname="app.driftless.tracking.android.AccountUsageTest" time="0.07"/>
+  <testcase name="dayStaysUnknownUntilACountableAppOpensThenLimitsWork" classname="app.driftless.tracking.android.AccountUsageTest" time="0.07"/>
+  <testcase name="staleAndOfflineStatusIsHonestAndRolloverNeedsFreshCredit" classname="app.driftless.tracking.android.AccountUsageTest" time="0.053"/>
+  <testcase name="deduplicatesEventsAndBlocksAtOwnReservationWithoutDoubleCountingAcceptedUsage" classname="app.driftless.tracking.android.AccountUsageTest" time="0.075"/>
+  <testcase name="delayedRecorderRetainsItsIncarnationTimezoneAcrossAnAccountSwitch" classname="app.driftless.tracking.android.AccountUsageTest" time="0.033"/>
+  <testcase name="accountCreditPausesRespectMasterSwitchSelectedAppsAndVideoGoalOptIn" classname="app.driftless.tracking.android.AccountUsageTest" time="0.048"/>
+  <testcase name="fixedTimezoneSurvivesDeviceTimezoneChangeAndDstDayIsNot24Hours" classname="app.driftless.tracking.android.AccountUsageTest" time="0.032"/>
+  <testcase name="resetTwicePreservesCumulativeCloudBackupWithoutRevealingItsBaseline" classname="app.driftless.tracking.android.AccountUsageTest" time="0.053"/>
+  <testcase name="permissionChangesReviseNullablePayloadsWithoutReusingFrozenRevisions" classname="app.driftless.tracking.android.AccountUsageTest" time="0.03"/>
+  <testcase name="unlimitedMetricsDoNotRequireFreshCreditAfterMidnightOrReboot" classname="app.driftless.tracking.android.AccountUsageTest" time="0.027"/>
+  <testcase name="anUnknownAllowanceNeverPausesAndHandsBackToLocalDailyRules" classname="app.driftless.tracking.android.AccountUsageTest" time="0.037"/>
+  <testcase name="personalAndAllowanceCopiesOfOneDeviceAreReconciledWithoutAddingTwice" classname="app.driftless.tracking.android.AccountUsageTest" time="0.037"/>
+  <testcase name="delayedPreResetRecorderCannotRestoreIntervalsOrCachedHistory" classname="app.driftless.tracking.android.AccountUsageTest" time="0.041"/>
+  <testcase name="rebootRequiresVerifiedClockAndCannotReuseYesterdayCredit" classname="app.driftless.tracking.android.AccountUsageTest" time="0.028"/>
+  <testcase name="restoredPersonalBackupIsNotHiddenByAnEmptyAllowanceSnapshot" classname="app.driftless.tracking.android.AccountUsageTest" time="0.034"/>
+  <testcase name="resetKeepsAccountingDeduplicationAndFrozenRevisionsButClearsVisibleHistory" classname="app.driftless.tracking.android.AccountUsageTest" time="0.049"/>
+  <testcase name="processRestartRetainsOfflineLedgerGrantAndResetFence" classname="app.driftless.tracking.android.AccountUsageTest" time="0.052"/>
+  <testcase name="remainingIsCappedByOwnReservationNeverNegativeAndRepeatedRolloverDoesNotRestoreIt" classname="app.driftless.tracking.android.AccountUsageTest" time="0.057"/>
+  <testcase name="transitionDoesNotImportExistingLocalCountersIntoAccounting" classname="app.driftless.tracking.android.AccountUsageTest" time="0.036"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

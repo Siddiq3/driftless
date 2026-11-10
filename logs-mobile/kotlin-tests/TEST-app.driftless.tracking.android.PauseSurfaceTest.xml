@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.driftless.tracking.android.PauseSurfaceTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-10T07:05:37.478Z" hostname="runnervm7aw5e" time="0.321">
+  <properties/>
+  <testcase name="countdownUpdatesInPlaceAndThePrimaryActionStaysUsable" classname="app.driftless.tracking.android.PauseSurfaceTest" time="0.112"/>
+  <testcase name="aPauseWithoutANumberHidesTheFigureAndKeepsTheFooter" classname="app.driftless.tracking.android.PauseSurfaceTest" time="0.105"/>
+  <testcase name="sideQuestsAreThreeLargeTilesThatEachLeaveOnce" classname="app.driftless.tracking.android.PauseSurfaceTest" time="0.099"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

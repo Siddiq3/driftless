@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.driftless.tracking.android.GuestAccountLifecycleTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-10T07:05:33.630Z" hostname="runnervm7aw5e" time="0.445">
+  <properties/>
+  <testcase name="usageRefreshKeepsImportedGuestMinutesWithoutChargingThemAsSignedInUsage" classname="app.driftless.tracking.android.GuestAccountLifecycleTest" time="0.042"/>
+  <testcase name="restoredOldDeviceHistoryAndNewGuestActivityAddWithoutRestagingOrDuplicatingTheOldDevice" classname="app.driftless.tracking.android.GuestAccountLifecycleTest" time="0.062"/>
+  <testcase name="newerSameDeviceAccountingBreakdownRepairsLegacyPersonalAttributionWithoutRawEvents" classname="app.driftless.tracking.android.GuestAccountLifecycleTest" time="0.047"/>
+  <testcase name="concurrentCapturedRecorderAndImportPreserveEveryUniqueEventOnce" classname="app.driftless.tracking.android.GuestAccountLifecycleTest" time="0.038"/>
+  <testcase name="singlePlatformImportsKeepInstagramAndYoutubeCountsSeparate" classname="app.driftless.tracking.android.GuestAccountLifecycleTest" time="0.048"/>
+  <testcase name="midnightDatesPackageAndStableEventMetadataSurviveMigrationAndRollback" classname="app.driftless.tracking.android.GuestAccountLifecycleTest" time="0.04"/>
+  <testcase name="repeatedMixedPlatformLogoutLoginAddsOnlyTheNewGuestActivity" classname="app.driftless.tracking.android.GuestAccountLifecycleTest" time="0.137"/>
+  <testcase name="legacyCombinedCountsRemainKnownWhileUnprovablePlatformAttributionRemainsUnknown" classname="app.driftless.tracking.android.GuestAccountLifecycleTest" time="0.027"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

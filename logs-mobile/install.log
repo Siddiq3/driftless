@@ -1,0 +1,18 @@
+Lockfile is up to date, resolution step is skipped
+Packages: +1079
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 0, reused 0, downloaded 1, added 0
+Progress: resolved 0, reused 0, downloaded 34, added 8
+Progress: resolved 0, reused 0, downloaded 143, added 47
+Progress: resolved 0, reused 0, downloaded 436, added 269
+Progress: resolved 0, reused 0, downloaded 819, added 567
+Progress: resolved 0, reused 0, downloaded 1014, added 1079, done
+
+╭ Warning ─────────────────────────────────────────────────────────────────────╮
+│                                                                              │
+│   Ignored build scripts: unrs-resolver@1.12.2.                               │
+│   Run "pnpm approve-builds" to pick which dependencies should be allowed     │
+│   to run scripts.                                                            │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+Done in 6.1s using pnpm v10.28.0
