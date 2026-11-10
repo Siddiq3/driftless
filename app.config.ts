@@ -9,7 +9,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   name: 'ScrollSnooze',
   slug: 'scrollsnooze',
   scheme: ['scrollsnooze', 'driftless'],
-  version: '1.0.6',
+  version: '1.0.7',
   icon: './assets/branding/app-icon.png',
   orientation: 'portrait',
   userInterfaceStyle: 'dark',
@@ -49,7 +49,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         }
       : {}),
     package: 'com.siddiqkolimi.scrollsnooze',
-    versionCode: 8,
+    versionCode: 9,
     adaptiveIcon: {
       foregroundImage: './assets/branding/adaptive-foreground.png',
       backgroundColor: '#2A0E02',
