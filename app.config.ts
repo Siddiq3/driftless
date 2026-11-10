@@ -90,7 +90,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     './plugins/withDriftlessBrand.cjs',
     './plugins/withAndroidRelease.cjs',
     './plugins/withIOSSceneLifecycle.cjs',
-    ['expo-build-properties', { android: { usesCleartextTraffic: false } }],
+    ['expo-build-properties', { android: { usesCleartextTraffic: false, enableMinifyInReleaseBuilds: true } }],
   ],
   experiments: { typedRoutes: true },
   extra: {

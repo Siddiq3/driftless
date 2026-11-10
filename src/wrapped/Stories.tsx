@@ -276,7 +276,7 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
           <BrainCharacter pose={recap.changePercent > 0 ? 'tired' : 'wave'} size={artSize} />
           {big(`${Math.abs(recap.changePercent)}%`, 100)}
           {body(
-            `${recap.changePercent > 0 ? 'more' : recap.changePercent < 0 ? 'fewer' : 'change in'} videos than the previous ${periodWord}`,
+            `${recap.changePercent > 0 ? 'more' : recap.changePercent < 0 ? 'fewer' : 'change in'} videos than the previous ${periodWord}\n${recap.previousViews.value} → ${recap.views.value} recorded`,
           )}
         </>
       ),

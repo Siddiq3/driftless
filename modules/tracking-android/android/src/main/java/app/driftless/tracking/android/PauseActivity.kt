@@ -2,6 +2,7 @@ package app.driftless.tracking.android
 
 import android.app.Activity
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import app.driftless.tracking.core.BlockPolicy
 
@@ -76,11 +77,8 @@ class PauseActivity : Activity() {
         val renderDate=ownerDate
         val label = RulesLoader.load(this).apps[pkg]?.label ?: "this app"
 
-        @Suppress("DEPRECATION")
-        window.apply {
-            statusBarColor = PauseStyle.background
-            navigationBarColor = PauseStyle.background
-        }
+        // Draw behind the bars; PauseSurface pads itself with the system-bar insets.
+        if (Build.VERSION.SDK_INT >= 30) window.setDecorFitsSystemWindows(false)
         val surface = PauseSurface(this)
         val account = reason == "ACCOUNT_CREDIT"
         val scheduled = reason == "SCHEDULE"

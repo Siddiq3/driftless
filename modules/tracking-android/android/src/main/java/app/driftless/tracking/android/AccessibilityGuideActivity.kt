@@ -5,7 +5,6 @@ import android.app.PictureInPictureParams
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
-import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -39,8 +38,6 @@ class AccessibilityGuideActivity : Activity() {
         startedAt=System.currentTimeMillis()
         enabledAtLaunch=Health.serviceEnabled(this)
         settingsOpened=savedInstanceState?.getBoolean("settingsOpened") ?: false
-        window.statusBarColor=Color.BLACK
-        window.navigationBarColor=Color.BLACK
         content=GuideVideoPlayer(this)
         setContentView(content)
         main.postDelayed(advance,2400)
