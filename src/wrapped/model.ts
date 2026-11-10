@@ -198,3 +198,14 @@ export function personality(recap: Recap) {
     fact: `${recap.sessions.length} RECORDED SESSIONS`,
   };
 }
+/** Mascot mood from the average recorded videos per tracked day; no data keeps the gift pose. */
+// ponytail: fixed thresholds, tune here if the moods feel off on real weeks.
+export function wrapMood(recap: Pick<Recap, 'views'>) {
+  const { value, trackedDays } = recap.views;
+  if (value === null || trackedDays === 0) return 'wrapped' as const;
+  const perDay = value / trackedDays;
+  if (perDay <= 30) return 'fresh' as const;
+  if (perDay <= 100) return 'focused' as const;
+  if (perDay <= 250) return 'tired' as const;
+  return 'drained' as const;
+}

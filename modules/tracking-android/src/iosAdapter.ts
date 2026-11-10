@@ -114,6 +114,7 @@ export function createIOSTracking(store: Store, hooks: Hooks) {
     setFloatingCountSize: noop,
     resumeFloatingCount: noop,
     floatingCountEnabled: () => false,
+    shareImageWithText: async () => false,
     setFloatingCountEnabled: noop,
     localActivityDetails: () => ({ available: false, days: [] }),
     wrappedDetails: () => ({ available: false, days: [] }),

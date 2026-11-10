@@ -17,6 +17,7 @@ import {
   readPhoneWrap,
   hasWrapData,
   resolveWrapEnd,
+  wrapMood,
 } from '@/wrapped/model';
 import { Tracking, type Daily, type TrackingHealth } from 'tracking-android';
 import { invalidatePersonalData } from '@/data/personal';
@@ -261,3 +262,13 @@ test.each(['daily', 'weekly'] as const)(
     invalidatePersonalData();
   },
 );
+
+test('mascot mood follows the daily average, and missing data keeps the gift pose', () => {
+  const v = (value: number | null, trackedDays: number) => ({ views: { value, trackedDays } });
+  expect(wrapMood(v(null, 0))).toBe('wrapped');
+  expect(wrapMood(v(0, 7))).toBe('fresh');
+  expect(wrapMood(v(210, 7))).toBe('fresh');
+  expect(wrapMood(v(700, 7))).toBe('focused');
+  expect(wrapMood(v(150, 1))).toBe('tired');
+  expect(wrapMood(v(2000, 7))).toBe('drained');
+});

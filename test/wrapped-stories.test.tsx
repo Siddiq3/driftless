@@ -35,7 +35,10 @@ jest.mock('react-native-view-shot', () => ({
   captureRef: jest.fn().mockResolvedValue('file:///temporary.png'),
   releaseCapture: jest.fn(),
 }));
-jest.mock('tracking-android', () => ({ Tracking: {} }));
+const mockShareWithText = jest.fn().mockResolvedValue(false);
+jest.mock('tracking-android', () => ({
+  Tracking: { shareImageWithText: (...args: unknown[]) => mockShareWithText(...args) },
+}));
 jest.mock('@/sync/run', () => ({ currentTimeZone: () => 'UTC' }));
 const recap: Recap = {
   period: 'daily',
@@ -65,7 +68,12 @@ const button = (tree: ReactTestRenderer, label: string) =>
   tree.root.findAll(
     (n) => n.props.accessibilityLabel === label && typeof n.props.onPress === 'function',
   )[0]!;
+// Arrow buttons exist only for screen readers; most tests drive the stories through them.
+beforeEach(() => {
+  jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockResolvedValue(true);
+});
 afterEach(() => {
+  mockShareWithText.mockResolvedValue(false);
   mockReduced = true;
   jest.restoreAllMocks();
   jest.clearAllMocks();
@@ -131,7 +139,7 @@ test('older binaries share an honest text summary without requiring login', asyn
   const tree = await mount();
   await act(async () => button(tree, 'Share this Wrapped card').props.onPress());
   expect(share).toHaveBeenCalledWith({
-    message: expect.stringContaining('No confirmed counts yet'),
+    message: expect.stringContaining('My Daily Wrapped on ScrollSnooze.'),
   });
   expect(Sharing.shareAsync).not.toHaveBeenCalled();
   expect(share.mock.calls[0]![0].message).toContain(
@@ -205,4 +213,35 @@ test('a tall slide shrinks to fit and a short one keeps its size', () => {
   expect(fitScale(500, 1000)).toBe(0.5);
   expect(fitScale(500, 300)).toBe(1);
   expect(fitScale(0, 300)).toBe(1);
+});
+
+test('without a screen reader, arrows are hidden and taps on the story move between slides', async () => {
+  jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockResolvedValue(false);
+  const tree = await mount();
+  expect(button(tree, 'Next story')).toBeUndefined();
+  const zone = tree.root.findAll(
+    (n) => n.props.accessible === false && typeof n.props.onPress === 'function',
+  )[0]!;
+  const caption = () => JSON.stringify(tree.toJSON());
+  expect(caption()).toContain('"1"," / ","6"');
+  await act(async () => zone.props.onPress({ nativeEvent: { pageX: 900 } }));
+  expect(caption()).toContain('"2"," / ","6"');
+  await act(async () => zone.props.onPress({ nativeEvent: { pageX: 0 } }));
+  expect(caption()).toContain('"1"," / ","6"');
+  await act(async () => tree.unmount());
+});
+test('image sharing sends the card with a caption and the Play link in one sheet', async () => {
+  jest.spyOn(TurboModuleRegistry, 'get').mockReturnValue({} as never);
+  mockShareWithText.mockResolvedValue(true);
+  const tree = await mount({ ...recap, views: { value: 42, trackedDays: 1 } });
+  await act(async () => button(tree, 'Share this Wrapped card').props.onPress());
+  expect(mockShareWithText).toHaveBeenCalledWith(
+    'file:///temporary.png',
+    expect.stringMatching(/42 short videos recorded[\s\S]*play\.google\.com.*wrapped_share/),
+    'Share your Wrapped',
+  );
+  expect(Sharing.shareAsync).not.toHaveBeenCalled();
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  expect(require('react-native-view-shot').releaseCapture).not.toHaveBeenCalled();
+  await act(async () => tree.unmount());
 });

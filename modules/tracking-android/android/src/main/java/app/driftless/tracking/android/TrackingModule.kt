@@ -1,9 +1,12 @@
 package app.driftless.tracking.android
 
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
+import android.net.Uri
 import android.provider.Settings
+import androidx.core.content.FileProvider
 import app.driftless.tracking.core.Recorder
 import app.driftless.tracking.core.isValidatedVersion
 import expo.modules.kotlin.exception.CodedException
@@ -28,6 +31,20 @@ class TrackingModule : Module() {
         }
 
         Function("floatingCountEnabled") { TrackingPrefs(context).floatingCountEnabled }
+        // Android's share sheet carries the Wrapped image and its caption/link together.
+        // ponytail: reuses expo-sharing's FileProvider (covers the cache dir); own provider if that dependency goes.
+        AsyncFunction("shareImageWithText") { path: String, text: String, title: String ->
+            val activity = appContext.currentActivity ?: throw CodedException("NO_ACTIVITY", "No visible screen to share from", null)
+            val file = File(Uri.parse(path).path ?: path)
+            val uri = FileProvider.getUriForFile(activity, "${activity.packageName}.SharingFileProvider", file)
+            val send = Intent(Intent.ACTION_SEND)
+                .setType("image/png")
+                .putExtra(Intent.EXTRA_STREAM, uri)
+                .putExtra(Intent.EXTRA_TEXT, text)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            send.clipData = ClipData.newRawUri(null, uri)
+            activity.startActivity(Intent.createChooser(send, title))
+        }
         Function("setFloatingCountEnabled") { enabled: Boolean ->
             TrackingPrefs(context).apply {
                 floatingCountEnabled = enabled

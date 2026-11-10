@@ -21,8 +21,9 @@ import { BrainCharacter } from '@/ui/BrainCharacter';
 import { AppIcon, Icon } from '@/ui/Icon';
 import { useReducedMotion, useDataMotion } from '@/ui/motion';
 import { SetupButton } from '@/onboarding/Visuals';
-import { clock, peakWindow, personality, type Recap } from './model';
+import { clock, peakWindow, personality, wrapMood, type Recap } from './model';
 import { playStoreUrl } from '@/config/website';
+import { Tracking } from 'tracking-android';
 
 const cream = '#FFE9AD';
 type Story = { id: string; colors: [string, string]; label: string; content: ReactNode };
@@ -114,7 +115,7 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
       label: `Your ${periodWord} in short videos`,
       content: (
         <>
-          <BrainCharacter pose="wrapped" size={artSize + 15} />
+          <BrainCharacter pose={wrapMood(recap)} size={artSize + 15} />
           {big(
             hasViews
               ? recap.views.value!.toLocaleString()
@@ -421,6 +422,17 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
       animation?.stop();
     };
   }, [current, holding, sharing, reduced, reader, active, focused, progress, stories.length]);
+  const shareText = [
+    hasViews
+      ? `My ${periodWord} on ScrollSnooze: ${recap.views.value!.toLocaleString()} short videos recorded.`
+      : `My ${recap.period === 'daily' ? 'Daily' : 'Weekly'} Wrapped on ScrollSnooze.`,
+    recap.changePercent !== null && recap.changePercent < 0
+      ? `That's ${Math.abs(recap.changePercent)}% fewer than the ${periodWord} before.`
+      : '',
+    `Track your Reels & Shorts too: ${playStoreUrl('wrapped_share')}`,
+  ]
+    .filter(Boolean)
+    .join('\n');
   async function share() {
     if (shareLock.current) return;
     shareLock.current = true;
@@ -430,9 +442,7 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
     let release: ((uri: string) => void) | undefined;
     try {
       if (!TurboModuleRegistry.get('RNViewShot') || !(await Sharing.isAvailableAsync())) {
-        await Share.share({
-          message: `ScrollSnooze · ${recap.period === 'daily' ? 'Daily' : 'Weekly'} Wrapped\n${recap.from} – ${recap.to}\n${hasViews ? `${recap.views.value} short videos counted (${recap.views.trackedDays}/${recap.expectedDays} tracked days)` : recap.minutes.value !== null ? `${recap.minutes.value} minutes in supported apps` : 'No confirmed counts yet'}\n\nScroll less with ScrollSnooze: ${playStoreUrl('wrapped_share')}`,
-        });
+        await Share.share({ message: shareText });
         return;
       }
       // Lazy loading keeps recaps usable in development clients built before view-shot was added.
@@ -440,6 +450,11 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
       const shot = require('react-native-view-shot') as typeof import('react-native-view-shot');
       release = shot.releaseCapture;
       uri = await shot.captureRef(capture, { format: 'png', result: 'tmpfile' });
+      if (await Tracking.shareImageWithText(uri, shareText, 'Share your Wrapped')) {
+        // The receiving app reads the file after the sheet closes; the OS clears the cache file later.
+        uri = undefined;
+        return;
+      }
       await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share your Wrapped' });
     } catch {
       setNote('Sharing failed. Please try again.');
@@ -527,12 +542,26 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
             <Text style={styles.control}>×</Text>
           </Pressable>
         </View>
-        <FitToScreen key={story.id}>
-          <Animated.View style={[styles.content, transition]}>
-            {label(story.label)}
-            {story.content}
-          </Animated.View>
-        </FitToScreen>
+        {/* Story-style taps: left third goes back, the rest goes forward. */}
+        <Pressable
+          accessible={false}
+          disabled={sharing}
+          onPress={({ nativeEvent }) =>
+            nativeEvent.pageX < width / 3
+              ? setIndex((i) => Math.max(0, i - 1))
+              : current === stories.length - 1
+                ? router.back()
+                : next()
+          }
+          style={{ flex: 1 }}
+        >
+          <FitToScreen key={story.id}>
+            <Animated.View style={[styles.content, transition]}>
+              {label(story.label)}
+              {story.content}
+            </Animated.View>
+          </FitToScreen>
+        </Pressable>
         <View
           style={{
             alignItems: 'center',
@@ -559,15 +588,18 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
           },
         ]}
       >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Previous story"
-          disabled={current === 0 || sharing}
-          onPress={() => setIndex((i) => Math.max(0, i - 1))}
-          style={[styles.circle, { opacity: current === 0 ? 0.3 : 1 }]}
-        >
-          <Icon name="back" color="#FFFFFF" />
-        </Pressable>
+        {/* Arrow buttons only for screen readers, which cannot use the tap zones. */}
+        {reader && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Previous story"
+            disabled={current === 0 || sharing}
+            onPress={() => setIndex((i) => Math.max(0, i - 1))}
+            style={[styles.circle, { opacity: current === 0 ? 0.3 : 1 }]}
+          >
+            <Icon name="back" color="#FFFFFF" />
+          </Pressable>
+        )}
         <Pressable
           accessibilityRole="button"
           disabled={sharing}
@@ -579,15 +611,17 @@ export function WrapStories({ recap, initialIndex = 0 }: { recap: Recap; initial
             {sharing ? 'Sharing…' : '↗  Share'}
           </Text>
         </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={current === stories.length - 1 ? 'Finish Wrapped' : 'Next story'}
-          disabled={sharing}
-          onPress={current === stories.length - 1 ? () => router.back() : next}
-          style={styles.circle}
-        >
-          <Icon name={current === stories.length - 1 ? 'check' : 'chevron'} color="#FFFFFF" />
-        </Pressable>
+        {reader && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={current === stories.length - 1 ? 'Finish Wrapped' : 'Next story'}
+            disabled={sharing}
+            onPress={current === stories.length - 1 ? () => router.back() : next}
+            style={styles.circle}
+          >
+            <Icon name={current === stories.length - 1 ? 'check' : 'chevron'} color="#FFFFFF" />
+          </Pressable>
+        )}
       </View>
       <View
         pointerEvents="none"

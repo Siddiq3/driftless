@@ -44,11 +44,8 @@ class CountWidget : AppWidgetProvider() {
                     WidgetFace.Pose.RESTING -> R.drawable.widget_mascot_meditating
                     WidgetFace.Pose.FRESH -> R.drawable.widget_mascot_fresh
                 })
-                setTextViewText(R.id.count_widget_goal, face.goalText ?: "")
-                setViewVisibility(R.id.count_widget_goal, if (face.goalText == null) android.view.View.GONE else android.view.View.VISIBLE)
-                setTextViewText(R.id.count_widget_streak, face.streakText ?: "")
-                setViewVisibility(R.id.count_widget_streak, if (face.streakText == null) android.view.View.GONE else android.view.View.VISIBLE)
-                setTextViewText(R.id.count_widget_status, if (!active) "Counting is off · tap to set up" else if (!known) "Count not confirmed · tap for details" else "Updated ${java.time.Instant.ofEpochMilli(store.account.now()).atZone(store.account.zone()).toLocalTime().withSecond(0).withNano(0)}")
+                // 2×1 has room for one line: a problem first, then the goal, then the plain label.
+                setTextViewText(R.id.count_widget_status, if (!active) "Counting is off · tap to set up" else if (!known) "Count not confirmed · tap" else face.goalText ?: "Short videos today")
                 context.packageManager.getLaunchIntentForPackage(context.packageName)?.let { launch ->
                     setOnClickPendingIntent(R.id.count_widget_root, PendingIntent.getActivity(context, 1701, launch, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
                 }

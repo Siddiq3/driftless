@@ -27,6 +27,7 @@ type NativeTracking = {
   setFloatingCountSize(size: number): void;
   resumeFloatingCount(): void;
   floatingCountEnabled(): boolean;
+  shareImageWithText?(path: string, text: string, title: string): Promise<void>;
   setFloatingCountEnabled(enabled: boolean): void;
   getLocalActivityDetails(from: string, to: string): WrapDetails;
   getWrappedDetails(from: string, to: string): WrapDetails;
@@ -119,6 +120,12 @@ export const Tracking = {
   setFloatingCountSize: (size: number) => native.setFloatingCountSize?.(size),
   resumeFloatingCount: () => native.resumeFloatingCount?.(),
   floatingCountEnabled: () => native.floatingCountEnabled?.() ?? false,
+  /** Image plus caption in one share sheet; false on builds without the native function. */
+  shareImageWithText: async (path: string, text: string, title: string): Promise<boolean> => {
+    if (!native.shareImageWithText) return false;
+    await native.shareImageWithText(path, text, title);
+    return true;
+  },
   setFloatingCountEnabled: (enabled: boolean) => native.setFloatingCountEnabled?.(enabled),
   /** Local recorded events; do not use for sync, goals or battle scoring. */
   localActivityDetails: (from: string, to: string): WrapDetails =>
